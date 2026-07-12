@@ -111,7 +111,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     value = localTagModel,
                     onValueChange = { localTagModel = it },
                     label = { Text("标签模型") },
-                    supportingText = { Text("用于自动生成标签") },
+                    supportingText = { Text("轻量模型即可，仅需文本分类") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { focusState ->
@@ -131,7 +131,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     value = localSummaryModel,
                     onValueChange = { localSummaryModel = it },
                     label = { Text("总结模型") },
-                    supportingText = { Text("用于生成周/月总结") },
+                    supportingText = { Text("需要较强文本理解力，建议推理模型") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { focusState ->
@@ -139,6 +139,26 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                                 viewModel.updateSummaryModel(localSummaryModel)
                             }
                         },
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                var localVisionModel by remember(uiState.settings.visionModel) {
+                    mutableStateOf(uiState.settings.visionModel)
+                }
+                OutlinedTextField(
+                    value = localVisionModel,
+                    onValueChange = { localVisionModel = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            if (!focusState.isFocused) {
+                                viewModel.updateVisionModel(localVisionModel)
+                            }
+                        },
+                    label = { Text("视觉模型") },
+                    supportingText = { Text("用于识别纯图片记录，生成文字描述后参与标签和总结") },
                     singleLine = true
                 )
             }

@@ -13,5 +13,6 @@ data class Entry(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val summaryStart: Long? = null,
-    val summaryEnd: Long? = null
+    val summaryEnd: Long? = null,
+    val imageDescription: String? = null
 )

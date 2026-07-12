@@ -5,5 +5,6 @@ data class AppSettings(
     val baseUrl: String = "https://api.deepseek.com",
     val tagModel: String = "deepseek-chat",
     val summaryModel: String = "deepseek-chat",
+    val visionModel: String = "deepseek-chat",
     val biometricEnabled: Boolean = false
 )

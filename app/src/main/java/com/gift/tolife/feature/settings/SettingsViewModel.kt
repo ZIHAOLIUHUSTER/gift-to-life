@@ -58,6 +58,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateVisionModel(model: String) {
+        viewModelScope.launch {
+            settingsDataStore.updateVisionModel(model)
+            _uiState.update { it.copy(isSaved = true) }
+        }
+    }
+
     fun clearSavedFlag() {
         _uiState.update { it.copy(isSaved = false) }
     }

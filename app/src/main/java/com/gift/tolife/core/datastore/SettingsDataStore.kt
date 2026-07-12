@@ -21,6 +21,7 @@ class SettingsDataStore @Inject constructor(
         val BASE_URL = stringPreferencesKey("base_url")
         val TAG_MODEL = stringPreferencesKey("tag_model")
         val SUMMARY_MODEL = stringPreferencesKey("summary_model")
+        val VISION_MODEL = stringPreferencesKey("vision_model")
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
     }
 
@@ -30,6 +31,7 @@ class SettingsDataStore @Inject constructor(
             baseUrl = prefs[Keys.BASE_URL] ?: "https://api.deepseek.com",
             tagModel = prefs[Keys.TAG_MODEL] ?: "deepseek-chat",
             summaryModel = prefs[Keys.SUMMARY_MODEL] ?: "deepseek-chat",
+            visionModel = prefs[Keys.VISION_MODEL] ?: "deepseek-chat",
             biometricEnabled = prefs[Keys.BIOMETRIC_ENABLED] ?: false
         )
     }
@@ -48,6 +50,10 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun updateSummaryModel(model: String) {
         context.settingsDataStore.edit { it[Keys.SUMMARY_MODEL] = model }
+    }
+
+    suspend fun updateVisionModel(model: String) {
+        context.settingsDataStore.edit { it[Keys.VISION_MODEL] = model }
     }
 
     suspend fun updateBiometricEnabled(enabled: Boolean) {
