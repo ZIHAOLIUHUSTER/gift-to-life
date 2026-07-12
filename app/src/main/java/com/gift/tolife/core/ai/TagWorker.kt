@@ -75,7 +75,7 @@ class TagWorker @AssistedInject constructor(
     }
 
     companion object {
-        fun enqueue(entryId: Long) {
+        fun enqueue(context: Context, entryId: Long) {
             val work = OneTimeWorkRequestBuilder<TagWorker>()
                 .setInputData(Data.Builder().putLong("entry_id", entryId).build())
                 .setConstraints(
@@ -85,7 +85,7 @@ class TagWorker @AssistedInject constructor(
                 )
                 .addTag("tag_$entryId")
                 .build()
-            WorkManager.getInstance().enqueue(work)
+            WorkManager.getInstance(context).enqueue(work)
         }
     }
 }

@@ -58,7 +58,7 @@ class RecordViewModel @Inject constructor(
                 type = EntryType.NORMAL
             )
             val entryId = repository.save(entry)
-            TagWorker.enqueue(entryId)
+            TagWorker.enqueue(context, entryId)
             _uiState.update { it.copy(pendingImageUri = null) }
         }
     }
