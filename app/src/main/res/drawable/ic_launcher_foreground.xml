@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 简单的星形占位图标 -->
+    <path
+        android:fillColor="#FAF8F5"
+        android:pathData="M54,30 L58,44 L73,44 L61,52 L66,66 L54,57 L42,66 L47,52 L35,44 L50,44 Z" />
+</vector>

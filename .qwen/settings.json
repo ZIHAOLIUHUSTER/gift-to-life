@@ -6,7 +6,11 @@
       "Bash(git init)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git tag *)"
+      "Bash(git tag *)",
+      "Bash(\"c:\\users\\lzh\\appdata\\local\\android\\sdk\\build-tools\\34.0.0\\apksigner.bat\" *)",
+      "Bash(\"c:\\users\\lzh\\appdata\\local\\android\\sdk\\build-tools\\34.0.0\\aapt2.exe\" *)",
+      "Bash(mkdir *)",
+      "Bash(del *)"
     ]
   },
   "$version": 4
