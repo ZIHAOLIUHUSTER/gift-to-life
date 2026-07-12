@@ -23,6 +23,7 @@ import com.gift.tolife.core.model.TagType
 @Composable
 fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    val editTags by viewModel.editTags.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
 
@@ -126,7 +127,10 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
                 items(uiState.entries, key = { it.id }) { entry ->
                     EntryCard(
                         entry = entry,
-                        onClick = { viewModel.selectEntry(entry) },
+                        onClick = { 
+                            viewModel.selectEntry(entry)
+                            viewModel.loadTags(entry.id)
+                        },
                         onImageClick = { previewImagePath = entry.imagePath }
                     )
                 }
@@ -137,15 +141,22 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
         if (uiState.selectedEntry != null) {
             EditEntryBottomSheet(
                 entry = uiState.selectedEntry!!,
-                onSave = viewModel::update,
+                onSave = { entry ->
+                    viewModel.saveWithTags(entry, editTags)
+                },
                 onDelete = viewModel::delete,
-                onDismiss = viewModel::clearSelection,
+                onDismiss = {
+                    viewModel.clearSelection()
+                    viewModel.setEditTags(emptyList())
+                },
                 onRemoveImage = viewModel::removeImage,
                 onReplaceImage = {
                     viewModel.setEditingImage(uiState.selectedEntry!!.id)
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-                onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath }
+                onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath },
+                currentTags = editTags,
+                onTagsChanged = { viewModel.setEditTags(it) }
             )
         }
     }

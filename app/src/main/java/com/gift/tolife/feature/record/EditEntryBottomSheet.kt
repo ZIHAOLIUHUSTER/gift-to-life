@@ -11,6 +11,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.TagType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -24,7 +25,9 @@ fun EditEntryBottomSheet(
     onDismiss: () -> Unit,
     onRemoveImage: ((Entry) -> Unit)? = null,
     onReplaceImage: (() -> Unit)? = null,
-    onImageClick: (() -> Unit)? = null
+    onImageClick: (() -> Unit)? = null,
+    currentTags: List<TagType> = emptyList(),
+    onTagsChanged: ((List<TagType>) -> Unit)? = null,
 ) {
     var editedContent by remember(entry.id) { mutableStateOf(entry.content) }
 
@@ -45,6 +48,30 @@ fun EditEntryBottomSheet(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 标签选择
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TagType.entries.forEach { tag ->
+                    val selected = tag in currentTags
+                    FilterChip(
+                        selected = selected,
+                        onClick = {
+                            val updated = if (selected) currentTags - tag else currentTags + tag
+                            onTagsChanged?.invoke(updated)
+                        },
+                        label = { Text(tag.label, style = MaterialTheme.typography.labelSmall) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 

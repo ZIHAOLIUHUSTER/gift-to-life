@@ -153,4 +153,25 @@ class RecordViewModel @Inject constructor(
     fun clearFilters() {
         _uiState.update { it.copy(entryQuery = EntryQuery()) }
     }
+
+    private val _editTags = MutableStateFlow<List<TagType>>(emptyList())
+    val editTags: StateFlow<List<TagType>> = _editTags.asStateFlow()
+
+    fun loadTags(entryId: Long) {
+        viewModelScope.launch {
+            val tags = repository.getTags(entryId).map { it.tag }
+            _editTags.value = tags
+        }
+    }
+
+    fun setEditTags(tags: List<TagType>) {
+        _editTags.value = tags
+    }
+
+    fun saveWithTags(entry: Entry, tags: List<TagType>) {
+        viewModelScope.launch {
+            repository.setTags(entry.id, tags)
+            update(entry)
+        }
+    }
 }
