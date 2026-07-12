@@ -3,6 +3,7 @@ package com.gift.tolife.feature.record
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gift.tolife.core.ai.TagWorker
 import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
@@ -56,7 +57,8 @@ class RecordViewModel @Inject constructor(
                 imagePath = imagePath,
                 type = EntryType.NORMAL
             )
-            repository.save(entry)
+            val entryId = repository.save(entry)
+            TagWorker.enqueue(entryId)
             _uiState.update { it.copy(pendingImageUri = null) }
         }
     }
