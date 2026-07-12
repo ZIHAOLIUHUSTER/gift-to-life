@@ -9,7 +9,8 @@ data class ChatRequest(
 
 data class Message(
     val role: String,
-    val content: String
+    val content: String? = null,
+    val reasoning_content: String? = null
 )
 
 data class ChatResponse(

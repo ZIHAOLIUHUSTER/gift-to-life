@@ -32,7 +32,8 @@ class AiClient @Inject constructor(
                 authorization = "Bearer ${settings.apiKey}",
                 request = request
             )
-            response.choices?.firstOrNull()?.message?.content
+            val msg = response.choices?.firstOrNull()?.message
+            msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
         } catch (e: Exception) {
             null
         }
@@ -63,7 +64,8 @@ class AiClient @Inject constructor(
                 authorization = "Bearer ${settings.apiKey}",
                 request = request
             )
-            response.choices?.firstOrNull()?.message?.content
+            val msg = response.choices?.firstOrNull()?.message
+            msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
         } catch (e: Exception) {
             null
         }
@@ -82,7 +84,12 @@ class AiClient @Inject constructor(
 
     private fun createService(baseUrl: String): OpenAiService? {
         return try {
-            val url = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            var url = baseUrl.trim()
+            // 去除用户可能误填的 API 路径后缀
+            if (url.endsWith("/v1/chat/completions")) {
+                url = url.removeSuffix("/v1/chat/completions")
+            }
+            if (!url.endsWith("/")) url += "/"
             val client = OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
