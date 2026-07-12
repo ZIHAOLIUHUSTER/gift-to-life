@@ -5,7 +5,6 @@ import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.network.dto.*
 import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -16,11 +15,47 @@ import javax.inject.Singleton
 class AiClient @Inject constructor(
     private val settingsDataStore: SettingsDataStore
 ) {
+    private val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()
+
+    private var cachedBaseUrl: String = ""
+    private var cachedService: OpenAiService? = null
+
+    private fun getService(baseUrl: String): OpenAiService? {
+        val url = normalizeUrl(baseUrl) ?: return null
+        if (url != cachedBaseUrl || cachedService == null) {
+            cachedService = try {
+                Retrofit.Builder()
+                    .baseUrl(url)
+                    .client(okHttpClient)
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+                    .create(OpenAiService::class.java)
+            } catch (e: Exception) {
+                null
+            }
+            cachedBaseUrl = url
+        }
+        return cachedService
+    }
+
+    private fun normalizeUrl(raw: String): String? {
+        var url = raw.trim()
+        if (url.isEmpty()) return null
+        if (url.endsWith("/v1/chat/completions")) {
+            url = url.removeSuffix("/v1/chat/completions")
+        }
+        if (!url.endsWith("/")) url += "/"
+        return url
+    }
+
     suspend fun chat(model: String, systemPrompt: String, userMessage: String): String? {
         return try {
             val settings = settingsDataStore.settings.first()
             if (settings.apiKey.isBlank()) return null
-            val service = createService(settings.baseUrl) ?: return null
+            val service = getService(settings.baseUrl) ?: return null
             val request = ChatRequest(
                 model = model,
                 messages = listOf(
@@ -43,9 +78,8 @@ class AiClient @Inject constructor(
         return try {
             val settings = settingsDataStore.settings.first()
             if (settings.apiKey.isBlank()) return null
-
             val base64 = encodeImageToBase64(imagePath) ?: return null
-            val service = createService(settings.baseUrl) ?: return null
+            val service = getService(settings.baseUrl) ?: return null
             val message = VisionMessage(
                 role = "user",
                 content = listOf(
@@ -77,32 +111,6 @@ class AiClient @Inject constructor(
             if (!file.exists()) return null
             val bytes = file.readBytes()
             android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    private fun createService(baseUrl: String): OpenAiService? {
-        return try {
-            var url = baseUrl.trim()
-            // 去除用户可能误填的 API 路径后缀
-            if (url.endsWith("/v1/chat/completions")) {
-                url = url.removeSuffix("/v1/chat/completions")
-            }
-            if (!url.endsWith("/")) url += "/"
-            val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .addInterceptor(HttpLoggingInterceptor().apply {
-                    level = HttpLoggingInterceptor.Level.NONE
-                })
-                .build()
-            Retrofit.Builder()
-                .baseUrl(url)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-                .create(OpenAiService::class.java)
         } catch (e: Exception) {
             null
         }

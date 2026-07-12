@@ -6,7 +6,6 @@ import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -70,7 +69,7 @@ class SettingsViewModel @Inject constructor(
 
     fun testTagModel() {
         if (_uiState.value.testingTag) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             _uiState.update { it.copy(testingTag = true, testResultTag = null) }
             try {
                 val current = _uiState.value.settings
@@ -94,7 +93,7 @@ class SettingsViewModel @Inject constructor(
 
     fun testSummaryModel() {
         if (_uiState.value.testingSummary) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
             try {
                 val current = _uiState.value.settings
@@ -118,7 +117,7 @@ class SettingsViewModel @Inject constructor(
 
     fun testVisionModel() {
         if (_uiState.value.testingVision) return
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             _uiState.update { it.copy(testingVision = true, testResultVision = null) }
             try {
                 val current = _uiState.value.settings
