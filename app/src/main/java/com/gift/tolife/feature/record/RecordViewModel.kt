@@ -6,13 +6,17 @@ import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.EntryType
+import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RecordViewModel @Inject constructor(
     private val repository: EntryRepository,
@@ -27,9 +31,15 @@ class RecordViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.getAllEntries().collect { entries ->
-                _uiState.update { it.copy(entries = entries, isLoading = false) }
-            }
+            _uiState
+                .map { it.entryQuery }
+                .distinctUntilChanged()
+                .flatMapLatest { query ->
+                    repository.getFilteredEntries(query)
+                }
+                .collect { entries ->
+                    _uiState.update { it.copy(entries = entries, isLoading = false) }
+                }
         }
     }
 
@@ -112,6 +122,35 @@ class RecordViewModel @Inject constructor(
     }
 
     fun setSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
+        _uiState.update { 
+            it.copy(
+                searchQuery = query, 
+                entryQuery = it.entryQuery.copy(searchText = query)
+            ) 
+        }
+    }
+
+    fun setFilterStartDate(date: Long?) {
+        _uiState.update { it.copy(entryQuery = it.entryQuery.copy(startDate = date)) }
+    }
+
+    fun setFilterEndDate(date: Long?) {
+        _uiState.update { it.copy(entryQuery = it.entryQuery.copy(endDate = date)) }
+    }
+
+    fun setFilterHasImage(hasImage: Boolean?) {
+        _uiState.update { it.copy(entryQuery = it.entryQuery.copy(hasImage = hasImage)) }
+    }
+
+    fun toggleTagFilter(tag: TagType) {
+        _uiState.update { state ->
+            val current = state.entryQuery.selectedTags
+            val updated = if (tag in current) current - tag else current + tag
+            state.copy(entryQuery = state.entryQuery.copy(selectedTags = updated))
+        }
+    }
+
+    fun clearFilters() {
+        _uiState.update { it.copy(entryQuery = EntryQuery()) }
     }
 }

@@ -23,4 +23,7 @@ interface EntryDao {
 
     @Query("SELECT * FROM entries WHERE type = :type ORDER BY createdAt DESC")
     fun getByType(type: String): Flow<List<Entry>>
+
+    @Query("SELECT * FROM entries WHERE content LIKE '%' || :query || '%' ORDER BY createdAt DESC")
+    fun searchByContent(query: String): Flow<List<Entry>>
 }

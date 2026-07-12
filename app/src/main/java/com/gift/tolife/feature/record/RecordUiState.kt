@@ -1,6 +1,7 @@
 package com.gift.tolife.feature.record
 
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.EntryQuery
 
 data class RecordUiState(
     val entries: List<Entry> = emptyList(),
@@ -8,6 +9,7 @@ data class RecordUiState(
     val isSearchMode: Boolean = false,
     val searchQuery: String = "",
     val selectedEntry: Entry? = null,
+    val entryQuery: EntryQuery = EntryQuery(),
     val editingImageEntryId: Long? = null,
     val isLoading: Boolean = false
 )

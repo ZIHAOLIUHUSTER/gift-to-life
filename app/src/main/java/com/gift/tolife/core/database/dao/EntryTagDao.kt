@@ -17,4 +17,7 @@ interface EntryTagDao {
 
     @Query("DELETE FROM entry_tags WHERE entryId = :entryId AND tag = :tag")
     suspend fun deleteByEntryIdAndTag(entryId: Long, tag: TagType)
+
+    @Query("SELECT DISTINCT entryId FROM entry_tags WHERE tag IN (:tags)")
+    suspend fun getEntryIdsByTags(tags: List<TagType>): List<Long>
 }

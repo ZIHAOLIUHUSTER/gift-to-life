@@ -12,9 +12,12 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gift.tolife.core.model.EntryQuery
+import com.gift.tolife.core.model.TagType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,26 +94,36 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            EntryComposer(
-                pendingImageUri = uiState.pendingImageUri,
-                onSave = viewModel::save,
-                onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                onClearImage = viewModel::clearImage
-            )
-
-            val displayEntries = if (uiState.searchQuery.isBlank()) {
-                uiState.entries
+            if (uiState.isSearchMode) {
+                FilterBar(
+                    entryQuery = uiState.entryQuery,
+                    onToggleTag = viewModel::toggleTagFilter,
+                    onToggleHasImage = {
+                        val current = uiState.entryQuery.hasImage
+                        viewModel.setFilterHasImage(
+                            when (current) {
+                                null -> true
+                                true -> false
+                                false -> null
+                            }
+                        )
+                    },
+                    onClearFilters = viewModel::clearFilters
+                )
             } else {
-                uiState.entries.filter {
-                    it.content.contains(uiState.searchQuery, ignoreCase = true)
-                }
+                EntryComposer(
+                    pendingImageUri = uiState.pendingImageUri,
+                    onSave = viewModel::save,
+                    onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    onClearImage = viewModel::clearImage
+                )
             }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(displayEntries, key = { it.id }) { entry ->
+                items(uiState.entries, key = { it.id }) { entry ->
                     EntryCard(
                         entry = entry,
                         onClick = { viewModel.selectEntry(entry) },
@@ -178,4 +191,69 @@ private fun SearchTopBar(
             containerColor = MaterialTheme.colorScheme.background
         )
     )
+}
+
+@Composable
+private fun FilterBar(
+    entryQuery: EntryQuery,
+    onToggleTag: (TagType) -> Unit,
+    onToggleHasImage: () -> Unit,
+    onClearFilters: () -> Unit
+) {
+    val tagTypes = TagType.entries
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // 标签筛选行
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            tagTypes.forEach { tag ->
+                val selected = tag in entryQuery.selectedTags
+                FilterChip(
+                    selected = selected,
+                    onClick = { onToggleTag(tag) },
+                    label = { Text(tag.label, style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 图片筛选 + 清除
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val hasImageLabel = when (entryQuery.hasImage) {
+                null -> "全部"
+                true -> "有图"
+                false -> "无图"
+            }
+            FilterChip(
+                selected = entryQuery.hasImage != null,
+                onClick = onToggleHasImage,
+                label = { Text(hasImageLabel, style = MaterialTheme.typography.labelSmall) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                )
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            TextButton(onClick = onClearFilters) {
+                Text("清除筛选", style = MaterialTheme.typography.labelSmall)
+            }
+        }
+    }
 }
