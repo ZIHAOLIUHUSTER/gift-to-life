@@ -40,38 +40,28 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateApiKey(key: String) {
-        viewModelScope.launch {
-            settingsDataStore.updateApiKey(key)
-            _uiState.update { it.copy(isSaved = true) }
-        }
+        settingsDataStore.updateApiKey(key)
+        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun updateBaseUrl(url: String) {
-        viewModelScope.launch {
-            settingsDataStore.updateBaseUrl(url)
-            _uiState.update { it.copy(isSaved = true) }
-        }
+        settingsDataStore.updateBaseUrl(url)
+        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun updateTagModel(model: String) {
-        viewModelScope.launch {
-            settingsDataStore.updateTagModel(model)
-            _uiState.update { it.copy(isSaved = true) }
-        }
+        settingsDataStore.updateTagModel(model)
+        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun updateSummaryModel(model: String) {
-        viewModelScope.launch {
-            settingsDataStore.updateSummaryModel(model)
-            _uiState.update { it.copy(isSaved = true) }
-        }
+        settingsDataStore.updateSummaryModel(model)
+        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun updateVisionModel(model: String) {
-        viewModelScope.launch {
-            settingsDataStore.updateVisionModel(model)
-            _uiState.update { it.copy(isSaved = true) }
-        }
+        settingsDataStore.updateVisionModel(model)
+        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun clearSavedFlag() {

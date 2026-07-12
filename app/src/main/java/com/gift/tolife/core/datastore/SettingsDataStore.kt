@@ -1,68 +1,66 @@
 package com.gift.tolife.core.datastore
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
-import androidx.datastore.preferences.preferencesDataStore
+import android.content.SharedPreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
-
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private object Keys {
-        val API_KEY = stringPreferencesKey("api_key")
-        val BASE_URL = stringPreferencesKey("base_url")
-        val TAG_MODEL = stringPreferencesKey("tag_model")
-        val SUMMARY_MODEL = stringPreferencesKey("summary_model")
-        val VISION_MODEL = stringPreferencesKey("vision_model")
-        val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
+    private val prefs: SharedPreferences =
+        context.getSharedPreferences("gift_settings", Context.MODE_PRIVATE)
+
+    private val _settings = MutableSharedFlow<AppSettings>(replay = 1)
+    val settings: SharedFlow<AppSettings> = _settings.asSharedFlow()
+
+    init {
+        _settings.tryEmit(readAll())
     }
 
-    val settings: Flow<AppSettings> = context.settingsDataStore.data.map { prefs ->
-        AppSettings(
-            apiKey = prefs[Keys.API_KEY] ?: "",
-            baseUrl = prefs[Keys.BASE_URL] ?: "https://api.deepseek.com",
-            tagModel = prefs[Keys.TAG_MODEL] ?: "deepseek-chat",
-            summaryModel = prefs[Keys.SUMMARY_MODEL] ?: "deepseek-chat",
-            visionModel = prefs[Keys.VISION_MODEL] ?: "deepseek-chat",
-            biometricEnabled = prefs[Keys.BIOMETRIC_ENABLED] ?: false
+    private fun readAll(): AppSettings {
+        return AppSettings(
+            apiKey = prefs.getString("api_key", "") ?: "",
+            baseUrl = prefs.getString("base_url", "https://api.deepseek.com") ?: "https://api.deepseek.com",
+            tagModel = prefs.getString("tag_model", "deepseek-chat") ?: "deepseek-chat",
+            summaryModel = prefs.getString("summary_model", "deepseek-chat") ?: "deepseek-chat",
+            visionModel = prefs.getString("vision_model", "deepseek-chat") ?: "deepseek-chat",
+            biometricEnabled = prefs.getBoolean("biometric_enabled", false)
         )
     }
 
-    suspend fun updateApiKey(key: String) {
-        context.settingsDataStore.edit { it[Keys.API_KEY] = key }
-        kotlinx.coroutines.delay(100)
+    fun updateApiKey(key: String) {
+        prefs.edit().putString("api_key", key).apply()
+        _settings.tryEmit(readAll())
     }
 
-    suspend fun updateBaseUrl(url: String) {
-        context.settingsDataStore.edit { it[Keys.BASE_URL] = url }
-        kotlinx.coroutines.delay(100)
+    fun updateBaseUrl(url: String) {
+        prefs.edit().putString("base_url", url).apply()
+        _settings.tryEmit(readAll())
     }
 
-    suspend fun updateTagModel(model: String) {
-        context.settingsDataStore.edit { it[Keys.TAG_MODEL] = model }
-        kotlinx.coroutines.delay(100)
+    fun updateTagModel(model: String) {
+        prefs.edit().putString("tag_model", model).apply()
+        _settings.tryEmit(readAll())
     }
 
-    suspend fun updateSummaryModel(model: String) {
-        context.settingsDataStore.edit { it[Keys.SUMMARY_MODEL] = model }
-        kotlinx.coroutines.delay(100)
+    fun updateSummaryModel(model: String) {
+        prefs.edit().putString("summary_model", model).apply()
+        _settings.tryEmit(readAll())
     }
 
-    suspend fun updateVisionModel(model: String) {
-        context.settingsDataStore.edit { it[Keys.VISION_MODEL] = model }
-        kotlinx.coroutines.delay(100)
+    fun updateVisionModel(model: String) {
+        prefs.edit().putString("vision_model", model).apply()
+        _settings.tryEmit(readAll())
     }
 
-    suspend fun updateBiometricEnabled(enabled: Boolean) {
-        context.settingsDataStore.edit { it[Keys.BIOMETRIC_ENABLED] = enabled }
-        kotlinx.coroutines.delay(100)
+    fun updateBiometricEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("biometric_enabled", enabled).apply()
+        _settings.tryEmit(readAll())
     }
 }
