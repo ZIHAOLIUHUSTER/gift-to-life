@@ -5,12 +5,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -22,6 +24,26 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 本地编辑状态（不在 ViewModel 中，避免每次键入都触发更新）
+    var apiKey by remember { mutableStateOf("") }
+    var baseUrl by remember { mutableStateOf("") }
+    var tagModel by remember { mutableStateOf("") }
+    var summaryModel by remember { mutableStateOf("") }
+    var visionModel by remember { mutableStateOf("") }
+    var initialized by remember { mutableStateOf(false) }
+
+    // 初始化：从 DataStore 加载到本地状态
+    LaunchedEffect(uiState.settings) {
+        if (!initialized) {
+            apiKey = uiState.settings.apiKey
+            baseUrl = uiState.settings.baseUrl
+            tagModel = uiState.settings.tagModel
+            summaryModel = uiState.settings.summaryModel
+            visionModel = uiState.settings.visionModel
+            initialized = true
+        }
+    }
 
     LaunchedEffect(uiState.isSaved) {
         if (uiState.isSaved) {
@@ -52,21 +74,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         ) {
             // AI 配置卡片
             SettingsCard(title = "AI 配置") {
-                var apiKey by remember(uiState.settings.apiKey) {
-                    mutableStateOf(uiState.settings.apiKey)
-                }
                 var showKey by remember { mutableStateOf(false) }
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
                     label = { Text("API Key") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                viewModel.updateApiKey(apiKey)
-                            }
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     visualTransformation = if (showKey) VisualTransformation.None
                         else PasswordVisualTransformation(),
@@ -83,84 +96,81 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                var baseUrl by remember(uiState.settings.baseUrl) {
-                    mutableStateOf(uiState.settings.baseUrl)
-                }
                 OutlinedTextField(
                     value = baseUrl,
                     onValueChange = { baseUrl = it },
                     label = { Text("API 地址") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                viewModel.updateBaseUrl(baseUrl)
-                            }
-                        },
+                    modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.updateApiKey(apiKey)
+                        viewModel.updateBaseUrl(baseUrl)
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("保存")
+                }
             }
 
             // 模型配置卡片
             SettingsCard(title = "模型") {
-                var localTagModel by remember(uiState.settings.tagModel) {
-                    mutableStateOf(uiState.settings.tagModel)
-                }
-                OutlinedTextField(
-                    value = localTagModel,
-                    onValueChange = { localTagModel = it },
-                    label = { Text("标签模型") },
-                    supportingText = { Text("轻量模型即可，仅需文本分类") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                viewModel.updateTagModel(localTagModel)
-                            }
-                        },
-                    singleLine = true
+                // 标签模型
+                ModelRow(
+                    value = tagModel,
+                    onValueChange = { tagModel = it },
+                    label = "标签模型",
+                    supportingText = "轻量模型即可，仅需文本分类",
+                    testing = uiState.testingTag,
+                    testResult = uiState.testResultTag,
+                    onTest = viewModel::testTagModel
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                var localSummaryModel by remember(uiState.settings.summaryModel) {
-                    mutableStateOf(uiState.settings.summaryModel)
-                }
-                OutlinedTextField(
-                    value = localSummaryModel,
-                    onValueChange = { localSummaryModel = it },
-                    label = { Text("总结模型") },
-                    supportingText = { Text("需要较强文本理解力，建议推理模型") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                viewModel.updateSummaryModel(localSummaryModel)
-                            }
-                        },
-                    singleLine = true
+                // 总结模型
+                ModelRow(
+                    value = summaryModel,
+                    onValueChange = { summaryModel = it },
+                    label = "总结模型",
+                    supportingText = "需要较强文本理解力，建议推理模型",
+                    testing = uiState.testingSummary,
+                    testResult = uiState.testResultSummary,
+                    onTest = viewModel::testSummaryModel
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                var localVisionModel by remember(uiState.settings.visionModel) {
-                    mutableStateOf(uiState.settings.visionModel)
-                }
-                OutlinedTextField(
-                    value = localVisionModel,
-                    onValueChange = { localVisionModel = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            if (!focusState.isFocused) {
-                                viewModel.updateVisionModel(localVisionModel)
-                            }
-                        },
-                    label = { Text("视觉模型") },
-                    supportingText = { Text("用于识别纯图片记录，生成文字描述后参与标签和总结") },
-                    singleLine = true
+                // 视觉模型
+                ModelRow(
+                    value = visionModel,
+                    onValueChange = { visionModel = it },
+                    label = "视觉模型",
+                    supportingText = "用于识别纯图片记录",
+                    testing = uiState.testingVision,
+                    testResult = uiState.testResultVision,
+                    onTest = viewModel::testVisionModel
                 )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.updateTagModel(tagModel)
+                        viewModel.updateSummaryModel(summaryModel)
+                        viewModel.updateVisionModel(visionModel)
+                    },
+                    modifier = Modifier.align(Alignment.End),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("保存")
+                }
             }
 
             // 安全卡片（占位）
@@ -169,6 +179,66 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     "更多安全设置将在后续版本中添加",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelRow(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    supportingText: String,
+    testing: Boolean,
+    testResult: String?,
+    onTest: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            supportingText = { Text(supportingText) },
+            modifier = Modifier.weight(1f),
+            singleLine = true
+        )
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            IconButton(
+                onClick = onTest,
+                enabled = !testing,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                if (testing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = "测试",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // 测试结果显示在按钮下方
+            if (testResult != null) {
+                val isSuccess = testResult.startsWith("✓")
+                Text(
+                    testResult,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSuccess) Color(0xFF4CAF50) else Color(0xFFE53935)
                 )
             }
         }

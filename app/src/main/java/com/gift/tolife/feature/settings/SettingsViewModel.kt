@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
+import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -11,12 +12,19 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val testingTag: Boolean = false,
+    val testingSummary: Boolean = false,
+    val testingVision: Boolean = false,
+    val testResultTag: String? = null,
+    val testResultSummary: String? = null,
+    val testResultVision: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsDataStore: SettingsDataStore
+    private val settingsDataStore: SettingsDataStore,
+    private val chatClient: AiClient
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -67,5 +75,47 @@ class SettingsViewModel @Inject constructor(
 
     fun clearSavedFlag() {
         _uiState.update { it.copy(isSaved = false) }
+    }
+
+    fun testTagModel() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(testingTag = true, testResultTag = null) }
+            val current = _uiState.value.settings
+            val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
+            _uiState.update {
+                it.copy(
+                    testingTag = false,
+                    testResultTag = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                )
+            }
+        }
+    }
+
+    fun testSummaryModel() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
+            val current = _uiState.value.settings
+            val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
+            _uiState.update {
+                it.copy(
+                    testingSummary = false,
+                    testResultSummary = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                )
+            }
+        }
+    }
+
+    fun testVisionModel() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(testingVision = true, testResultVision = null) }
+            val current = _uiState.value.settings
+            val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
+            _uiState.update {
+                it.copy(
+                    testingVision = false,
+                    testResultVision = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                )
+            }
+        }
     }
 }
