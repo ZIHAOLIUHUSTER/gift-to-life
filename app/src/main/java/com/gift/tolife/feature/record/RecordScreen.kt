@@ -1,5 +1,8 @@
 package com.gift.tolife.feature.record
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +21,23 @@ import androidx.hilt.navigation.compose.hiltViewModel
 fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var previewImagePath by remember { mutableStateOf<String?>(null) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let {
+            val editingId = uiState.editingImageEntryId
+            if (editingId != null) {
+                val entry = uiState.entries.find { it.id == editingId }
+                if (entry != null) {
+                    viewModel.replaceImage(entry, it)
+                }
+            } else {
+                viewModel.selectImage(it)
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -71,7 +91,12 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            EntryComposer(onSave = viewModel::save)
+            EntryComposer(
+                pendingImageUri = uiState.pendingImageUri,
+                onSave = viewModel::save,
+                onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onClearImage = viewModel::clearImage
+            )
 
             val displayEntries = if (uiState.searchQuery.isBlank()) {
                 uiState.entries
@@ -88,7 +113,8 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
                 items(displayEntries, key = { it.id }) { entry ->
                     EntryCard(
                         entry = entry,
-                        onClick = { viewModel.selectEntry(entry) }
+                        onClick = { viewModel.selectEntry(entry) },
+                        onImageClick = { previewImagePath = entry.imagePath }
                     )
                 }
             }
@@ -100,9 +126,23 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
                 entry = uiState.selectedEntry!!,
                 onSave = viewModel::update,
                 onDelete = viewModel::delete,
-                onDismiss = viewModel::clearSelection
+                onDismiss = viewModel::clearSelection,
+                onRemoveImage = viewModel::removeImage,
+                onReplaceImage = {
+                    viewModel.setEditingImage(uiState.selectedEntry!!.id)
+                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
+                onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath }
             )
         }
+    }
+
+    // 图片预览 Dialog
+    if (previewImagePath != null) {
+        ImagePreviewDialog(
+            imagePath = previewImagePath!!,
+            onDismiss = { previewImagePath = null }
+        )
     }
 }
 

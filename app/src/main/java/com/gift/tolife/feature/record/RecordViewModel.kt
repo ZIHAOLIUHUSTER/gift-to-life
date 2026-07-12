@@ -1,18 +1,22 @@
 package com.gift.tolife.feature.record
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class RecordViewModel @Inject constructor(
-    private val repository: EntryRepository
+    private val repository: EntryRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordUiState())
@@ -32,11 +36,46 @@ class RecordViewModel @Inject constructor(
     fun save(content: String) {
         if (content.isBlank()) return
         viewModelScope.launch {
+            val currentState = _uiState.value
+            val imagePath = currentState.pendingImageUri?.let { uri ->
+                ImageUtil.copyToPrivateDir(context, uri)
+            }
+
             val entry = Entry(
                 content = content.trim(),
+                imagePath = imagePath,
                 type = EntryType.NORMAL
             )
             repository.save(entry)
+            _uiState.update { it.copy(pendingImageUri = null) }
+        }
+    }
+
+    fun selectImage(uri: android.net.Uri) {
+        _uiState.update { it.copy(pendingImageUri = uri) }
+    }
+
+    fun clearImage() {
+        _uiState.update { it.copy(pendingImageUri = null) }
+    }
+
+    fun setEditingImage(entryId: Long?) {
+        _uiState.update { it.copy(editingImageEntryId = entryId) }
+    }
+
+    fun removeImage(entry: Entry) {
+        viewModelScope.launch {
+            repository.update(entry.copy(imagePath = null))
+        }
+    }
+
+    fun replaceImage(entry: Entry, uri: android.net.Uri) {
+        viewModelScope.launch {
+            val imagePath = ImageUtil.copyToPrivateDir(context, uri)
+            if (imagePath != null) {
+                repository.update(entry.copy(imagePath = imagePath))
+                _uiState.update { it.copy(editingImageEntryId = null) }
+            }
         }
     }
 
@@ -74,16 +113,5 @@ class RecordViewModel @Inject constructor(
 
     fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
-    }
-
-    fun getFilteredEntries(): List<Entry> {
-        val state = _uiState.value
-        return if (state.searchQuery.isBlank()) {
-            state.entries
-        } else {
-            state.entries.filter {
-                it.content.contains(state.searchQuery, ignoreCase = true)
-            }
-        }
     }
 }

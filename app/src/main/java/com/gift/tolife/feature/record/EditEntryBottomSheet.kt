@@ -6,8 +6,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.gift.tolife.core.model.Entry
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -17,7 +21,10 @@ fun EditEntryBottomSheet(
     entry: Entry,
     onSave: (Entry) -> Unit,
     onDelete: (Entry) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onRemoveImage: ((Entry) -> Unit)? = null,
+    onReplaceImage: (() -> Unit)? = null,
+    onImageClick: (() -> Unit)? = null
 ) {
     var editedContent by remember(entry.id) { mutableStateOf(entry.content) }
 
@@ -39,7 +46,41 @@ fun EditEntryBottomSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 已有图片显示
+            if (!entry.imagePath.isNullOrBlank()) {
+                AsyncImage(
+                    model = File(entry.imagePath),
+                    contentDescription = "记录图片",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(onClick = { onImageClick?.invoke() }) {
+                        Text("查看大图")
+                    }
+                    TextButton(onClick = { onRemoveImage?.invoke(entry) }) {
+                        Text("删除图片", color = MaterialTheme.colorScheme.error)
+                    }
+                    if (onReplaceImage != null) {
+                        TextButton(onClick = onReplaceImage) {
+                            Text("替换图片")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // 编辑区
             OutlinedTextField(
@@ -47,7 +88,7 @@ fun EditEntryBottomSheet(
                 onValueChange = { editedContent = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 300.dp),
+                    .heightIn(min = 100.dp, max = 300.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                     focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
