@@ -20,8 +20,7 @@ class AiClient @Inject constructor(
         return try {
             val settings = settingsDataStore.settings.first()
             if (settings.apiKey.isBlank()) return null
-
-            val service = createService(settings.baseUrl)
+            val service = createService(settings.baseUrl) ?: return null
             val request = ChatRequest(
                 model = model,
                 messages = listOf(
@@ -45,7 +44,7 @@ class AiClient @Inject constructor(
             if (settings.apiKey.isBlank()) return null
 
             val base64 = encodeImageToBase64(imagePath) ?: return null
-            val service = createService(settings.baseUrl)
+            val service = createService(settings.baseUrl) ?: return null
             val message = VisionMessage(
                 role = "user",
                 content = listOf(
@@ -81,20 +80,24 @@ class AiClient @Inject constructor(
         }
     }
 
-    private fun createService(baseUrl: String): OpenAiService {
-        val url = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.NONE
-            })
-            .build()
-        return Retrofit.Builder()
-            .baseUrl(url)
-            .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(OpenAiService::class.java)
+    private fun createService(baseUrl: String): OpenAiService? {
+        return try {
+            val url = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .addInterceptor(HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.NONE
+                })
+                .build()
+            Retrofit.Builder()
+                .baseUrl(url)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(OpenAiService::class.java)
+        } catch (e: Exception) {
+            null
+        }
     }
 }

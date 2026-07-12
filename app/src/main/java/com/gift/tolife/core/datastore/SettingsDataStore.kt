@@ -38,25 +38,31 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun updateApiKey(key: String) {
         context.settingsDataStore.edit { it[Keys.API_KEY] = key }
+        kotlinx.coroutines.delay(100)
     }
 
     suspend fun updateBaseUrl(url: String) {
         context.settingsDataStore.edit { it[Keys.BASE_URL] = url }
+        kotlinx.coroutines.delay(100)
     }
 
     suspend fun updateTagModel(model: String) {
         context.settingsDataStore.edit { it[Keys.TAG_MODEL] = model }
+        kotlinx.coroutines.delay(100)
     }
 
     suspend fun updateSummaryModel(model: String) {
         context.settingsDataStore.edit { it[Keys.SUMMARY_MODEL] = model }
+        kotlinx.coroutines.delay(100)
     }
 
     suspend fun updateVisionModel(model: String) {
         context.settingsDataStore.edit { it[Keys.VISION_MODEL] = model }
+        kotlinx.coroutines.delay(100)
     }
 
     suspend fun updateBiometricEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { it[Keys.BIOMETRIC_ENABLED] = enabled }
+        kotlinx.coroutines.delay(100)
     }
 }

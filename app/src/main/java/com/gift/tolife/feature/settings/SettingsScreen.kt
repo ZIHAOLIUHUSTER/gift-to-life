@@ -31,18 +31,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var tagModel by remember { mutableStateOf("") }
     var summaryModel by remember { mutableStateOf("") }
     var visionModel by remember { mutableStateOf("") }
-    var initialized by remember { mutableStateOf(false) }
-
-    // 初始化：从 DataStore 加载到本地状态
-    LaunchedEffect(uiState.settings) {
-        if (!initialized) {
-            apiKey = uiState.settings.apiKey
-            baseUrl = uiState.settings.baseUrl
-            tagModel = uiState.settings.tagModel
-            summaryModel = uiState.settings.summaryModel
-            visionModel = uiState.settings.visionModel
-            initialized = true
-        }
+    LaunchedEffect(Unit) {
+        apiKey = uiState.settings.apiKey
+        baseUrl = uiState.settings.baseUrl
+        tagModel = uiState.settings.tagModel
+        summaryModel = uiState.settings.summaryModel
+        visionModel = uiState.settings.visionModel
     }
 
     LaunchedEffect(uiState.isSaved) {
@@ -100,6 +94,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     value = baseUrl,
                     onValueChange = { baseUrl = it },
                     label = { Text("API 地址") },
+                    placeholder = { Text("https://api.deepseek.com") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)

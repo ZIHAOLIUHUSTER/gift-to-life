@@ -6,6 +6,7 @@ import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -78,43 +79,73 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun testTagModel() {
-        viewModelScope.launch {
+        if (_uiState.value.testingTag) return
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(testingTag = true, testResultTag = null) }
-            val current = _uiState.value.settings
-            val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
-            _uiState.update {
-                it.copy(
-                    testingTag = false,
-                    testResultTag = if (result != null) "✓ 连接成功" else "✗ 连接失败"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingTag = false,
+                        testResultTag = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        testingTag = false,
+                        testResultTag = "✗ 连接失败"
+                    )
+                }
             }
         }
     }
 
     fun testSummaryModel() {
-        viewModelScope.launch {
+        if (_uiState.value.testingSummary) return
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
-            val current = _uiState.value.settings
-            val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
-            _uiState.update {
-                it.copy(
-                    testingSummary = false,
-                    testResultSummary = if (result != null) "✓ 连接成功" else "✗ 连接失败"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingSummary = false,
+                        testResultSummary = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        testingSummary = false,
+                        testResultSummary = "✗ 连接失败"
+                    )
+                }
             }
         }
     }
 
     fun testVisionModel() {
-        viewModelScope.launch {
+        if (_uiState.value.testingVision) return
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.update { it.copy(testingVision = true, testResultVision = null) }
-            val current = _uiState.value.settings
-            val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
-            _uiState.update {
-                it.copy(
-                    testingVision = false,
-                    testResultVision = if (result != null) "✓ 连接成功" else "✗ 连接失败"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingVision = false,
+                        testResultVision = if (result != null) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        testingVision = false,
+                        testResultVision = "✗ 连接失败"
+                    )
+                }
             }
         }
     }
