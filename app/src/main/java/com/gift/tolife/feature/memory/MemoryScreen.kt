@@ -62,18 +62,12 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
                         RandomReviewCard(
                             entry = randomEntry,
                             tags = uiState.randomEntryTags,
-                            onRefresh = viewModel::fetchRandomEntry
+                            onRefresh = viewModel::fetchRandomEntry,
+                            isGenerating = uiState.isGeneratingSummary,
+                            onWeekSummary = viewModel::generateWeekSummary,
+                            onMonthSummary = viewModel::generateMonthSummary
                         )
                     }
-                }
-
-                // 总结操作区
-                item(key = "summary_actions") {
-                    SummaryActionsCard(
-                        isGenerating = uiState.isGeneratingSummary,
-                        onWeekSummary = viewModel::generateWeekSummary,
-                        onMonthSummary = viewModel::generateMonthSummary
-                    )
                 }
 
                 // 历史总结列表
@@ -99,7 +93,10 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
 private fun RandomReviewCard(
     entry: Entry,
     tags: List<TagType>,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    isGenerating: Boolean = false,
+    onWeekSummary: () -> Unit = {},
+    onMonthSummary: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -154,74 +151,40 @@ private fun RandomReviewCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            OutlinedButton(
-                onClick = onRefresh,
-                modifier = Modifier.align(Alignment.End),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text("再抽一条")
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryActionsCard(
-    isGenerating: Boolean,
-    onWeekSummary: () -> Unit,
-    onMonthSummary: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "生成总结",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
+            // 分割线 + 总结按钮
+            HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(
-                    onClick = onWeekSummary,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isGenerating,
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("本周总结")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onWeekSummary,
+                        enabled = !isGenerating,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text("本周", style = MaterialTheme.typography.labelSmall)
+                    }
+                    OutlinedButton(
+                        onClick = onMonthSummary,
+                        enabled = !isGenerating,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text("本月", style = MaterialTheme.typography.labelSmall)
                     }
                 }
 
-                Button(
-                    onClick = onMonthSummary,
-                    modifier = Modifier.weight(1f),
-                    enabled = !isGenerating,
-                    shape = MaterialTheme.shapes.medium,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                OutlinedButton(
+                    onClick = onRefresh,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("本月总结")
+                    Text("再抽一条", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
