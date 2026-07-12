@@ -1,29 +1,41 @@
 package com.gift.tolife.core.ai
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.network.AiClient
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
-import java.util.concurrent.TimeUnit
 
-@HiltWorker
-class TagWorker @AssistedInject constructor(
-    @Assisted context: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val repository: EntryRepository,
-    private val aiClient: AiClient,
-    private val settingsDataStore: SettingsDataStore
-) : CoroutineWorker(context, workerParams) {
+class TagWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface WorkerEntryPoint {
+        fun repository(): EntryRepository
+        fun aiClient(): AiClient
+        fun settingsDataStore(): SettingsDataStore
+    }
 
     override suspend fun doWork(): Result {
         val entryId = inputData.getLong("entry_id", -1)
         if (entryId == -1L) return Result.failure()
+
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            WorkerEntryPoint::class.java
+        )
+        val repository = entryPoint.repository()
+        val aiClient = entryPoint.aiClient()
+        val settingsDataStore = entryPoint.settingsDataStore()
 
         val entry = repository.getById(entryId) ?: return Result.failure()
         val settings = settingsDataStore.settings.first()
@@ -31,7 +43,6 @@ class TagWorker @AssistedInject constructor(
         if (settings.apiKey.isBlank()) return Result.failure()
 
         try {
-            // Step 1: 如果只有图片没有文字，先做视觉识别
             var content = entry.content
             if (content.isBlank() && !entry.imagePath.isNullOrBlank()) {
                 val description = aiClient.describeImage(settings.visionModel, entry.imagePath)
@@ -41,7 +52,6 @@ class TagWorker @AssistedInject constructor(
                 }
             }
 
-            // Step 2: 如果有内容（原文或视觉描述），打标签
             if (content.isNotBlank()) {
                 val response = aiClient.chat(
                     model = settings.tagModel,
