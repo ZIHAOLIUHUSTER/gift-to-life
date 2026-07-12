@@ -95,6 +95,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     onValueChange = { baseUrl = it },
                     label = { Text("API 地址") },
                     placeholder = { Text("https://api.deepseek.com") },
+                    supportingText = { Text("只需填基础地址，程序自动补全 /v1/chat/completions") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
