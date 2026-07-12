@@ -21,7 +21,10 @@ import com.gift.tolife.core.model.TagType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
+fun RecordScreen(
+    onNavigateToMemory: () -> Unit = {},
+    viewModel: RecordViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val editTags by viewModel.editTags.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -80,7 +83,7 @@ fun RecordScreen(viewModel: RecordViewModel = hiltViewModel()) {
         floatingActionButton = {
             if (uiState.entries.isNotEmpty()) {
                 FloatingActionButton(
-                    onClick = { /* 阶段 4: 随机回顾 */ },
+                    onClick = onNavigateToMemory,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = MaterialTheme.shapes.medium

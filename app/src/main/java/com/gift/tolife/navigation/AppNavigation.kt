@@ -69,7 +69,19 @@ fun AppNavigation() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Memory.route) { MemoryScreen() }
-            composable(Screen.Record.route) { RecordScreen() }
+            composable(Screen.Record.route) {
+                RecordScreen(
+                    onNavigateToMemory = {
+                        navController.navigate(Screen.Memory.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
             composable(Screen.Settings.route) { SettingsScreen() }
         }
     }
