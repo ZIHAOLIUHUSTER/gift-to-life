@@ -21,7 +21,8 @@ object SummaryPrompt {
         return entries.joinToString("\n\n") { entry ->
             val time = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
                 .format(java.util.Date(entry.createdAt))
-            "[$time] ${entry.content}"
+            val base = "[$time] ${entry.content}"
+            if (!entry.imageDescription.isNullOrBlank()) "$base\n[图片内容: ${entry.imageDescription}]" else base
         }
     }
 }

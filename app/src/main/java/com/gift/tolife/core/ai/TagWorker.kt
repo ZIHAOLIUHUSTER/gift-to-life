@@ -51,7 +51,7 @@ class TagWorker(
                 )
                 if (description != null) {
                     repository.update(entry.copy(imageDescription = description))
-                    content = description
+                    content = if (content.isNotBlank()) "$content\n[图片描述: $description]" else description
                 }
             }
 
