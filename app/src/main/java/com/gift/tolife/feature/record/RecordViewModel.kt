@@ -95,6 +95,7 @@ class RecordViewModel @Inject constructor(
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
             repository.update(entry.copy(imagePath = null))
+            TagWorker.enqueue(context, entry.id)
         }
     }
 
@@ -103,6 +104,7 @@ class RecordViewModel @Inject constructor(
             val imagePath = ImageUtil.copyToPrivateDir(context, uri)
             if (imagePath != null) {
                 repository.update(entry.copy(imagePath = imagePath))
+                TagWorker.enqueue(context, entry.id)
                 _uiState.update { it.copy(editingImageEntryId = null) }
             }
         }
