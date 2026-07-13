@@ -166,7 +166,7 @@ private fun RandomReviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 320.dp)
+            .height(420.dp)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -186,23 +186,11 @@ private fun RandomReviewCard(
 
             // 内容（带引号装饰）
             Text(
-                "「",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-            )
-
-            Text(
-                entry.content,
+                "「${entry.content}」",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 6,
                 overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                "」",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
