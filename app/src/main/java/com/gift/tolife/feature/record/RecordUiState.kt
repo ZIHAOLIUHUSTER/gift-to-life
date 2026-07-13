@@ -6,6 +6,7 @@ import com.gift.tolife.core.model.EntryQuery
 data class RecordUiState(
     val entries: List<Entry> = emptyList(),
     val pendingImageUri: android.net.Uri? = null,
+    val pendingContentText: String? = null,
     val isSearchMode: Boolean = false,
     val searchQuery: String = "",
     val selectedEntry: Entry? = null,

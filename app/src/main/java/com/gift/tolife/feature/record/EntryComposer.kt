@@ -20,9 +20,10 @@ fun EntryComposer(
     pendingImageUri: Uri?,
     onSave: (String) -> Unit,
     onPickImage: () -> Unit,
-    onClearImage: () -> Unit
+    onClearImage: () -> Unit,
+    initialText: String? = null
 ) {
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText ?: "") }
 
     Card(
         modifier = Modifier

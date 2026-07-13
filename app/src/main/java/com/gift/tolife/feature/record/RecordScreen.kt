@@ -119,7 +119,8 @@ fun RecordScreen(
                     pendingImageUri = uiState.pendingImageUri,
                     onSave = viewModel::save,
                     onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                    onClearImage = viewModel::clearImage
+                    onClearImage = viewModel::clearImage,
+                    initialText = uiState.pendingContentText
                 )
             }
 

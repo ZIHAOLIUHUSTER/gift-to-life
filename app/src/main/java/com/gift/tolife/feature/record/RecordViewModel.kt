@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.ai.TagWorker
 import com.gift.tolife.core.common.ImageUtil
+import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
@@ -42,6 +43,16 @@ class RecordViewModel @Inject constructor(
                     _uiState.update { it.copy(entries = entries, isLoading = false) }
                 }
         }
+        consumeSharedContent()
+    }
+
+    private fun consumeSharedContent() {
+        if (!ShareReceiver.hasPending()) return
+        val (text, imageUri) = ShareReceiver.consume()
+        _uiState.update { it.copy(
+            pendingContentText = text,
+            pendingImageUri = imageUri ?: it.pendingImageUri
+        ) }
     }
 
     fun save(content: String) {
@@ -59,7 +70,7 @@ class RecordViewModel @Inject constructor(
             )
             val entryId = repository.save(entry)
             TagWorker.enqueue(context, entryId)
-            _uiState.update { it.copy(pendingImageUri = null) }
+            _uiState.update { it.copy(pendingImageUri = null, pendingContentText = null) }
         }
     }
 
