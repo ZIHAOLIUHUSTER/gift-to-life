@@ -90,7 +90,12 @@ class RecordViewModel @Inject constructor(
 
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
-            repository.update(entry.copy(imagePath = null, imageDescription = null))
+            val updated = entry.copy(imagePath = null, imageDescription = null)
+            // 乐观更新本地列表，避免等待 Flow 重发
+            _uiState.update { state ->
+                state.copy(entries = state.entries.map { if (it.id == entry.id) updated else it })
+            }
+            repository.update(updated)
             TagWorker.enqueue(context, entry.id)
         }
     }
@@ -99,18 +104,31 @@ class RecordViewModel @Inject constructor(
         viewModelScope.launch {
             val imagePath = ImageUtil.copyToPrivateDir(context, uri)
             if (imagePath != null) {
-                repository.update(entry.copy(imagePath = imagePath))
+                val updated = entry.copy(imagePath = imagePath)
+                // 乐观更新本地列表，避免等待 Flow 重发
+                _uiState.update { state ->
+                    state.copy(
+                        entries = state.entries.map { if (it.id == entry.id) updated else it },
+                        editingImageEntryId = null
+                    )
+                }
+                repository.update(updated)
                 TagWorker.enqueue(context, entry.id)
-                _uiState.update { it.copy(editingImageEntryId = null) }
             }
         }
     }
 
     fun update(entry: Entry) {
         viewModelScope.launch {
+            // 乐观更新本地列表，避免等待 Flow 重发
+            _uiState.update { state ->
+                state.copy(
+                    entries = state.entries.map { if (it.id == entry.id) entry else it },
+                    selectedEntry = null
+                )
+            }
             repository.update(entry)
             TagWorker.enqueue(context, entry.id)
-            _uiState.update { it.copy(selectedEntry = null) }
         }
     }
 

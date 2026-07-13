@@ -136,7 +136,9 @@ private fun RandomReviewCard(
     onMonthSummary: () -> Unit = {}
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 280.dp),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)

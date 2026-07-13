@@ -123,7 +123,9 @@ fun EntryComposer(
         }
     }
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    LaunchedEffect(initialText) {
+        if (!initialText.isNullOrBlank()) {
+            focusRequester.requestFocus()
+        }
     }
 }
