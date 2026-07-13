@@ -40,7 +40,13 @@ class RecordViewModel @Inject constructor(
                     repository.getFilteredEntries(query)
                 }
                 .collect { entries ->
-                    _uiState.update { it.copy(entries = entries, isLoading = false) }
+                    // 加载所有条目的标签
+                    val tagsMap = mutableMapOf<Long, List<TagType>>()
+                    entries.forEach { entry ->
+                        val tags = repository.getTags(entry.id).map { it.tag }
+                        tagsMap[entry.id] = tags
+                    }
+                    _uiState.update { it.copy(entries = entries, entryTags = tagsMap, isLoading = false) }
                 }
         }
         consumeSharedContent()

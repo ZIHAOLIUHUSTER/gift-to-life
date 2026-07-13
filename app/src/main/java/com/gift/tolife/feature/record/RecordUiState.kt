@@ -2,6 +2,7 @@ package com.gift.tolife.feature.record
 
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
+import com.gift.tolife.core.model.TagType
 
 data class RecordUiState(
     val entries: List<Entry> = emptyList(),
@@ -10,6 +11,7 @@ data class RecordUiState(
     val isSearchMode: Boolean = false,
     val searchQuery: String = "",
     val selectedEntry: Entry? = null,
+    val entryTags: Map<Long, List<TagType>> = emptyMap(),
     val entryQuery: EntryQuery = EntryQuery(),
     val editingImageEntryId: Long? = null,
     val isLoading: Boolean = false

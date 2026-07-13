@@ -12,12 +12,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.TagType
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun EntryCard(entry: Entry, onClick: () -> Unit, onImageClick: () -> Unit = {}) {
+fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Unit, onImageClick: () -> Unit = {}) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -58,6 +59,26 @@ fun EntryCard(entry: Entry, onClick: () -> Unit, onImageClick: () -> Unit = {}) 
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // 标签
+                if (tags.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        tags.forEach { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                            ) {
+                                Text(
+                                    tag.label,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
 
                 Text(
                     text = formatTime(entry.createdAt),

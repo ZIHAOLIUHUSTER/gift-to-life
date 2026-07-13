@@ -131,7 +131,8 @@ fun RecordScreen(
                 items(uiState.entries, key = { it.id }) { entry ->
                     EntryCard(
                         entry = entry,
-                        onClick = { 
+                        tags = uiState.entryTags[entry.id] ?: emptyList(),
+                        onClick = {
                             viewModel.selectEntry(entry)
                             viewModel.loadTags(entry.id)
                         },
