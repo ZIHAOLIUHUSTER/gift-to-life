@@ -10,7 +10,8 @@
       "Bash(\"c:\\users\\lzh\\appdata\\local\\android\\sdk\\build-tools\\34.0.0\\apksigner.bat\" *)",
       "Bash(\"c:\\users\\lzh\\appdata\\local\\android\\sdk\\build-tools\\34.0.0\\aapt2.exe\" *)",
       "Bash(mkdir *)",
-      "Bash(del *)"
+      "Bash(del *)",
+      "Agent(general-purpose)"
     ]
   },
   "$version": 4

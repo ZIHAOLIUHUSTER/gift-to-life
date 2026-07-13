@@ -69,7 +69,7 @@ class AiClient @Inject constructor(
             )
             val msg = response.choices?.firstOrNull()?.message
             msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             null
         }
     }
@@ -100,7 +100,7 @@ class AiClient @Inject constructor(
             )
             val msg = response.choices?.firstOrNull()?.message
             msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             null
         }
     }
@@ -111,7 +111,7 @@ class AiClient @Inject constructor(
             if (!file.exists()) return null
             val bytes = file.readBytes()
             android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-        } catch (e: Exception) {
+        } catch (t: Throwable) {
             null
         }
     }
