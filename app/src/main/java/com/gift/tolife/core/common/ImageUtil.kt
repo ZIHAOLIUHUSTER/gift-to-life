@@ -1,26 +1,48 @@
+@file:Suppress("DEPRECATION")
 package com.gift.tolife.core.common
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import java.io.File
 import java.util.UUID
 
 object ImageUtil {
+    private const val MAX_DIMENSION = 1920
+    private const val WEBP_QUALITY = 85
+
     suspend fun copyToPrivateDir(context: Context, sourceUri: Uri): String? {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 val imagesDir = File(context.filesDir, "images")
                 if (!imagesDir.exists()) imagesDir.mkdirs()
 
-                val extension = getExtension(context, sourceUri)
-                val fileName = "${UUID.randomUUID()}.$extension"
+                val fileName = "${UUID.randomUUID()}.webp"
                 val destFile = File(imagesDir, fileName)
 
-                context.contentResolver.openInputStream(sourceUri)?.use { input ->
-                    destFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
                 }
+                context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                    BitmapFactory.decodeStream(input, null, options)
+                }
+
+                val sampleSize = calculateSampleSize(
+                    options.outWidth, options.outHeight, MAX_DIMENSION
+                )
+
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                }
+                val bitmap = context.contentResolver.openInputStream(sourceUri)?.use { input ->
+                    BitmapFactory.decodeStream(input, null, decodeOptions)
+                } ?: return@withContext null
+
+                destFile.outputStream().use { output ->
+                    bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, output)
+                }
+                bitmap.recycle()
 
                 destFile.absolutePath
             } catch (e: Exception) {
@@ -29,13 +51,12 @@ object ImageUtil {
         }
     }
 
-    private fun getExtension(context: Context, uri: Uri): String {
-        val mimeType = context.contentResolver.getType(uri)
-        return when {
-            mimeType?.contains("png") == true -> "png"
-            mimeType?.contains("webp") == true -> "webp"
-            mimeType?.contains("gif") == true -> "gif"
-            else -> "jpg"
+    private fun calculateSampleSize(width: Int, height: Int, maxDimension: Int): Int {
+        var sampleSize = 1
+        val maxSide = maxOf(width, height)
+        while (maxSide / sampleSize > maxDimension) {
+            sampleSize *= 2
         }
+        return sampleSize
     }
 }
