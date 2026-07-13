@@ -51,7 +51,7 @@ class AiClient @Inject constructor(
         return url
     }
 
-    suspend fun chat(model: String, systemPrompt: String, userMessage: String): String? {
+    suspend fun chat(model: String, systemPrompt: String, userMessage: String, disableThinking: Boolean = false): String? {
         return try {
             val settings = settingsDataStore.settings.first()
             if (settings.apiKey.isBlank()) return null
@@ -61,7 +61,8 @@ class AiClient @Inject constructor(
                 messages = listOf(
                     Message(role = "system", content = systemPrompt),
                     Message(role = "user", content = userMessage)
-                )
+                ),
+                enable_thinking = if (disableThinking) false else null
             )
             val response = service.chatCompletion(
                 authorization = "Bearer ${settings.apiKey}",
@@ -74,7 +75,7 @@ class AiClient @Inject constructor(
         }
     }
 
-    suspend fun describeImage(model: String, imagePath: String): String? {
+    suspend fun describeImage(model: String, imagePath: String, disableThinking: Boolean = false): String? {
         return try {
             val settings = settingsDataStore.settings.first()
             if (settings.apiKey.isBlank()) return null
@@ -92,7 +93,8 @@ class AiClient @Inject constructor(
             )
             val request = VisionChatRequest(
                 model = model,
-                messages = listOf(message)
+                messages = listOf(message),
+                enable_thinking = if (disableThinking) false else null
             )
             val response = service.chatCompletionVision(
                 authorization = "Bearer ${settings.apiKey}",

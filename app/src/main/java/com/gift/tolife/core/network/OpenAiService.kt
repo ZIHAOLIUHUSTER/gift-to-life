@@ -25,5 +25,6 @@ data class VisionChatRequest(
     val model: String,
     val messages: List<VisionMessage>,
     val temperature: Double = 0.3,
-    val max_tokens: Int = 100
+    val max_tokens: Int = 300,
+    val enable_thinking: Boolean? = null
 )

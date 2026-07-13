@@ -4,7 +4,8 @@ data class ChatRequest(
     val model: String,
     val messages: List<Message>,
     val temperature: Double = 0.3,
-    val max_tokens: Int = 300
+    val max_tokens: Int = 1024,
+    val enable_thinking: Boolean? = null  // DeepSeek/SiliconFlow 思考模式开关
 )
 
 data class Message(

@@ -45,7 +45,10 @@ class TagWorker(
         try {
             var content = entry.content
             if (content.isBlank() && !entry.imagePath.isNullOrBlank()) {
-                val description = aiClient.describeImage(settings.visionModel, entry.imagePath)
+                val description = aiClient.describeImage(
+                    settings.visionModel, entry.imagePath,
+                    disableThinking = true
+                )
                 if (description != null) {
                     repository.update(entry.copy(imageDescription = description))
                     content = description
@@ -56,7 +59,8 @@ class TagWorker(
                 val response = aiClient.chat(
                     model = settings.tagModel,
                     systemPrompt = TagPrompt.SYSTEM,
-                    userMessage = TagPrompt.userPrompt(content)
+                    userMessage = TagPrompt.userPrompt(content),
+                    disableThinking = true
                 )
                 if (response != null) {
                     val tags = parseTags(response)
