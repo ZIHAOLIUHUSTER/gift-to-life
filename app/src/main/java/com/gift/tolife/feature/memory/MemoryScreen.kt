@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -164,7 +166,7 @@ private fun RandomReviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(400.dp)
+            .heightIn(min = 320.dp)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -173,23 +175,37 @@ private fun RandomReviewCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(28.dp)) {
+            // 标题
             Text(
                 "随机回顾",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 内容（带引号装饰）
+            Text(
+                "「",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            )
 
             Text(
                 entry.content,
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 5,
+                maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "」",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 图片
             if (!entry.imagePath.isNullOrBlank()) {
@@ -198,75 +214,83 @@ private fun RandomReviewCard(
                     contentDescription = "回顾图片",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 240.dp)
+                        .heightIn(max = 180.dp)
                         .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 标签
-            if (tags.isNotEmpty()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tags.forEach { tag ->
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        ) {
-                            Text(
-                                tag.label,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+            // 标签 + 时间（居中）
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (tags.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        tags.forEach { tag ->
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    tag.label,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.width(12.dp))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    formatTime(entry.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            Text(
-                formatTime(entry.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 分割线 + 总结按钮
+            // 分割线
             HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
             Spacer(modifier = Modifier.height(12.dp))
 
+            // 按钮行（小按钮，右对齐）
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(
                         onClick = onWeekSummary,
-                        enabled = !isGenerating,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        shape = MaterialTheme.shapes.medium
+                        enabled = !isGenerating
                     ) {
-                        Text("本周", style = MaterialTheme.typography.labelSmall)
+                        Text("本周", style = MaterialTheme.typography.bodySmall)
                     }
-                    OutlinedButton(
+                    TextButton(
                         onClick = onMonthSummary,
-                        enabled = !isGenerating,
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        shape = MaterialTheme.shapes.medium
+                        enabled = !isGenerating
                     ) {
-                        Text("本月", style = MaterialTheme.typography.labelSmall)
+                        Text("本月", style = MaterialTheme.typography.bodySmall)
                     }
                 }
 
-                OutlinedButton(
+                TextButton(
                     onClick = onRefresh,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    shape = MaterialTheme.shapes.medium
+                    enabled = !isGenerating
                 ) {
-                    Text("再抽一条", style = MaterialTheme.typography.labelSmall)
+                    Icon(
+                        Icons.Filled.Refresh,
+                        contentDescription = "再抽一条",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("再抽一条", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
