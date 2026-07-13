@@ -94,7 +94,7 @@ class RecordViewModel @Inject constructor(
 
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
-            repository.update(entry.copy(imagePath = null))
+            repository.update(entry.copy(imagePath = null, imageDescription = null))
             TagWorker.enqueue(context, entry.id)
         }
     }

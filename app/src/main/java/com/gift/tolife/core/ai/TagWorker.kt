@@ -44,7 +44,7 @@ class TagWorker(
 
         try {
             var content = entry.content
-            if (content.isBlank() && !entry.imagePath.isNullOrBlank()) {
+            if (!entry.imagePath.isNullOrBlank()) {
                 val description = aiClient.describeImage(
                     settings.visionModel, entry.imagePath,
                     disableThinking = true
