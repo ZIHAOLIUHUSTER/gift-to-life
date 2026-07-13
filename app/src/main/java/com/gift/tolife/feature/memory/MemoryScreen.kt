@@ -3,17 +3,22 @@ package com.gift.tolife.feature.memory
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.feature.memory.MemoryEvent
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -119,7 +124,7 @@ private fun RandomReviewCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(24.dp)) {
             Text(
                 "随机回顾",
                 style = MaterialTheme.typography.labelSmall,
@@ -130,11 +135,25 @@ private fun RandomReviewCard(
 
             Text(
                 entry.content,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // 图片
+            if (!entry.imagePath.isNullOrBlank()) {
+                AsyncImage(
+                    model = File(entry.imagePath),
+                    contentDescription = "回顾图片",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 240.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             // 标签
             if (tags.isNotEmpty()) {

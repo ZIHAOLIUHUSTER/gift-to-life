@@ -3,6 +3,7 @@ package com.gift.tolife.feature.record
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
@@ -11,7 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
@@ -23,6 +28,7 @@ fun EntryComposer(
     onClearImage: () -> Unit,
     initialText: String? = null
 ) {
+    val focusRequester = remember { FocusRequester() }
     var text by remember { mutableStateOf(initialText ?: "") }
 
     Card(
@@ -41,7 +47,8 @@ fun EntryComposer(
                 onValueChange = { text = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 80.dp, max = 200.dp),
+                    .heightIn(min = 80.dp, max = 200.dp)
+                    .focusRequester(focusRequester),
                 placeholder = {
                     Text(
                         "此刻的想法...",
@@ -114,5 +121,9 @@ fun EntryComposer(
                 }
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
     }
 }

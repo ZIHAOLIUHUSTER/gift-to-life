@@ -111,6 +111,7 @@ class RecordViewModel @Inject constructor(
     fun update(entry: Entry) {
         viewModelScope.launch {
             repository.update(entry)
+            TagWorker.enqueue(context, entry.id)
             _uiState.update { it.copy(selectedEntry = null) }
         }
     }
