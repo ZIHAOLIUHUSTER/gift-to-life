@@ -1,5 +1,6 @@
 package com.gift.tolife.feature.memory
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +20,7 @@ import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.feature.memory.MemoryEvent
+import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -28,6 +30,8 @@ import java.util.*
 fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var previewEntry by remember { mutableStateOf<Entry?>(null) }
+    var previewImagePath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -103,7 +107,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
                             onRefresh = viewModel::fetchRandomEntry,
                             isGenerating = uiState.isGeneratingSummary,
                             onWeekSummary = viewModel::generateWeekSummary,
-                            onMonthSummary = viewModel::generateMonthSummary
+                            onMonthSummary = viewModel::generateMonthSummary,
+                            onClick = { previewEntry = randomEntry }
                         )
                     }
                 }
@@ -125,6 +130,25 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
             }
         }
     }
+
+    // 预览弹层
+    if (previewEntry != null) {
+        EntryPreviewSheet(
+            entry = previewEntry!!,
+            tags = uiState.randomEntryTags,
+            onEdit = { previewEntry = null },
+            onDismiss = { previewEntry = null },
+            onImageClick = { previewImagePath = previewEntry!!.imagePath }
+        )
+    }
+
+    // 图片预览 Dialog
+    if (previewImagePath != null) {
+        com.gift.tolife.feature.record.ImagePreviewDialog(
+            imagePath = previewImagePath!!,
+            onDismiss = { previewImagePath = null }
+        )
+    }
 }
 
 @Composable
@@ -134,12 +158,14 @@ private fun RandomReviewCard(
     onRefresh: () -> Unit,
     isGenerating: Boolean = false,
     onWeekSummary: () -> Unit = {},
-    onMonthSummary: () -> Unit = {}
+    onMonthSummary: () -> Unit = {},
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(400.dp),
+            .height(400.dp)
+            .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)

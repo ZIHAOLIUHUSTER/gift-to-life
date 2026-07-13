@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
 
@@ -29,6 +30,7 @@ fun RecordScreen(
     val editTags by viewModel.editTags.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
+    var previewEntry by remember { mutableStateOf<Pair<Entry, List<TagType>>?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -133,13 +135,28 @@ fun RecordScreen(
                         entry = entry,
                         tags = uiState.entryTags[entry.id] ?: emptyList(),
                         onClick = {
-                            viewModel.selectEntry(entry)
-                            viewModel.loadTags(entry.id)
+                            previewEntry = entry to (uiState.entryTags[entry.id] ?: emptyList())
                         },
                         onImageClick = { previewImagePath = entry.imagePath }
                     )
                 }
             }
+        }
+
+        // 预览弹层
+        if (previewEntry != null) {
+            val (pEntry, pTags) = previewEntry!!
+            EntryPreviewSheet(
+                entry = pEntry,
+                tags = pTags,
+                onEdit = {
+                    viewModel.selectEntry(pEntry)
+                    viewModel.loadTags(pEntry.id)
+                    previewEntry = null
+                },
+                onDismiss = { previewEntry = null },
+                onImageClick = { previewImagePath = pEntry.imagePath }
+            )
         }
 
         // Edit bottom sheet

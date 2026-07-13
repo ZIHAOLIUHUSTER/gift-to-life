@@ -54,7 +54,7 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                     text = entry.content,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
+                    maxLines = 5,
                     overflow = TextOverflow.Ellipsis
                 )
 
