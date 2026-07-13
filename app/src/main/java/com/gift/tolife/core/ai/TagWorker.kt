@@ -66,6 +66,8 @@ class TagWorker(
                     val tags = parseTags(response)
                     if (tags.isNotEmpty()) {
                         repository.setTags(entryId, tags)
+                        // 更新 updatedAt 以触发 UI 刷新
+                        repository.update(entry.copy(updatedAt = System.currentTimeMillis()))
                     }
                 }
             }

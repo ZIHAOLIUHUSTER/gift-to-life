@@ -20,4 +20,7 @@ interface EntryTagDao {
 
     @Query("SELECT DISTINCT entryId FROM entry_tags WHERE tag IN (:tags)")
     suspend fun getEntryIdsByTags(tags: List<TagType>): List<Long>
+
+    @Query("SELECT * FROM entry_tags WHERE entryId IN (:entryIds)")
+    suspend fun getByEntryIds(entryIds: List<Long>): List<EntryTag>
 }

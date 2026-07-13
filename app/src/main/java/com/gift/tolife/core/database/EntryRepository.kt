@@ -90,4 +90,11 @@ class EntryRepository @Inject constructor(
         // Will be expanded in phase 3 for filtering
         return emptyList()
     }
+
+    suspend fun getTagsBatch(entryIds: List<Long>): Map<Long, List<TagType>> {
+        if (entryIds.isEmpty()) return emptyMap()
+        return entryTagDao.getByEntryIds(entryIds)
+            .groupBy { it.entryId }
+            .mapValues { (_, tags) -> tags.map { it.tag } }
+    }
 }
