@@ -71,12 +71,22 @@ class SettingsViewModel @Inject constructor(
         if (_uiState.value.testingTag) return
         _uiState.update { it.copy(testingTag = true, testResultTag = null) }
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _uiState.update {
-                it.copy(
-                    testingTag = false,
-                    testResultTag = "✓ 连接成功（模拟）"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingTag = false,
+                        testResultTag = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        testingTag = false,
+                        testResultTag = "✗ ${t.message ?: "连接失败"}"
+                    )
+                }
             }
         }
     }
@@ -85,12 +95,22 @@ class SettingsViewModel @Inject constructor(
         if (_uiState.value.testingSummary) return
         _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _uiState.update {
-                it.copy(
-                    testingSummary = false,
-                    testResultSummary = "✓ 连接成功（模拟）"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingSummary = false,
+                        testResultSummary = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        testingSummary = false,
+                        testResultSummary = "✗ ${t.message ?: "连接失败"}"
+                    )
+                }
             }
         }
     }
@@ -99,12 +119,22 @@ class SettingsViewModel @Inject constructor(
         if (_uiState.value.testingVision) return
         _uiState.update { it.copy(testingVision = true, testResultVision = null) }
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _uiState.update {
-                it.copy(
-                    testingVision = false,
-                    testResultVision = "✓ 连接成功（模拟）"
-                )
+            try {
+                val current = _uiState.value.settings
+                val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
+                _uiState.update {
+                    it.copy(
+                        testingVision = false,
+                        testResultVision = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
+                    )
+                }
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        testingVision = false,
+                        testResultVision = "✗ ${t.message ?: "连接失败"}"
+                    )
+                }
             }
         }
     }
