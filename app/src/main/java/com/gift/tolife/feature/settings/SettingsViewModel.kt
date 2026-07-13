@@ -1,9 +1,11 @@
 package com.gift.tolife.feature.settings
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
+import com.gift.tolife.core.export.ExportImportManager
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -24,7 +26,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val chatClient: AiClient
+    private val chatClient: AiClient,
+    private val exportManager: ExportImportManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -65,6 +68,31 @@ class SettingsViewModel @Inject constructor(
 
     fun clearSavedFlag() {
         _uiState.update { it.copy(isSaved = false) }
+    }
+
+    private val _events = MutableSharedFlow<SettingsEvent>()
+    val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
+
+    fun exportData(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val count = exportManager.exportToUri(uri)
+                _events.emit(SettingsEvent.ShowMessage("已导出 $count 条记录"))
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: "未知错误"}"))
+            }
+        }
+    }
+
+    fun importData(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val count = exportManager.importFromUri(uri)
+                _events.emit(SettingsEvent.ShowMessage("已导入 $count 条记录"))
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
+            }
+        }
     }
 
     fun testTagModel() {
@@ -138,4 +166,8 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+}
+
+sealed class SettingsEvent {
+    data class ShowMessage(val message: String) : SettingsEvent()
 }

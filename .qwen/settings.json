@@ -14,5 +14,13 @@
       "Agent(general-purpose)"
     ]
   },
-  "$version": 4
+  "$version": 4,
+  "skills": {
+    "disabled": [
+      "stage-review"
+    ]
+  },
+  "memory": {
+    "enableAutoSkill": false
+  }
 }
