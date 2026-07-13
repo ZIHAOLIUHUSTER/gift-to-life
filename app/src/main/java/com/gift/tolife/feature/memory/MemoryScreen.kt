@@ -209,6 +209,9 @@ private fun RandomReviewCard(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            // 弹性空间，把下方内容推到底部
+            Spacer(modifier = Modifier.weight(1f))
+
             // 标签 + 时间（居中）
             Row(
                 modifier = Modifier.fillMaxWidth(),
