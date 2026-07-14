@@ -177,6 +177,10 @@ fun RecordScreen(
                     viewModel.setEditingImage(uiState.selectedEntry!!.id)
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
+                onAddImage = {
+                    viewModel.setEditingImage(uiState.selectedEntry!!.id)
+                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                },
                 onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath },
                 currentTags = editTags,
                 onTagsChanged = { viewModel.setEditTags(it) }

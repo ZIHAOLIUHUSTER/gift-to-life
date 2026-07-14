@@ -24,6 +24,7 @@ fun EditEntryBottomSheet(
     onDismiss: () -> Unit,
     onRemoveImage: ((Entry) -> Unit)? = null,
     onReplaceImage: (() -> Unit)? = null,
+    onAddImage: (() -> Unit)? = null,
     onImageClick: (() -> Unit)? = null,
     currentTags: List<TagType> = emptyList(),
     onTagsChanged: ((List<TagType>) -> Unit)? = null,
@@ -105,6 +106,11 @@ fun EditEntryBottomSheet(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(8.dp))
+            } else if (onAddImage != null) {
+                TextButton(onClick = onAddImage) {
+                    Text("＋ 添加图片")
+                }
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
