@@ -41,4 +41,32 @@ interface EntryDao {
 
     @Query("DELETE FROM entries WHERE isDeleted = 1")
     suspend fun permanentlyDeleteAllDeleted()
+
+    @Query("""
+        UPDATE entries
+        SET content = :content,
+            imagePath = :imagePath,
+            imageDescription = NULL,
+            updatedAt = :updatedAt,
+            entryRevision = entryRevision + 1
+        WHERE id = :id AND isDeleted = 0
+    """)
+    suspend fun updateUserContent(id: Long, content: String, imagePath: String?, updatedAt: Long): Int
+
+    @Query("UPDATE entries SET isDeleted = 1 WHERE id = :id AND isDeleted = 0")
+    suspend fun softDeleteActive(id: Long): Int
+
+    @Query("UPDATE entries SET isDeleted = 0 WHERE id = :id AND isDeleted = 1")
+    suspend fun restoreDeleted(id: Long): Int
+
+    @Query("DELETE FROM entries WHERE id = :id AND isDeleted = 1")
+    suspend fun permanentlyDeleteOne(id: Long): Int
+
+    @Query("""
+        UPDATE entries
+        SET entryRevision = entryRevision + 1,
+            updatedAt = :updatedAt
+        WHERE id = :id AND isDeleted = 0
+    """)
+    suspend fun bumpEntryRevision(id: Long, updatedAt: Long): Int
 }

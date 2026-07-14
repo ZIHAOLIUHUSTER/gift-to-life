@@ -15,7 +15,8 @@ import javax.inject.Singleton
 @Singleton
 class EntryRepository @Inject constructor(
     private val entryDao: EntryDao,
-    private val entryTagDao: EntryTagDao
+    private val entryTagDao: EntryTagDao,
+    private val entryTransactions: EntryTransactions
 ) {
     fun getAllEntries(): Flow<List<Entry>> = entryDao.getAllOrderByCreatedAtDesc()
 
@@ -76,17 +77,16 @@ class EntryRepository @Inject constructor(
         entryDao.delete(entry)
     }
 
-    suspend fun softDelete(entryId: Long) {
-        entryTagDao.deleteByEntryId(entryId)
-        entryDao.softDelete(entryId)
+    suspend fun softDelete(entryId: Long): Boolean {
+        return entryTransactions.softDelete(entryId)
     }
 
     suspend fun getDeletedEntries(): List<Entry> {
         return entryDao.getDeletedEntries()
     }
 
-    suspend fun restoreEntry(id: Long) {
-        entryDao.restore(id)
+    suspend fun restoreEntry(id: Long): Boolean {
+        return entryTransactions.restore(id)
     }
 
     suspend fun permanentlyDeleteAllDeleted() {

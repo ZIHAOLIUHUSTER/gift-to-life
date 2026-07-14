@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.gift.tolife.core.database.AppDatabase
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.EntryTransactions
 import com.gift.tolife.core.database.Migrations
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
@@ -39,7 +40,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideEntryRepository(entryDao: EntryDao, entryTagDao: EntryTagDao): EntryRepository {
-        return EntryRepository(entryDao, entryTagDao)
+    fun provideEntryRepository(
+        entryDao: EntryDao,
+        entryTagDao: EntryTagDao,
+        entryTransactions: EntryTransactions
+    ): EntryRepository {
+        return EntryRepository(entryDao, entryTagDao, entryTransactions)
     }
 }

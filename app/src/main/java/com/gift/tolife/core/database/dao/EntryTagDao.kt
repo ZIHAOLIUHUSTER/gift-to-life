@@ -23,4 +23,7 @@ interface EntryTagDao {
 
     @Query("SELECT * FROM entry_tags WHERE entryId IN (:entryIds)")
     suspend fun getByEntryIds(entryIds: List<Long>): List<EntryTag>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(tags: List<EntryTag>)
 }
