@@ -3,6 +3,8 @@ package com.gift.tolife.feature.memory
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -175,7 +177,7 @@ private fun RandomReviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(520.dp)
+            .heightIn(min = 320.dp)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
@@ -193,33 +195,39 @@ private fun RandomReviewCard(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // 内容（带引号装饰）
-            Text(
-                "「${entry.content}」",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 图片
-            if (!entry.imagePath.isNullOrBlank()) {
-                AsyncImage(
-                    model = File(entry.imagePath),
-                    contentDescription = "回顾图片",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 180.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
+            // 可滚动内容区（文字 + 图片），限制最大高度保证按钮可见
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 500.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // 内容（带引号装饰）
+                Text(
+                    "「${entry.content}」",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // 图片
+                if (!entry.imagePath.isNullOrBlank()) {
+                    AsyncImage(
+                        model = File(entry.imagePath),
+                        contentDescription = "回顾图片",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .heightIn(max = 180.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
-            // 弹性空间，把下方内容推到底部
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 标签 + 时间（居中）
             Row(

@@ -2,6 +2,7 @@ package com.gift.tolife.feature.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -52,31 +54,55 @@ private fun SettingsMainPage(onNavigate: (SettingsPage) -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SettingsButton("模型配置", onClick = { onNavigate(SettingsPage.MODEL_CONFIG) })
-            SettingsButton("数据管理", onClick = { onNavigate(SettingsPage.DATA_MANAGE) })
-            SettingsButton("回收站", onClick = { onNavigate(SettingsPage.RECYCLE_BIN) })
+            item {
+                SettingsSectionCard(
+                    title = "模型配置",
+                    description = "API Key、模型选择与连通性测试",
+                    painter = painterResource(R.drawable.ic_settings),
+                    onClick = { onNavigate(SettingsPage.MODEL_CONFIG) }
+                )
+            }
+            item {
+                SettingsSectionCard(
+                    title = "数据管理",
+                    description = "备份恢复、导入导出",
+                    painter = painterResource(R.drawable.ic_edit_note),
+                    onClick = { onNavigate(SettingsPage.DATA_MANAGE) }
+                )
+            }
+            item {
+                SettingsSectionCard(
+                    title = "回收站",
+                    description = "恢复或彻底删除已移除的记录",
+                    painter = painterResource(R.drawable.ic_refresh),
+                    onClick = { onNavigate(SettingsPage.RECYCLE_BIN) }
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SettingsButton(text: String, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 48.dp, vertical = 8.dp)
-            .height(52.dp),
-        shape = RoundedCornerShape(12.dp)
+private fun SettingsSectionCard(title: String, description: String, painter: Painter, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(painter = painter, contentDescription = null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

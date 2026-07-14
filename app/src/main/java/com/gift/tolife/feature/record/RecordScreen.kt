@@ -3,6 +3,8 @@ package com.gift.tolife.feature.record
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -245,6 +247,7 @@ private fun SearchTopBar(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterBar(
     entryQuery: EntryQuery,
@@ -260,9 +263,10 @@ private fun FilterBar(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         // 标签筛选行
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             tagTypes.forEach { tag ->
                 val selected = tag in entryQuery.selectedTags
