@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.ai.TagWorkScheduler
+import com.gift.tolife.core.common.ImageStore
 import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.database.EntryRepository
@@ -25,7 +26,8 @@ class RecordViewModel @Inject constructor(
     private val repository: EntryRepository,
     private val entryTransactions: EntryTransactions,
     @ApplicationContext private val context: Context,
-    private val tagScheduler: TagWorkScheduler
+    private val tagScheduler: TagWorkScheduler,
+    private val imageStore: ImageStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordUiState())
@@ -93,6 +95,7 @@ class RecordViewModel @Inject constructor(
 
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
+            val oldPath = entry.imagePath
             val updated = entry.copy(imagePath = null, imageDescription = null)
             // 乐观更新本地列表，避免等待 Flow 重发
             _uiState.update { state ->
@@ -101,6 +104,9 @@ class RecordViewModel @Inject constructor(
                     selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry
                 )
             }
+            // 删除旧图片文件
+            imageStore.delete(oldPath)
+
             val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, null)
             tagScheduler.enqueue(entry.id, newRevision)
         }
@@ -108,6 +114,7 @@ class RecordViewModel @Inject constructor(
 
     fun replaceImage(entry: Entry, uri: android.net.Uri) {
         viewModelScope.launch {
+            val oldPath = entry.imagePath
             val imagePath = ImageUtil.copyToPrivateDir(context, uri)
             if (imagePath != null) {
                 val updated = entry.copy(imagePath = imagePath)
@@ -119,6 +126,9 @@ class RecordViewModel @Inject constructor(
                         editingImageEntryId = null
                     )
                 }
+                // 删除旧图片文件
+                imageStore.delete(oldPath)
+
                 val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, imagePath)
                 tagScheduler.enqueue(entry.id, newRevision)
             }

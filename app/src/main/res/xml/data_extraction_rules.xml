@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/app_name">
+    <cloud-backup>
+        <exclude domain="sharedpref" path="gift_settings.xml"/>
+        <exclude domain="root" path="files/"/>
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="gift_settings.xml"/>
+        <exclude domain="root" path="files/"/>
+    </device-transfer>
+</data-extraction-rules>

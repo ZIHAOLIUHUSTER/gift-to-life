@@ -3,6 +3,7 @@ package com.gift.tolife.core.database.di
 import android.content.Context
 import androidx.room.Room
 import com.gift.tolife.core.database.AppDatabase
+import com.gift.tolife.core.common.ImageStore
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.EntryTransactions
 import com.gift.tolife.core.database.Migrations
@@ -43,8 +44,9 @@ object AppModule {
     fun provideEntryRepository(
         entryDao: EntryDao,
         entryTagDao: EntryTagDao,
-        entryTransactions: EntryTransactions
+        entryTransactions: EntryTransactions,
+        imageStore: ImageStore
     ): EntryRepository {
-        return EntryRepository(entryDao, entryTagDao, entryTransactions)
+        return EntryRepository(entryDao, entryTagDao, entryTransactions, imageStore)
     }
 }

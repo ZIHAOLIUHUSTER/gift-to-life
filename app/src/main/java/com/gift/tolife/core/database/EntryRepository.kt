@@ -6,6 +6,7 @@ import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.EntryTag
 import com.gift.tolife.core.model.EntryType
+import com.gift.tolife.core.common.ImageStore
 import com.gift.tolife.core.model.TagType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,7 +17,8 @@ import javax.inject.Singleton
 class EntryRepository @Inject constructor(
     private val entryDao: EntryDao,
     private val entryTagDao: EntryTagDao,
-    private val entryTransactions: EntryTransactions
+    private val entryTransactions: EntryTransactions,
+    private val imageStore: ImageStore
 ) {
     fun getAllEntries(): Flow<List<Entry>> = entryDao.getAllOrderByCreatedAtDesc()
 
@@ -90,7 +92,10 @@ class EntryRepository @Inject constructor(
     }
 
     suspend fun permanentlyDeleteAllDeleted() {
+        val deleted = entryDao.getDeletedEntries()
+        val imagePaths = deleted.mapNotNull { it.imagePath }
         entryDao.permanentlyDeleteAllDeleted()
+        imageStore.deleteAll(imagePaths)
     }
 
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
