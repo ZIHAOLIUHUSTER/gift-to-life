@@ -21,6 +21,9 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE isDeleted = 0 ORDER BY createdAt DESC")
     fun getAllOrderByCreatedAtDesc(): Flow<List<Entry>>
 
+    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
+    suspend fun getNormalEntriesInRange(start: Long, end: Long): List<Entry>
+
     @Query("SELECT * FROM entries WHERE type = :type ORDER BY createdAt DESC")
     fun getByType(type: String): Flow<List<Entry>>
 

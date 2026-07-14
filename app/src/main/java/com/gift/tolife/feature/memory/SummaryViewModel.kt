@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.ai.SummaryPrompt
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
@@ -32,6 +33,7 @@ sealed class SummaryEvent {
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
     private val repository: EntryRepository,
+    private val entryDao: EntryDao,
     private val settingsDataStore: SettingsDataStore,
     private val aiClient: AiClient
 ) : ViewModel() {
@@ -65,7 +67,7 @@ class SummaryViewModel @Inject constructor(
 
     fun generateWeekSummary() {
         if (!TimeUtil.isMonday()) {
-            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在周一生成本周总结")) }
+            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在周一总结上周")) }
             return
         }
         viewModelScope.launch {
@@ -77,11 +79,10 @@ class SummaryViewModel @Inject constructor(
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
-                val (start, end) = TimeUtil.currentWeekRange()
-                val entries = repository.getAllEntries().first()
-                    .filter { it.type == EntryType.NORMAL && !it.isDeleted && it.createdAt in start..end }
+                val (start, end) = TimeUtil.previousWeekRange()
+                val entries = entryDao.getNormalEntriesInRange(start, end)
                 if (entries.size < 3) {
-                    _events.emit(SummaryEvent.ShowMessage("本周记录不足 3 条"))
+                    _events.emit(SummaryEvent.ShowMessage("上周记录不足 3 条"))
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
@@ -90,7 +91,7 @@ class SummaryViewModel @Inject constructor(
                     val existing = _state.value.currentWeekSummary
                     if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
                     else repository.save(Entry(content = result.value, type = EntryType.SUMMARY, summaryStart = start, summaryEnd = end, summaryModel = settings.summaryModel))
-                    _events.emit(SummaryEvent.ShowMessage("周总结已生成"))
+                    _events.emit(SummaryEvent.ShowMessage("上周总结已生成"))
                 } else {
                     _events.emit(SummaryEvent.ShowMessage("生成失败"))
                 }
@@ -104,7 +105,7 @@ class SummaryViewModel @Inject constructor(
 
     fun generateMonthSummary() {
         if (!TimeUtil.isFirstDayOfMonth()) {
-            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在每月1号生成本月总结")) }
+            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在每月1号总结上月")) }
             return
         }
         viewModelScope.launch {
@@ -116,11 +117,10 @@ class SummaryViewModel @Inject constructor(
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
-                val (start, end) = TimeUtil.currentMonthRange()
-                val entries = repository.getAllEntries().first()
-                    .filter { it.type == EntryType.NORMAL && !it.isDeleted && it.createdAt in start..end }
+                val (start, end) = TimeUtil.previousMonthRange()
+                val entries = entryDao.getNormalEntriesInRange(start, end)
                 if (entries.size < 3) {
-                    _events.emit(SummaryEvent.ShowMessage("本月记录不足 3 条"))
+                    _events.emit(SummaryEvent.ShowMessage("上月记录不足 3 条"))
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
@@ -129,7 +129,7 @@ class SummaryViewModel @Inject constructor(
                     val existing = _state.value.currentMonthSummary
                     if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
                     else repository.save(Entry(content = result.value, type = EntryType.SUMMARY, summaryStart = start, summaryEnd = end, summaryModel = settings.summaryModel))
-                    _events.emit(SummaryEvent.ShowMessage("月总结已生成"))
+                    _events.emit(SummaryEvent.ShowMessage("上月总结已生成"))
                 } else {
                     _events.emit(SummaryEvent.ShowMessage("生成失败"))
                 }
