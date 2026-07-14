@@ -26,6 +26,7 @@ fun EntryPreviewSheet(
     tags: List<TagType>,
     onEdit: () -> Unit,
     onDismiss: () -> Unit,
+    onDelete: () -> Unit,
     onImageClick: (() -> Unit)? = null
 ) {
     ModalBottomSheet(
@@ -96,8 +97,20 @@ fun EntryPreviewSheet(
             // 按钮行
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                TextButton(
+                    onClick = {
+                        onDismiss()
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("删除")
+                }
+
                 Button(
                     onClick = {
                         onDismiss()

@@ -10,7 +10,7 @@ import com.gift.tolife.core.model.EntryTag
 
 @Database(
     entities = [Entry::class, EntryTag::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

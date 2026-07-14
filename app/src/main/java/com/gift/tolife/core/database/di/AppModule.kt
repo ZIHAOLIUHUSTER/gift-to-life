@@ -24,7 +24,7 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "gift_tolife.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
@@ -108,6 +109,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
                             tags = uiState.randomEntryTags,
                             onRefresh = viewModel::fetchRandomEntry,
                             isGenerating = uiState.isGeneratingSummary,
+                            canGenerateWeek = uiState.canGenerateWeek,
+                            canGenerateMonth = uiState.canGenerateMonth,
                             onWeekSummary = viewModel::generateWeekSummary,
                             onMonthSummary = viewModel::generateMonthSummary,
                             onClick = { previewEntry = randomEntry }
@@ -140,6 +143,7 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
             tags = uiState.randomEntryTags,
             onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
+            onDelete = { previewEntry = null },
             onImageClick = { previewImagePath = previewEntry!!.imagePath }
         )
     }
@@ -159,6 +163,8 @@ private fun RandomReviewCard(
     tags: List<TagType>,
     onRefresh: () -> Unit,
     isGenerating: Boolean = false,
+    canGenerateWeek: Boolean = false,
+    canGenerateMonth: Boolean = false,
     onWeekSummary: () -> Unit = {},
     onMonthSummary: () -> Unit = {},
     onClick: () -> Unit = {}
@@ -256,17 +262,21 @@ private fun RandomReviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(
-                        onClick = onWeekSummary,
-                        enabled = !isGenerating
-                    ) {
-                        Text("本周", style = MaterialTheme.typography.bodySmall)
+                    if (canGenerateWeek) {
+                        TextButton(
+                            onClick = onWeekSummary,
+                            enabled = !isGenerating
+                        ) {
+                            Text("本周", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
-                    TextButton(
-                        onClick = onMonthSummary,
-                        enabled = !isGenerating
-                    ) {
-                        Text("本月", style = MaterialTheme.typography.bodySmall)
+                    if (canGenerateMonth) {
+                        TextButton(
+                            onClick = onMonthSummary,
+                            enabled = !isGenerating
+                        ) {
+                            Text("本月", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 }
 
@@ -290,6 +300,14 @@ private fun RandomReviewCard(
 
 @Composable
 private fun SummaryCard(entry: Entry) {
+    val timeLabel = if (entry.summaryStart != null && entry.summaryEnd != null) {
+        if (entry.summaryEnd!! - entry.summaryStart!! > 25L * 24 * 60 * 60 * 1000) {
+            TimeUtil.formatMonth(entry.summaryStart!!, entry.summaryEnd!!)
+        } else {
+            TimeUtil.formatWeek(entry.summaryStart!!, entry.summaryEnd!!)
+        }
+    } else null
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
@@ -299,20 +317,20 @@ private fun SummaryCard(entry: Entry) {
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                entry.content,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 3
-            )
-
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                if (timeLabel != null) {
+                    Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
+                        Text(timeLabel, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                if (!entry.summaryModel.isNullOrBlank()) {
+                    Text(entry.summaryModel!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                formatTime(entry.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(entry.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(formatTime(entry.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

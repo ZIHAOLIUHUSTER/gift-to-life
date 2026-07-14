@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
+import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.export.ExportImportManager
+import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -27,7 +29,8 @@ data class SettingsUiState(
 class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val chatClient: AiClient,
-    private val exportManager: ExportImportManager
+    private val exportManager: ExportImportManager,
+    private val repository: EntryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -87,7 +90,7 @@ class SettingsViewModel @Inject constructor(
     fun importData(uri: Uri) {
         viewModelScope.launch {
             try {
-                val count = exportManager.importFromUri(uri)
+                val count = exportManager.replaceImportFromUri(uri)
                 _events.emit(SettingsEvent.ShowMessage("已导入 $count 条记录"))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
@@ -165,6 +168,19 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // 回收站相关
+    suspend fun getDeletedEntries(): List<Entry> {
+        return repository.getDeletedEntries()
+    }
+
+    suspend fun restoreEntry(id: Long) {
+        repository.restoreEntry(id)
+    }
+
+    suspend fun permanentlyDeleteAll() {
+        repository.permanentlyDeleteAllDeleted()
     }
 }
 

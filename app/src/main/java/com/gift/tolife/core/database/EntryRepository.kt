@@ -76,6 +76,23 @@ class EntryRepository @Inject constructor(
         entryDao.delete(entry)
     }
 
+    suspend fun softDelete(entryId: Long) {
+        entryTagDao.deleteByEntryId(entryId)
+        entryDao.softDelete(entryId)
+    }
+
+    suspend fun getDeletedEntries(): List<Entry> {
+        return entryDao.getDeletedEntries()
+    }
+
+    suspend fun restoreEntry(id: Long) {
+        entryDao.restore(id)
+    }
+
+    suspend fun permanentlyDeleteAllDeleted() {
+        entryDao.permanentlyDeleteAllDeleted()
+    }
+
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
 
     suspend fun setTags(entryId: Long, tags: List<TagType>) {

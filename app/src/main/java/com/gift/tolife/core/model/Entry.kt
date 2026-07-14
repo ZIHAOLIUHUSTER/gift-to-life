@@ -14,5 +14,7 @@ data class Entry(
     val updatedAt: Long = System.currentTimeMillis(),
     val summaryStart: Long? = null,
     val summaryEnd: Long? = null,
-    val imageDescription: String? = null
+    val imageDescription: String? = null,
+    val isDeleted: Boolean = false,
+    val summaryModel: String? = null
 )

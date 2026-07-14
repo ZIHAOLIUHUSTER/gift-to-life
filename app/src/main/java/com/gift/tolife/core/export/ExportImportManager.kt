@@ -3,6 +3,7 @@ package com.gift.tolife.core.export
 import android.content.Context
 import android.net.Uri
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
@@ -19,7 +20,8 @@ import javax.inject.Singleton
 @Singleton
 class ExportImportManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repository: EntryRepository
+    private val repository: EntryRepository,
+    private val entryDao: EntryDao
 ) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -65,6 +67,40 @@ class ExportImportManager @Inject constructor(
 
     suspend fun importFromUri(uri: Uri): Int {
         return withContext(Dispatchers.IO) {
+            val json = context.contentResolver.openInputStream(uri)?.use {
+                String(it.readBytes())
+            } ?: return@withContext 0
+            val data = gson.fromJson(json, ExportData::class.java) ?: return@withContext 0
+            var count = 0
+            data.entries.forEach { e ->
+                val entry = Entry(
+                    content = e.content,
+                    type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
+                    createdAt = e.createdAt,
+                    imageDescription = e.imageDescription
+                )
+                val entryId = repository.save(entry)
+                val tags = e.tags.mapNotNull { tag ->
+                    TagType.entries.find { it.label == tag }
+                }
+                if (tags.isNotEmpty()) {
+                    repository.setTags(entryId, tags)
+                }
+                count++
+            }
+            count
+        }
+    }
+
+    suspend fun clearAllEntries() {
+        entryDao.deleteAll()
+    }
+
+    suspend fun replaceImportFromUri(uri: Uri): Int {
+        return withContext(Dispatchers.IO) {
+            // 清空现有数据
+            entryDao.deleteAll()
+            // 重新导入
             val json = context.contentResolver.openInputStream(uri)?.use {
                 String(it.readBytes())
             } ?: return@withContext 0

@@ -18,12 +18,27 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun getById(id: Long): Entry?
 
-    @Query("SELECT * FROM entries ORDER BY createdAt DESC")
+    @Query("SELECT * FROM entries WHERE isDeleted = 0 ORDER BY createdAt DESC")
     fun getAllOrderByCreatedAtDesc(): Flow<List<Entry>>
 
     @Query("SELECT * FROM entries WHERE type = :type ORDER BY createdAt DESC")
     fun getByType(type: String): Flow<List<Entry>>
 
-    @Query("SELECT * FROM entries WHERE content LIKE '%' || :query || '%' ORDER BY createdAt DESC")
+    @Query("SELECT * FROM entries WHERE content LIKE '%' || :query || '%' AND isDeleted = 0 ORDER BY createdAt DESC")
     fun searchByContent(query: String): Flow<List<Entry>>
+
+    @Query("DELETE FROM entries")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM entries WHERE isDeleted = 1 ORDER BY createdAt DESC")
+    suspend fun getDeletedEntries(): List<Entry>
+
+    @Query("UPDATE entries SET isDeleted = 1 WHERE id = :id")
+    suspend fun softDelete(id: Long)
+
+    @Query("UPDATE entries SET isDeleted = 0 WHERE id = :id")
+    suspend fun restore(id: Long)
+
+    @Query("DELETE FROM entries WHERE isDeleted = 1")
+    suspend fun permanentlyDeleteAllDeleted()
 }

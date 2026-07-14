@@ -10,6 +10,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gift.tolife.core.model.Entry
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +37,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var tagModel by remember { mutableStateOf("") }
     var summaryModel by remember { mutableStateOf("") }
     var visionModel by remember { mutableStateOf("") }
+    var showImportConfirm by remember { mutableStateOf(false) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importData(it) }
+    }
+
     LaunchedEffect(Unit) {
         apiKey = uiState.settings.apiKey
         baseUrl = uiState.settings.baseUrl
@@ -189,12 +201,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     uri?.let { viewModel.exportData(it) }
                 }
 
-                val importLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.OpenDocument()
-                ) { uri ->
-                    uri?.let { viewModel.importData(it) }
-                }
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -207,7 +213,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         Text("导出备份")
                     }
                     OutlinedButton(
-                        onClick = { importLauncher.launch(arrayOf("application/json")) },
+                        onClick = { showImportConfirm = true },
                         modifier = Modifier.weight(1f),
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -215,6 +221,95 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     }
                 }
             }
+
+            // 回收站卡片
+            SettingsCard(title = "回收站") {
+                var deletedEntries by remember { mutableStateOf<List<Entry>>(emptyList()) }
+                var loading by remember { mutableStateOf(false) }
+                val scope = rememberCoroutineScope()
+
+                LaunchedEffect(Unit) {
+                    loading = true
+                    deletedEntries = viewModel.getDeletedEntries()
+                    loading = false
+                }
+
+                if (deletedEntries.isEmpty() && !loading) {
+                    Text(
+                        "回收站为空",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (deletedEntries.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "${deletedEntries.size} 条已删除记录",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = {
+                            scope.launch {
+                                viewModel.permanentlyDeleteAll()
+                                deletedEntries = emptyList()
+                            }
+                        }) {
+                            Text("清空", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    deletedEntries.forEach { entry ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                entry.content.take(30) + if (entry.content.length > 30) "..." else "",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = {
+                                scope.launch {
+                                    viewModel.restoreEntry(entry.id)
+                                    deletedEntries = deletedEntries.filter { it.id != entry.id }
+                                }
+                            }) {
+                                Text("恢复")
+                            }
+                        }
+                    }
+                }
+            }
+
+    if (showImportConfirm) {
+        AlertDialog(
+            onDismissRequest = { showImportConfirm = false },
+            title = { Text("导入数据") },
+            text = { Text("导入将清空所有现有记录，确定继续？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showImportConfirm = false
+                    importLauncher.launch(arrayOf("application/json"))
+                }) {
+                    Text("确定", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportConfirm = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
         }
     }
 }

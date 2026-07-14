@@ -134,8 +134,8 @@ class RecordViewModel @Inject constructor(
 
     fun delete(entry: Entry) {
         viewModelScope.launch {
-            repository.delete(entry)
-            _events.emit(RecordEvent.ShowSnackbar("已删除"))
+            repository.softDelete(entry.id)
+            _events.emit(RecordEvent.ShowSnackbar("已移至回收站"))
         }
     }
 

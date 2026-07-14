@@ -21,7 +21,6 @@ import java.util.*
 fun EditEntryBottomSheet(
     entry: Entry,
     onSave: (Entry) -> Unit,
-    onDelete: (Entry) -> Unit,
     onDismiss: () -> Unit,
     onRemoveImage: ((Entry) -> Unit)? = null,
     onReplaceImage: (() -> Unit)? = null,
@@ -130,18 +129,8 @@ fun EditEntryBottomSheet(
             // 按钮行
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.End
             ) {
-                TextButton(
-                    onClick = { onDelete(entry) },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("删除")
-                }
-
                 Button(
                     onClick = {
                         if (editedContent.isNotBlank()) {

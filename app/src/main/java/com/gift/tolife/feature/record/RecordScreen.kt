@@ -31,6 +31,7 @@ fun RecordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
     var previewEntry by remember { mutableStateOf<Pair<Entry, List<TagType>>?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf<Entry?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -155,6 +156,7 @@ fun RecordScreen(
                     previewEntry = null
                 },
                 onDismiss = { previewEntry = null },
+                onDelete = { showDeleteConfirm = pEntry },
                 onImageClick = { previewImagePath = pEntry.imagePath }
             )
         }
@@ -166,7 +168,6 @@ fun RecordScreen(
                 onSave = { entry ->
                     viewModel.saveWithTags(entry, editTags)
                 },
-                onDelete = viewModel::delete,
                 onDismiss = {
                     viewModel.clearSelection()
                     viewModel.setEditTags(emptyList())
@@ -181,6 +182,30 @@ fun RecordScreen(
                 onTagsChanged = { viewModel.setEditTags(it) }
             )
         }
+    }
+
+    // 删除确认弹窗
+    if (showDeleteConfirm != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = null },
+            title = { Text("删除记录") },
+            text = { Text("删除后无法恢复，确定删除？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val entry = showDeleteConfirm!!
+                    viewModel.delete(entry)
+                    showDeleteConfirm = null
+                    previewEntry = null
+                }) {
+                    Text("删除", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = null }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 
     // 图片预览 Dialog
