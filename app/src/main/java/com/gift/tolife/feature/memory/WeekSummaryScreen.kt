@@ -11,9 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
-import com.gift.tolife.core.model.EntryType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -21,20 +19,20 @@ import java.util.*
 @Composable
 fun WeekSummaryScreen(
     onBack: () -> Unit,
-    viewModel: MemoryViewModel = hiltViewModel()
+    summaryVM: SummaryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val state by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        summaryVM.events.collect { event ->
             when (event) {
-                is MemoryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                is SummaryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
 
-    val weekSummaries = uiState.summaryEntries
+    val weekSummaries = state.weekSummaries
         .filter { it.summaryStart != null && it.summaryEnd != null }
         .filter { it.summaryEnd!! - it.summaryStart!! < 8L * 24 * 60 * 60 * 1000 }
         .sortedByDescending { it.summaryStart }
@@ -61,16 +59,16 @@ fun WeekSummaryScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (uiState.canGenerateWeek) {
+            if (state.canGenerateWeek) {
                 item(key = "generate") {
                     Button(
-                        onClick = viewModel::generateWeekSummary,
+                        onClick = summaryVM::generateWeekSummary,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isGeneratingSummary,
+                        enabled = !state.isGenerating,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        if (uiState.isGeneratingSummary) {
+                        if (state.isGenerating) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
                         }

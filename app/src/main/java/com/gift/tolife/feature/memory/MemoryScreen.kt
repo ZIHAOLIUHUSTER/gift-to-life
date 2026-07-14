@@ -20,9 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
-import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
-import com.gift.tolife.feature.memory.MemoryEvent
 import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
 import java.text.SimpleDateFormat
@@ -33,19 +31,19 @@ import java.util.*
 fun MemoryScreen(
     onNavigateToWeekSummary: () -> Unit = {},
     onNavigateToMonthSummary: () -> Unit = {},
-    viewModel: MemoryViewModel = hiltViewModel()
+    randomVM: RandomReviewViewModel = hiltViewModel(),
+    summaryVM: SummaryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val randomState by randomVM.state.collectAsState()
+    val summaryState by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        summaryVM.events.collect { event ->
             when (event) {
-                is MemoryEvent.ShowMessage -> {
-                    snackbarHostState.showSnackbar(event.message)
-                }
+                is SummaryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -62,7 +60,7 @@ fun MemoryScreen(
             )
         }
     ) { innerPadding ->
-        if (uiState.randomEntry == null && uiState.summaryEntries.isEmpty()) {
+        if (randomState.entry == null && (summaryState.weekSummaries + summaryState.monthSummaries).isEmpty()) {
             // 空状态
             Box(
                 modifier = Modifier
@@ -105,16 +103,16 @@ fun MemoryScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 // 随机回顾卡片
-                val randomEntry = uiState.randomEntry
+                val randomEntry = randomState.entry
                 if (randomEntry != null) {
                     item(key = "random") {
                         RandomReviewCard(
                             entry = randomEntry,
-                            tags = uiState.randomEntryTags,
-                            onRefresh = viewModel::fetchRandomEntry,
-                            isGenerating = uiState.isGeneratingSummary,
-                            canGenerateWeek = uiState.canGenerateWeek,
-                            canGenerateMonth = uiState.canGenerateMonth,
+                            tags = randomState.tags,
+                            onRefresh = randomVM::fetchRandom,
+                            isGenerating = summaryState.isGenerating,
+                            canGenerateWeek = summaryState.canGenerateWeek,
+                            canGenerateMonth = summaryState.canGenerateMonth,
                             onWeekSummary = onNavigateToWeekSummary,
                             onMonthSummary = onNavigateToMonthSummary,
                             onClick = { previewEntry = randomEntry }
@@ -123,7 +121,8 @@ fun MemoryScreen(
                 }
 
                 // 历史总结列表
-                if (uiState.summaryEntries.isNotEmpty()) {
+                val allSummaries = summaryState.weekSummaries + summaryState.monthSummaries
+                if (allSummaries.isNotEmpty()) {
                     item(key = "summary_header") {
                         Text(
                             "历史总结",
@@ -132,7 +131,7 @@ fun MemoryScreen(
                         )
                     }
 
-                    items(uiState.summaryEntries, key = { it.id }) { entry ->
+                    items(allSummaries, key = { it.id }) { entry ->
                         SummaryCard(entry = entry)
                     }
                 }
@@ -144,7 +143,7 @@ fun MemoryScreen(
     if (previewEntry != null) {
         EntryPreviewSheet(
             entry = previewEntry!!,
-            tags = uiState.randomEntryTags,
+            tags = randomState.tags,
             onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
             onDelete = { previewEntry = null },

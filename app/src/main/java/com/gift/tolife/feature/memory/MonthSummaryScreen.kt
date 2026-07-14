@@ -19,20 +19,20 @@ import java.util.*
 @Composable
 fun MonthSummaryScreen(
     onBack: () -> Unit,
-    viewModel: MemoryViewModel = hiltViewModel()
+    summaryVM: SummaryViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val state by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        summaryVM.events.collect { event ->
             when (event) {
-                is MemoryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                is SummaryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
 
-    val monthSummaries = uiState.summaryEntries
+    val monthSummaries = state.monthSummaries
         .filter { it.summaryStart != null && it.summaryEnd != null }
         .filter { it.summaryEnd!! - it.summaryStart!! > 25L * 24 * 60 * 60 * 1000 }
         .sortedByDescending { it.summaryStart }
@@ -59,16 +59,16 @@ fun MonthSummaryScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (uiState.canGenerateMonth) {
+            if (state.canGenerateMonth) {
                 item(key = "generate") {
                     Button(
-                        onClick = viewModel::generateMonthSummary,
+                        onClick = summaryVM::generateMonthSummary,
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = !uiState.isGeneratingSummary,
+                        enabled = !state.isGenerating,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        if (uiState.isGeneratingSummary) {
+                        if (state.isGenerating) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
                             Spacer(modifier = Modifier.width(8.dp))
                         }

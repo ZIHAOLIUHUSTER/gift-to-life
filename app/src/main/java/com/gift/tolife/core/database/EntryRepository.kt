@@ -119,4 +119,8 @@ class EntryRepository @Inject constructor(
             .groupBy { it.entryId }
             .mapValues { (_, tags) -> tags.map { it.tag } }
     }
+
+    suspend fun getRandomActiveEntry(): Entry? = entryDao.getRandomActiveEntry()
+
+    fun observeSummaries(): Flow<List<Entry>> = entryDao.observeSummaries()
 }

@@ -79,4 +79,10 @@ interface EntryDao {
 
     @Query("SELECT * FROM entries ORDER BY createdAt DESC")
     suspend fun getAllEntriesAsList(): List<Entry>
+
+    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY RANDOM() LIMIT 1")
+    suspend fun getRandomActiveEntry(): Entry?
+
+    @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
+    fun observeSummaries(): Flow<List<Entry>>
 }
