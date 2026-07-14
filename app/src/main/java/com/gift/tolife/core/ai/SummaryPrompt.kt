@@ -17,12 +17,60 @@ object SummaryPrompt {
         return if (Random.nextBoolean()) WEEK_SLICE else WEEK_WEATHER
     }
 
-    fun buildUserPrompt(entries: List<Entry>): String {
-        return entries.joinToString("\n\n") { entry ->
-            val time = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
-                .format(java.util.Date(entry.createdAt))
-            val base = "[$time] ${entry.content}"
-            if (!entry.imageDescription.isNullOrBlank()) "$base\n[图片内容: ${entry.imageDescription}]" else base
+    data class SummaryInputBudget(
+        val maxCharacters: Int = 48_000,
+        val maxEntryCharacters: Int = 2_000,
+        val minimumEntries: Int = 3
+    )
+
+    private val budget = SummaryInputBudget()
+
+    fun buildUserPrompt(entries: List<Entry>): String? {
+        if (entries.size < budget.minimumEntries) return null
+
+        // 截断每条记录
+        val truncated = entries.map { entry ->
+            val text = if (entry.content.isNotBlank()) {
+                "[${formatEntryTime(entry.createdAt)}] ${entry.content}".take(budget.maxEntryCharacters)
+            } else {
+                "[${formatEntryTime(entry.createdAt)}] [图片: ${entry.imageDescription ?: "无描述"}]".take(budget.maxEntryCharacters)
+            }
+            text
         }
+
+        // 近期优先 + 均匀采样
+        val recentCount = (truncated.size * 0.5).toInt().coerceAtLeast(1)
+        val sampled = mutableListOf<String>()
+        // 取最近的一半
+        truncated.takeLast(recentCount).forEach { sampled.add(it) }
+        // 等距采样前半部分
+        val remaining = budget.minimumEntries - recentCount
+        val step = if (remaining > 0 && truncated.size > recentCount) {
+            (truncated.size - recentCount) / remaining
+        } else 0
+        if (step > 0) {
+            for (i in 0 until truncated.size - recentCount step step.coerceAtLeast(1)) {
+                sampled.add(truncated[i])
+                if (sampled.size >= budget.minimumEntries + recentCount) break
+            }
+        }
+
+        // 按字符预算截断
+        val result = buildString {
+            var charCount = 0
+            for (s in sampled.distinct().sortedBy { it }) {
+                if (charCount + s.length > budget.maxCharacters) break
+                appendLine(s)
+                appendLine()
+                charCount += s.length + 2
+            }
+        }.trimEnd()
+
+        return if (result.isBlank()) null else result
+    }
+
+    private fun formatEntryTime(timestamp: Long): String {
+        val fmt = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
+        return fmt.format(java.util.Date(timestamp))
     }
 }

@@ -81,12 +81,13 @@ class SummaryViewModel @Inject constructor(
                 }
                 val (start, end) = TimeUtil.previousWeekRange()
                 val entries = entryDao.getNormalEntriesInRange(start, end)
-                if (entries.size < 3) {
-                    _events.emit(SummaryEvent.ShowMessage("上周记录不足 3 条"))
+                val prompt = SummaryPrompt.buildUserPrompt(entries)
+                if (prompt == null) {
+                    _events.emit(SummaryEvent.ShowMessage("上周记录不足 3 条，无法生成总结"))
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
-                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.pickRandomWeekPrompt(), SummaryPrompt.buildUserPrompt(entries))
+                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.pickRandomWeekPrompt(), prompt)
                 if (result is AiResult.Success && result.value.isNotBlank()) {
                     val existing = _state.value.currentWeekSummary
                     if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
@@ -119,12 +120,13 @@ class SummaryViewModel @Inject constructor(
                 }
                 val (start, end) = TimeUtil.previousMonthRange()
                 val entries = entryDao.getNormalEntriesInRange(start, end)
-                if (entries.size < 3) {
-                    _events.emit(SummaryEvent.ShowMessage("上月记录不足 3 条"))
+                val prompt = SummaryPrompt.buildUserPrompt(entries)
+                if (prompt == null) {
+                    _events.emit(SummaryEvent.ShowMessage("上月记录不足 3 条，无法生成总结"))
                     _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
-                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.MONTH_LETTER, SummaryPrompt.buildUserPrompt(entries))
+                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.MONTH_LETTER, prompt)
                 if (result is AiResult.Success && result.value.isNotBlank()) {
                     val existing = _state.value.currentMonthSummary
                     if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
