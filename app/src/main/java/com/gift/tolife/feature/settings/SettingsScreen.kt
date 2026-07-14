@@ -221,7 +221,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) {
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) {
         uri -> uri?.let { viewModel.exportData(it) }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
@@ -239,7 +239,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(innerPadding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SettingsCard(title = "备份与恢复") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { exportLauncher.launch("gift_backup.json") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导出备份") }
+                    OutlinedButton(onClick = { exportLauncher.launch("gift_backup.gtlbackup") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导出备份") }
                     OutlinedButton(onClick = { showImportConfirm = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导入恢复") }
                 }
             }
@@ -247,7 +247,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
             if (showImportConfirm) {
                 AlertDialog(onDismissRequest = { showImportConfirm = false },
                     title = { Text("导入数据") }, text = { Text("导入将清空所有现有记录，确定继续？") },
-                    confirmButton = { TextButton(onClick = { showImportConfirm = false; importLauncher.launch(arrayOf("application/json")) }) { Text("确定", color = MaterialTheme.colorScheme.error) } },
+                    confirmButton = { TextButton(onClick = { showImportConfirm = false; importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("确定", color = MaterialTheme.colorScheme.error) } },
                     dismissButton = { TextButton(onClick = { showImportConfirm = false }) { Text("取消") } })
             }
         }

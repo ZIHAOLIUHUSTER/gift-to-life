@@ -76,4 +76,7 @@ interface EntryDao {
         WHERE id = :id AND entryRevision = :expectedRevision AND isDeleted = 0
     """)
     suspend fun updateImageDescription(id: Long, expectedRevision: Long, description: String?): Int
+
+    @Query("SELECT * FROM entries ORDER BY createdAt DESC")
+    suspend fun getAllEntriesAsList(): List<Entry>
 }
