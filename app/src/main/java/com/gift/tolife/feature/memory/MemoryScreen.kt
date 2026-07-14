@@ -166,7 +166,7 @@ private fun RandomReviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(520.dp)
             .clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
