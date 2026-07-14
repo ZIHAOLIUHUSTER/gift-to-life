@@ -12,6 +12,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.gift.tolife.feature.memory.MemoryScreen
+import com.gift.tolife.feature.memory.MonthSummaryScreen
+import com.gift.tolife.feature.memory.WeekSummaryScreen
 import com.gift.tolife.feature.record.RecordScreen
 import com.gift.tolife.feature.settings.SettingsScreen
 
@@ -68,7 +70,12 @@ fun AppNavigation() {
             startDestination = Screen.Record.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Screen.Memory.route) { MemoryScreen() }
+            composable(Screen.Memory.route) {
+                MemoryScreen(
+                    onNavigateToWeekSummary = { navController.navigate(Screen.WeekSummary.route) },
+                    onNavigateToMonthSummary = { navController.navigate(Screen.MonthSummary.route) }
+                )
+            }
             composable(Screen.Record.route) {
                 RecordScreen(
                     onNavigateToMemory = {
@@ -83,6 +90,12 @@ fun AppNavigation() {
                 )
             }
             composable(Screen.Settings.route) { SettingsScreen() }
+            composable(Screen.WeekSummary.route) {
+                WeekSummaryScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Screen.MonthSummary.route) {
+                MonthSummaryScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

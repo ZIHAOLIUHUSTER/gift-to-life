@@ -30,7 +30,11 @@ import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
+fun MemoryScreen(
+    onNavigateToWeekSummary: () -> Unit = {},
+    onNavigateToMonthSummary: () -> Unit = {},
+    viewModel: MemoryViewModel = hiltViewModel()
+) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
@@ -111,8 +115,8 @@ fun MemoryScreen(viewModel: MemoryViewModel = hiltViewModel()) {
                             isGenerating = uiState.isGeneratingSummary,
                             canGenerateWeek = uiState.canGenerateWeek,
                             canGenerateMonth = uiState.canGenerateMonth,
-                            onWeekSummary = viewModel::generateWeekSummary,
-                            onMonthSummary = viewModel::generateMonthSummary,
+                            onWeekSummary = onNavigateToWeekSummary,
+                            onMonthSummary = onNavigateToMonthSummary,
                             onClick = { previewEntry = randomEntry }
                         )
                     }
@@ -299,7 +303,7 @@ private fun RandomReviewCard(
 }
 
 @Composable
-private fun SummaryCard(entry: Entry) {
+internal fun SummaryCard(entry: Entry) {
     val timeLabel = if (entry.summaryStart != null && entry.summaryEnd != null) {
         if (entry.summaryEnd!! - entry.summaryStart!! > 25L * 24 * 60 * 60 * 1000) {
             TimeUtil.formatMonth(entry.summaryStart!!, entry.summaryEnd!!)

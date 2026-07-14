@@ -105,10 +105,11 @@ class RecordViewModel @Inject constructor(
             val imagePath = ImageUtil.copyToPrivateDir(context, uri)
             if (imagePath != null) {
                 val updated = entry.copy(imagePath = imagePath)
-                // 乐观更新本地列表，避免等待 Flow 重发
+                // 乐观更新本地列表和编辑状态
                 _uiState.update { state ->
                     state.copy(
                         entries = state.entries.map { if (it.id == entry.id) updated else it },
+                        selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry,
                         editingImageEntryId = null
                     )
                 }

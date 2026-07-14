@@ -35,6 +35,20 @@ sealed class Screen(
         selectedIcon = Icons.Filled.Settings,
         unselectedIcon = Icons.Outlined.Settings
     )
+
+    data object WeekSummary : Screen(
+        route = "week_summary",
+        label = "周总结",
+        selectedIcon = Icons.Filled.AutoAwesome,
+        unselectedIcon = Icons.Outlined.AutoAwesome
+    )
+
+    data object MonthSummary : Screen(
+        route = "month_summary",
+        label = "月总结",
+        selectedIcon = Icons.Filled.AutoAwesome,
+        unselectedIcon = Icons.Outlined.AutoAwesome
+    )
 }
 
 val bottomNavItems = listOf(Screen.Memory, Screen.Record, Screen.Settings)

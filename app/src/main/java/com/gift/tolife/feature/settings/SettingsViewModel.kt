@@ -1,8 +1,12 @@
 package com.gift.tolife.feature.settings
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
@@ -30,7 +34,8 @@ class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val chatClient: AiClient,
     private val exportManager: ExportImportManager,
-    private val repository: EntryRepository
+    private val repository: EntryRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -181,6 +186,38 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun permanentlyDeleteAll() {
         repository.permanentlyDeleteAllDeleted()
+    }
+
+    fun exportModelConfig(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val settings = _uiState.value.settings
+                val json = GsonBuilder().setPrettyPrinting().create().toJson(settings)
+                context.contentResolver.openOutputStream(uri)?.use {
+                    it.write(json.toByteArray())
+                }
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导出"))
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: "未知错误"}"))
+            }
+        }
+    }
+
+    fun importModelConfig(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) } ?: return@launch
+                val settings = Gson().fromJson(json, AppSettings::class.java) ?: return@launch
+                settingsDataStore.updateApiKey(settings.apiKey)
+                settingsDataStore.updateBaseUrl(settings.baseUrl)
+                settingsDataStore.updateTagModel(settings.tagModel)
+                settingsDataStore.updateSummaryModel(settings.summaryModel)
+                settingsDataStore.updateVisionModel(settings.visionModel)
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导入"))
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
+            }
+        }
     }
 }
 
