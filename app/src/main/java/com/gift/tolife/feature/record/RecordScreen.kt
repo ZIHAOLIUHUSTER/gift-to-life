@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
@@ -28,6 +29,7 @@ fun RecordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val editTags by viewModel.editTags.collectAsState()
+    val lazyItems = viewModel.entriesPagingData.collectAsLazyPagingItems()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
     var previewEntry by remember { mutableStateOf<Pair<Entry, List<TagType>>?>(null) }
@@ -84,7 +86,7 @@ fun RecordScreen(
             }
         },
         floatingActionButton = {
-            if (uiState.entries.isNotEmpty()) {
+            if (lazyItems.itemCount > 0) {
                 FloatingActionButton(
                     onClick = onNavigateToMemory,
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -131,15 +133,18 @@ fun RecordScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(uiState.entries, key = { it.id }) { entry ->
-                    EntryCard(
-                        entry = entry,
-                        tags = uiState.entryTags[entry.id] ?: emptyList(),
-                        onClick = {
-                            previewEntry = entry to (uiState.entryTags[entry.id] ?: emptyList())
-                        },
-                        onImageClick = { previewImagePath = entry.imagePath }
-                    )
+                items(lazyItems.itemCount) { index ->
+                    val entry = lazyItems[index]
+                    if (entry != null) {
+                        EntryCard(
+                            entry = entry,
+                            tags = uiState.entryTags[entry.id] ?: emptyList(),
+                            onClick = {
+                                previewEntry = entry to (uiState.entryTags[entry.id] ?: emptyList())
+                            },
+                            onImageClick = { previewImagePath = entry.imagePath }
+                        )
+                    }
                 }
             }
         }

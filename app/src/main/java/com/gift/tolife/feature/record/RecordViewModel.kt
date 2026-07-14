@@ -3,12 +3,19 @@ package com.gift.tolife.feature.record
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.map
 import com.gift.tolife.core.ai.TagWorkScheduler
 import com.gift.tolife.core.common.ImageStore
 import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.EntryTransactions
+import com.gift.tolife.core.database.dao.EntryDao
+import com.gift.tolife.core.database.model.EntryListRow
+import com.gift.tolife.core.database.query.EntryQuerySqlBuilder
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.EntryType
@@ -27,11 +34,30 @@ class RecordViewModel @Inject constructor(
     private val entryTransactions: EntryTransactions,
     @ApplicationContext private val context: Context,
     private val tagScheduler: TagWorkScheduler,
-    private val imageStore: ImageStore
+    private val imageStore: ImageStore,
+    private val entryDao: EntryDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordUiState())
     val uiState: StateFlow<RecordUiState> = _uiState.asStateFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val entriesPagingData: Flow<PagingData<Entry>> = _uiState
+        .map { it.entryQuery }
+        .distinctUntilChanged()
+        .flatMapLatest { query ->
+            Pager(PagingConfig(pageSize = 30, enablePlaceholders = false)) {
+                entryDao.pagingSource(EntryQuerySqlBuilder.build(query))
+            }.flow.map { pagingData: PagingData<EntryListRow> ->
+                pagingData.map { row ->
+                    Entry(
+                        id = row.id, content = row.content, imagePath = row.imagePath,
+                        type = row.type, createdAt = row.createdAt, updatedAt = row.updatedAt,
+                        imageDescription = row.imageDescription
+                    )
+                }
+            }
+        }
 
     private val _events = MutableSharedFlow<RecordEvent>()
     val events: SharedFlow<RecordEvent> = _events.asSharedFlow()

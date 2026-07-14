@@ -1,7 +1,11 @@
 package com.gift.tolife.core.database.dao
 
+import androidx.paging.PagingSource
 import androidx.room.*
+import androidx.sqlite.db.SupportSQLiteQuery
+import com.gift.tolife.core.database.model.EntryListRow
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.EntryTag
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -88,4 +92,7 @@ interface EntryDao {
 
     @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
     fun observeSummaries(): Flow<List<Entry>>
+
+    @RawQuery(observedEntities = [Entry::class, EntryTag::class])
+    fun pagingSource(query: SupportSQLiteQuery): PagingSource<Int, EntryListRow>
 }
