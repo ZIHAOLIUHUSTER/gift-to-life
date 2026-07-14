@@ -266,21 +266,15 @@ private fun RandomReviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (canGenerateWeek) {
-                        TextButton(
-                            onClick = onWeekSummary,
-                            enabled = !isGenerating
-                        ) {
-                            Text("本周", style = MaterialTheme.typography.bodySmall)
-                        }
+                    TextButton(
+                        onClick = onWeekSummary
+                    ) {
+                        Text("本周", style = MaterialTheme.typography.bodySmall)
                     }
-                    if (canGenerateMonth) {
-                        TextButton(
-                            onClick = onMonthSummary,
-                            enabled = !isGenerating
-                        ) {
-                            Text("本月", style = MaterialTheme.typography.bodySmall)
-                        }
+                    TextButton(
+                        onClick = onMonthSummary
+                    ) {
+                        Text("本月", style = MaterialTheme.typography.bodySmall)
                     }
                 }
 

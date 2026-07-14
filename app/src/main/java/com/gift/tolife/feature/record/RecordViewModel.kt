@@ -93,7 +93,10 @@ class RecordViewModel @Inject constructor(
             val updated = entry.copy(imagePath = null, imageDescription = null)
             // 乐观更新本地列表，避免等待 Flow 重发
             _uiState.update { state ->
-                state.copy(entries = state.entries.map { if (it.id == entry.id) updated else it })
+                state.copy(
+                    entries = state.entries.map { if (it.id == entry.id) updated else it },
+                    selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry
+                )
             }
             repository.update(updated)
             TagWorker.enqueue(context, entry.id)
