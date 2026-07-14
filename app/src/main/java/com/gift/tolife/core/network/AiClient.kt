@@ -1,10 +1,12 @@
 package com.gift.tolife.core.network
 
+import com.gift.tolife.core.ai.AiResult
 import com.gift.tolife.core.ai.VisionPrompt
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.network.dto.*
 import kotlinx.coroutines.flow.first
 import okhttp3.OkHttpClient
+import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -51,11 +53,11 @@ class AiClient @Inject constructor(
         return url
     }
 
-    suspend fun chat(model: String, systemPrompt: String, userMessage: String, disableThinking: Boolean = false): String? {
+    suspend fun chat(model: String, systemPrompt: String, userMessage: String, disableThinking: Boolean = false): AiResult<String> {
         return try {
             val settings = settingsDataStore.settings.first()
-            if (settings.apiKey.isBlank()) return null
-            val service = getService(settings.baseUrl) ?: return null
+            if (settings.apiKey.isBlank()) return AiResult.PermanentFailure("API Key not configured")
+            val service = getService(settings.baseUrl) ?: return AiResult.PermanentFailure("Invalid base URL")
             val request = ChatRequest(
                 model = model,
                 messages = listOf(
@@ -69,18 +71,31 @@ class AiClient @Inject constructor(
                 request = request
             )
             val msg = response.choices?.firstOrNull()?.message
-            msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
+            val result = msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
+            if (!result.isNullOrBlank()) AiResult.Success(result)
+            else AiResult.PermanentFailure("Empty response")
+        } catch (e: java.net.UnknownHostException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: java.net.SocketTimeoutException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: java.io.IOException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: HttpException) {
+            when (e.code()) {
+                408, 429, in 500..599 -> AiResult.RetryableFailure(e)
+                else -> AiResult.PermanentFailure("HTTP ${e.code()}")
+            }
         } catch (t: Throwable) {
-            null
+            AiResult.RetryableFailure(t)
         }
     }
 
-    suspend fun describeImage(model: String, imagePath: String, disableThinking: Boolean = false): String? {
+    suspend fun describeImage(model: String, imagePath: String, disableThinking: Boolean = false): AiResult<String> {
         return try {
             val settings = settingsDataStore.settings.first()
-            if (settings.apiKey.isBlank()) return null
-            val base64 = encodeImageToBase64(imagePath) ?: return null
-            val service = getService(settings.baseUrl) ?: return null
+            if (settings.apiKey.isBlank()) return AiResult.PermanentFailure("API Key not configured")
+            val base64 = encodeImageToBase64(imagePath) ?: return AiResult.PermanentFailure("Image not found")
+            val service = getService(settings.baseUrl) ?: return AiResult.PermanentFailure("Invalid base URL")
             val message = VisionMessage(
                 role = "user",
                 content = listOf(
@@ -101,9 +116,22 @@ class AiClient @Inject constructor(
                 request = request
             )
             val msg = response.choices?.firstOrNull()?.message
-            msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
+            val result = msg?.content?.takeIf { it.isNotBlank() } ?: msg?.reasoning_content
+            if (!result.isNullOrBlank()) AiResult.Success(result)
+            else AiResult.PermanentFailure("Empty response")
+        } catch (e: java.net.UnknownHostException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: java.net.SocketTimeoutException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: java.io.IOException) {
+            AiResult.RetryableFailure(e)
+        } catch (e: HttpException) {
+            when (e.code()) {
+                408, 429, in 500..599 -> AiResult.RetryableFailure(e)
+                else -> AiResult.PermanentFailure("HTTP ${e.code()}")
+            }
         } catch (t: Throwable) {
-            null
+            AiResult.RetryableFailure(t)
         }
     }
 

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.gift.tolife.core.ai.AiResult
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
@@ -111,18 +112,14 @@ class SettingsViewModel @Inject constructor(
                 val current = _uiState.value.settings
                 val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
                 _uiState.update {
-                    it.copy(
-                        testingTag = false,
-                        testResultTag = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
-                    )
+                    it.copy(testingTag = false, testResultTag = when (result) {
+                        is AiResult.Success -> "✓ 连接成功"
+                        is AiResult.PermanentFailure -> "✗ ${result.message}"
+                        is AiResult.RetryableFailure -> "✗ 连接失败"
+                    })
                 }
             } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(
-                        testingTag = false,
-                        testResultTag = "✗ ${t.message ?: "连接失败"}"
-                    )
-                }
+                _uiState.update { it.copy(testingTag = false, testResultTag = "✗ ${t.message ?: "连接失败"}") }
             }
         }
     }
@@ -135,18 +132,14 @@ class SettingsViewModel @Inject constructor(
                 val current = _uiState.value.settings
                 val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
                 _uiState.update {
-                    it.copy(
-                        testingSummary = false,
-                        testResultSummary = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
-                    )
+                    it.copy(testingSummary = false, testResultSummary = when (result) {
+                        is AiResult.Success -> "✓ 连接成功"
+                        is AiResult.PermanentFailure -> "✗ ${result.message}"
+                        is AiResult.RetryableFailure -> "✗ 连接失败"
+                    })
                 }
             } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(
-                        testingSummary = false,
-                        testResultSummary = "✗ ${t.message ?: "连接失败"}"
-                    )
-                }
+                _uiState.update { it.copy(testingSummary = false, testResultSummary = "✗ ${t.message ?: "连接失败"}") }
             }
         }
     }
@@ -159,18 +152,14 @@ class SettingsViewModel @Inject constructor(
                 val current = _uiState.value.settings
                 val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
                 _uiState.update {
-                    it.copy(
-                        testingVision = false,
-                        testResultVision = if (!result.isNullOrBlank()) "✓ 连接成功" else "✗ 连接失败"
-                    )
+                    it.copy(testingVision = false, testResultVision = when (result) {
+                        is AiResult.Success -> "✓ 连接成功"
+                        is AiResult.PermanentFailure -> "✗ ${result.message}"
+                        is AiResult.RetryableFailure -> "✗ 连接失败"
+                    })
                 }
             } catch (t: Throwable) {
-                _uiState.update {
-                    it.copy(
-                        testingVision = false,
-                        testResultVision = "✗ ${t.message ?: "连接失败"}"
-                    )
-                }
+                _uiState.update { it.copy(testingVision = false, testResultVision = "✗ ${t.message ?: "连接失败"}") }
             }
         }
     }

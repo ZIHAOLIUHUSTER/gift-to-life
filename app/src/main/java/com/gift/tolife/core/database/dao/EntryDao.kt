@@ -69,4 +69,11 @@ interface EntryDao {
         WHERE id = :id AND isDeleted = 0
     """)
     suspend fun bumpEntryRevision(id: Long, updatedAt: Long): Int
+
+    @Query("""
+        UPDATE entries
+        SET imageDescription = :description
+        WHERE id = :id AND entryRevision = :expectedRevision AND isDeleted = 0
+    """)
+    suspend fun updateImageDescription(id: Long, expectedRevision: Long, description: String?): Int
 }

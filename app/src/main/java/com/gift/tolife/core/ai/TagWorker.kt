@@ -3,6 +3,7 @@ package com.gift.tolife.core.ai
 import android.content.Context
 import androidx.work.*
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.EntryTransactions
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.network.AiClient
@@ -12,62 +13,57 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.first
 
-class TagWorker(
-    context: Context,
-    params: WorkerParameters
-) : CoroutineWorker(context, params) {
+class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface WorkerEntryPoint {
         fun repository(): EntryRepository
+        fun transactions(): EntryTransactions
         fun aiClient(): AiClient
         fun settingsDataStore(): SettingsDataStore
     }
 
     override suspend fun doWork(): Result {
         val entryId = inputData.getLong("entry_id", -1)
-        if (entryId == -1L) return Result.failure()
+        val expectedRevision = inputData.getLong("entry_revision", -1)
+        if (entryId == -1L || expectedRevision == -1L) return Result.failure()
 
-        val entryPoint = EntryPointAccessors.fromApplication(
-            applicationContext,
-            WorkerEntryPoint::class.java
-        )
+        val entryPoint = EntryPointAccessors.fromApplication(applicationContext, WorkerEntryPoint::class.java)
         val repository = entryPoint.repository()
+        val transactions = entryPoint.transactions()
         val aiClient = entryPoint.aiClient()
         val settingsDataStore = entryPoint.settingsDataStore()
-
-        val entry = repository.getById(entryId) ?: return Result.failure()
         val settings = settingsDataStore.settings.first()
 
-        if (settings.apiKey.isBlank()) return Result.failure()
+        if (settings.apiKey.isBlank()) return Result.success()
+
+        val entry = repository.getById(entryId) ?: return Result.success()
+        if (entry.isDeleted || entry.entryRevision != expectedRevision) return Result.success()
 
         try {
             var content = entry.content
+            var imageDescription: String? = null
+
             if (!entry.imagePath.isNullOrBlank()) {
-                val description = aiClient.describeImage(
-                    settings.visionModel, entry.imagePath,
-                    disableThinking = true
-                )
-                if (description != null) {
-                    repository.update(entry.copy(imageDescription = description))
-                    content = if (content.isNotBlank()) "$content\n[图片描述: $description]" else description
+                val descResult = aiClient.describeImage(settings.visionModel, entry.imagePath, disableThinking = true)
+                if (descResult is AiResult.Success) {
+                    imageDescription = descResult.value
+                    content = if (content.isNotBlank()) "$content\n[图片描述: ${descResult.value}]" else descResult.value
                 }
             }
 
             if (content.isNotBlank()) {
-                val response = aiClient.chat(
+                val tagResult = aiClient.chat(
                     model = settings.tagModel,
                     systemPrompt = TagPrompt.SYSTEM,
                     userMessage = TagPrompt.userPrompt(content),
                     disableThinking = true
                 )
-                if (response != null) {
-                    val tags = parseTags(response)
+                if (tagResult is AiResult.Success) {
+                    val tags = parseTags(tagResult.value).toSet()
                     if (tags.isNotEmpty()) {
-                        repository.setTags(entryId, tags)
-                        // 更新 updatedAt 以触发 UI 刷新
-                        repository.update(entry.copy(updatedAt = System.currentTimeMillis()))
+                        transactions.applyAiEnhancement(entryId, expectedRevision, imageDescription, tags)
                     }
                 }
             }
@@ -88,20 +84,5 @@ class TagWorker(
                 else -> null
             }
         }.distinct()
-    }
-
-    companion object {
-        fun enqueue(context: Context, entryId: Long) {
-            val work = OneTimeWorkRequestBuilder<TagWorker>()
-                .setInputData(Data.Builder().putLong("entry_id", entryId).build())
-                .setConstraints(
-                    Constraints.Builder()
-                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                        .build()
-                )
-                .addTag("tag_$entryId")
-                .build()
-            WorkManager.getInstance(context).enqueue(work)
-        }
     }
 }

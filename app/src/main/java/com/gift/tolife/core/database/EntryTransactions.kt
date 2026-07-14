@@ -43,4 +43,20 @@ class EntryTransactions @Inject constructor(
             entryDao.getById(id)!!.entryRevision
         }
     }
+
+    suspend fun applyAiEnhancement(
+        entryId: Long,
+        expectedRevision: Long,
+        imageDescription: String?,
+        tags: Set<TagType>
+    ): Boolean = database.withTransaction {
+        val current = entryDao.getById(entryId) ?: return@withTransaction false
+        if (current.isDeleted || current.entryRevision != expectedRevision) {
+            return@withTransaction false
+        }
+        entryDao.updateImageDescription(id = entryId, expectedRevision = expectedRevision, description = imageDescription)
+        entryTagDao.deleteByEntryId(entryId)
+        entryTagDao.insertAll(tags.map { EntryTag(entryId, it) })
+        true
+    }
 }

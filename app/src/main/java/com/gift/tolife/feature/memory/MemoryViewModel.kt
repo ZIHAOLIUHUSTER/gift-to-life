@@ -2,6 +2,7 @@ package com.gift.tolife.feature.memory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gift.tolife.core.ai.AiResult
 import com.gift.tolife.core.ai.SummaryPrompt
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.database.EntryRepository
@@ -98,7 +99,11 @@ class MemoryViewModel @Inject constructor(
                     return@launch
                 }
                 val prompt = SummaryPrompt.pickRandomWeekPrompt()
-                val content = aiClient.chat(model = settings.summaryModel, systemPrompt = prompt, userMessage = SummaryPrompt.buildUserPrompt(entries))
+                val result = aiClient.chat(model = settings.summaryModel, systemPrompt = prompt, userMessage = SummaryPrompt.buildUserPrompt(entries))
+                val content = when (result) {
+                    is AiResult.Success -> result.value
+                    else -> null
+                }
                 if (!content.isNullOrBlank()) {
                     val existing = _uiState.value.currentWeekSummary
                     if (existing != null) {
@@ -140,7 +145,11 @@ class MemoryViewModel @Inject constructor(
                     _uiState.update { it.copy(isGeneratingSummary = false) }
                     return@launch
                 }
-                val content = aiClient.chat(model = settings.summaryModel, systemPrompt = SummaryPrompt.MONTH_LETTER, userMessage = SummaryPrompt.buildUserPrompt(entries))
+                val result = aiClient.chat(model = settings.summaryModel, systemPrompt = SummaryPrompt.MONTH_LETTER, userMessage = SummaryPrompt.buildUserPrompt(entries))
+                val content = when (result) {
+                    is AiResult.Success -> result.value
+                    else -> null
+                }
                 if (!content.isNullOrBlank()) {
                     val existing = _uiState.value.currentMonthSummary
                     if (existing != null) {
