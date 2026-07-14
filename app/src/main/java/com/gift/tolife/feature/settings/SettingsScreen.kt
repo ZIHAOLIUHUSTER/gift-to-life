@@ -9,19 +9,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gift.tolife.R
 
 private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN }
 
@@ -126,7 +126,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("模型配置") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -150,7 +150,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     label = { Text("API Key") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, "切换") } },
+                    trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(painterResource(if (showKey) R.drawable.ic_visibility_off else R.drawable.ic_visibility), "切换") } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -198,7 +198,7 @@ private fun ModelRow(value: String, onValueChange: (String) -> Unit, label: Stri
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onTest, enabled = !testing, modifier = Modifier.padding(top = 4.dp)) {
                 if (testing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Icon(Icons.Filled.CheckCircle, "测试", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                else Icon(painterResource(R.drawable.ic_check_circle), "测试", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (testResult != null) {
                 Text(testResult, style = MaterialTheme.typography.labelSmall,
@@ -232,7 +232,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(title = { Text("数据管理") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground))
         }
     ) { innerPadding ->
@@ -278,7 +278,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(title = { Text("回收站") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 actions = {
                     if (deletedEntries.isNotEmpty()) {
                         TextButton(onClick = { scope.launch { viewModel.permanentlyDeleteAll(); deletedEntries = emptyList() } }) {

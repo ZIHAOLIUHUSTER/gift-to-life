@@ -5,19 +5,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import com.gift.tolife.R
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
@@ -282,7 +282,7 @@ private fun RandomReviewCard(
                     enabled = !isGenerating
                 ) {
                     Icon(
-                        Icons.Filled.Refresh,
+                        painterResource(R.drawable.ic_refresh),
                         contentDescription = "再抽一条",
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.primary

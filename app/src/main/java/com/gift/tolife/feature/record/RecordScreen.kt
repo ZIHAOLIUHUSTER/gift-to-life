@@ -6,17 +6,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
+import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
@@ -75,7 +73,7 @@ fun RecordScreen(
                     title = { Text("记录") },
                     actions = {
                         IconButton(onClick = viewModel::openSearch) {
-                            Icon(Icons.Filled.Search, contentDescription = "搜索")
+                            Icon(painterResource(R.drawable.ic_search), contentDescription = "搜索")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -93,7 +91,7 @@ fun RecordScreen(
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.Filled.Casino, contentDescription = "随机回顾")
+                    Icon(painterResource(R.drawable.ic_casino), contentDescription = "随机回顾")
                 }
             }
         }
@@ -251,7 +249,7 @@ private fun SearchTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = "关闭搜索")
+                Icon(painterResource(R.drawable.ic_close), contentDescription = "关闭搜索")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

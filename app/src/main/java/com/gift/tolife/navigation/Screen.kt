@@ -1,53 +1,47 @@
 package com.gift.tolife.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.gift.tolife.R
 
 sealed class Screen(
     val route: String,
     val label: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    @DrawableRes val selectedIconRes: Int,
+    @DrawableRes val unselectedIconRes: Int
 ) {
     data object Memory : Screen(
         route = "memory",
         label = "回忆",
-        selectedIcon = Icons.Filled.AutoAwesome,
-        unselectedIcon = Icons.Outlined.AutoAwesome
+        selectedIconRes = R.drawable.ic_auto_awesome,
+        unselectedIconRes = R.drawable.ic_auto_awesome
     )
 
     data object Record : Screen(
         route = "record",
         label = "记录",
-        selectedIcon = Icons.Filled.EditNote,
-        unselectedIcon = Icons.Outlined.EditNote
+        selectedIconRes = R.drawable.ic_edit_note,
+        unselectedIconRes = R.drawable.ic_edit_note
     )
 
     data object Settings : Screen(
         route = "settings",
         label = "设置",
-        selectedIcon = Icons.Filled.Settings,
-        unselectedIcon = Icons.Outlined.Settings
+        selectedIconRes = R.drawable.ic_settings,
+        unselectedIconRes = R.drawable.ic_settings
     )
 
     data object WeekSummary : Screen(
         route = "week_summary",
         label = "周总结",
-        selectedIcon = Icons.Filled.AutoAwesome,
-        unselectedIcon = Icons.Outlined.AutoAwesome
+        selectedIconRes = R.drawable.ic_auto_awesome,
+        unselectedIconRes = R.drawable.ic_auto_awesome
     )
 
     data object MonthSummary : Screen(
         route = "month_summary",
         label = "月总结",
-        selectedIcon = Icons.Filled.AutoAwesome,
-        unselectedIcon = Icons.Outlined.AutoAwesome
+        selectedIconRes = R.drawable.ic_auto_awesome,
+        unselectedIconRes = R.drawable.ic_auto_awesome
     )
 }
 
