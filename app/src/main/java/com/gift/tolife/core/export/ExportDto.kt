@@ -11,6 +11,6 @@ data class ExportEntry(
     val type: String,
     val createdAt: Long,
     val tags: List<String>,
-    val imageFileName: String? = null,
+    val imageBase64: String? = null,
     val imageDescription: String? = null
 )

@@ -35,7 +35,9 @@ class ExportImportManager @Inject constructor(
                     type = entry.type.name,
                     createdAt = entry.createdAt,
                     tags = tags,
-                    imageFileName = entry.imagePath?.let { File(it).name },
+                    imageBase64 = entry.imagePath?.let { path ->
+                        try { android.util.Base64.encodeToString(java.io.File(path).readBytes(), android.util.Base64.NO_WRAP) } catch (_: Exception) { null }
+                    },
                     imageDescription = entry.imageDescription
                 )
             }
@@ -44,25 +46,8 @@ class ExportImportManager @Inject constructor(
             context.contentResolver.openOutputStream(uri)?.use { output ->
                 output.write(json.toByteArray())
             }
-            // 复制图片到导出目录旁边
-            entries.forEach { entry ->
-                if (!entry.imagePath.isNullOrBlank()) {
-                    copyImageToExport(entry.imagePath)
-                }
-            }
             exportEntries.size
         }
-    }
-
-    private fun copyImageToExport(imagePath: String) {
-        try {
-            val sourceFile = File(imagePath)
-            if (!sourceFile.exists()) return
-            val imagesDir = File(context.cacheDir, "export_images")
-            imagesDir.mkdirs()
-            val destFile = File(imagesDir, sourceFile.name)
-            sourceFile.copyTo(destFile, overwrite = true)
-        } catch (_: Exception) {}
     }
 
     suspend fun importFromUri(uri: Uri): Int {
@@ -73,13 +58,26 @@ class ExportImportManager @Inject constructor(
             val data = gson.fromJson(json, ExportData::class.java) ?: return@withContext 0
             var count = 0
             data.entries.forEach { e ->
+                var imagePath: String? = null
+                if (!e.imageBase64.isNullOrBlank()) {
+                    try {
+                        val bytes = android.util.Base64.decode(e.imageBase64, android.util.Base64.NO_WRAP)
+                        val imagesDir = java.io.File(context.filesDir, "images")
+                        if (!imagesDir.exists()) imagesDir.mkdirs()
+                        val fileName = "${java.util.UUID.randomUUID()}.webp"
+                        val destFile = java.io.File(imagesDir, fileName)
+                        destFile.writeBytes(bytes)
+                        imagePath = destFile.absolutePath
+                    } catch (_: Exception) {}
+                }
                 val entry = Entry(
                     content = e.content,
                     type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
                     createdAt = e.createdAt,
+                    imagePath = imagePath,
                     imageDescription = e.imageDescription
                 )
-                val entryId = repository.save(entry)
+                val entryId = entryDao.insert(entry)
                 val tags = e.tags.mapNotNull { tag ->
                     TagType.entries.find { it.label == tag }
                 }
@@ -107,13 +105,26 @@ class ExportImportManager @Inject constructor(
             val data = gson.fromJson(json, ExportData::class.java) ?: return@withContext 0
             var count = 0
             data.entries.forEach { e ->
+                var imagePath: String? = null
+                if (!e.imageBase64.isNullOrBlank()) {
+                    try {
+                        val bytes = android.util.Base64.decode(e.imageBase64, android.util.Base64.NO_WRAP)
+                        val imagesDir = java.io.File(context.filesDir, "images")
+                        if (!imagesDir.exists()) imagesDir.mkdirs()
+                        val fileName = "${java.util.UUID.randomUUID()}.webp"
+                        val destFile = java.io.File(imagesDir, fileName)
+                        destFile.writeBytes(bytes)
+                        imagePath = destFile.absolutePath
+                    } catch (_: Exception) {}
+                }
                 val entry = Entry(
                     content = e.content,
                     type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
                     createdAt = e.createdAt,
+                    imagePath = imagePath,
                     imageDescription = e.imageDescription
                 )
-                val entryId = repository.save(entry)
+                val entryId = entryDao.insert(entry)
                 val tags = e.tags.mapNotNull { tag ->
                     TagType.entries.find { it.label == tag }
                 }
