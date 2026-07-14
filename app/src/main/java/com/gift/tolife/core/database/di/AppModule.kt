@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.gift.tolife.core.database.AppDatabase
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.Migrations
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
 import dagger.Module
@@ -24,7 +25,10 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "gift_tolife.db"
-        ).fallbackToDestructiveMigration().build()
+        ).addMigrations(
+            Migrations.MIGRATION_1_3,
+            Migrations.MIGRATION_3_4
+        ).build()
     }
 
     @Provides

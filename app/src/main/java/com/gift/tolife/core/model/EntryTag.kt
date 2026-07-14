@@ -15,7 +15,7 @@ import androidx.room.Index
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("entryId")]
+    indices = [Index("entryId"), Index(value = ["tag", "entryId"], name = "index_entry_tags_tag_entryId")]
 )
 data class EntryTag(
     val entryId: Long,
