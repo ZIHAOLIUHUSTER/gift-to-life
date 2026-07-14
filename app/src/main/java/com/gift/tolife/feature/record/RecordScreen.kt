@@ -66,13 +66,13 @@ fun RecordScreen(
                 SearchTopBar(
                     query = uiState.searchQuery,
                     onQueryChange = viewModel::setSearchQuery,
-                    onClose = viewModel::toggleSearch
+                    onClose = viewModel::closeSearch
                 )
             } else {
                 TopAppBar(
                     title = { Text("记录") },
                     actions = {
-                        IconButton(onClick = viewModel::toggleSearch) {
+                        IconButton(onClick = viewModel::openSearch) {
                             Icon(Icons.Filled.Search, contentDescription = "搜索")
                         }
                     },

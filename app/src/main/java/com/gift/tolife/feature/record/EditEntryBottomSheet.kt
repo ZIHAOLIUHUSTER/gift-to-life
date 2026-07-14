@@ -139,9 +139,7 @@ fun EditEntryBottomSheet(
             ) {
                 Button(
                     onClick = {
-                        if (editedContent.isNotBlank()) {
-                            onSave(entry.copy(content = editedContent.trim()))
-                        }
+                        onSave(entry.copy(content = editedContent.trim()))
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary

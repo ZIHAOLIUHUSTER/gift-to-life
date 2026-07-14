@@ -54,12 +54,14 @@ class RecordViewModel @Inject constructor(
     }
 
     private fun consumeSharedContent() {
-        if (!ShareReceiver.hasPending()) return
-        val (text, imageUri) = ShareReceiver.consume()
-        _uiState.update { it.copy(
-            pendingContentText = text,
-            pendingImageUri = imageUri ?: it.pendingImageUri
-        ) }
+        viewModelScope.launch {
+            ShareReceiver.events.collect { shared ->
+                _uiState.update { it.copy(
+                    pendingContentText = shared.text ?: it.pendingContentText,
+                    pendingImageUri = shared.imageUri ?: it.pendingImageUri
+                ) }
+            }
+        }
     }
 
     fun save(content: String) {
@@ -164,14 +166,12 @@ class RecordViewModel @Inject constructor(
         _uiState.update { it.copy(selectedEntry = null) }
     }
 
-    fun toggleSearch() {
-        _uiState.update {
-            if (it.isSearchMode) {
-                it.copy(isSearchMode = false, searchQuery = "")
-            } else {
-                it.copy(isSearchMode = true, searchQuery = "")
-            }
-        }
+    fun openSearch() {
+        _uiState.update { it.copy(isSearchMode = true, searchQuery = "") }
+    }
+
+    fun closeSearch() {
+        _uiState.update { it.copy(isSearchMode = false, searchQuery = "", entryQuery = EntryQuery()) }
     }
 
     fun setSearchQuery(query: String) {

@@ -1,21 +1,16 @@
 package com.gift.tolife.core.common
 
 import android.net.Uri
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
+
+data class SharedContent(val text: String?, val imageUri: Uri?)
 
 object ShareReceiver {
-    @Volatile
-    var pendingText: String? = null
+    private val eventsChannel = Channel<SharedContent>(Channel.BUFFERED)
+    val events = eventsChannel.receiveAsFlow()
 
-    @Volatile
-    var pendingImageUri: Uri? = null
-
-    fun hasPending(): Boolean = pendingText != null || pendingImageUri != null
-
-    fun consume(): Pair<String?, Uri?> {
-        val text = pendingText
-        val image = pendingImageUri
-        pendingText = null
-        pendingImageUri = null
-        return text to image
+    fun publish(content: SharedContent) {
+        eventsChannel.trySend(content)
     }
 }

@@ -107,7 +107,7 @@ fun EntryComposer(
 
                 Button(
                     onClick = {
-                        if (text.isNotBlank()) {
+                        if (text.isNotBlank() || pendingImageUri != null) {
                             onSave(text.trim())
                             text = ""
                         }
