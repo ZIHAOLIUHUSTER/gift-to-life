@@ -22,7 +22,6 @@ import com.gift.tolife.core.model.TagType
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordScreen(
-    onNavigateToMemory: () -> Unit = {},
     viewModel: RecordViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,18 +80,6 @@ fun RecordScreen(
                         titleContentColor = MaterialTheme.colorScheme.onBackground
                     )
                 )
-            }
-        },
-        floatingActionButton = {
-            if (lazyItems.itemCount > 0) {
-                FloatingActionButton(
-                    onClick = onNavigateToMemory,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Icon(painterResource(R.drawable.ic_casino), contentDescription = "随机回顾")
-                }
             }
         }
     ) { innerPadding ->

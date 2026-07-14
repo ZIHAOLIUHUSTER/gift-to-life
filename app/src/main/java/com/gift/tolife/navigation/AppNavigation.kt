@@ -77,19 +77,7 @@ fun AppNavigation() {
                     onNavigateToMonthSummary = { navController.navigate(Screen.MonthSummary.route) }
                 )
             }
-            composable(Screen.Record.route) {
-                RecordScreen(
-                    onNavigateToMemory = {
-                        navController.navigate(Screen.Memory.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
-            }
+            composable(Screen.Record.route) { RecordScreen() }
             composable(Screen.Settings.route) { SettingsScreen() }
             composable(Screen.WeekSummary.route) {
                 WeekSummaryScreen(onBack = { navController.popBackStack() })
