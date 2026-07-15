@@ -97,6 +97,7 @@ class RecordViewModel @Inject constructor(
                         draftVersion = it.draftVersion + 1
                     )
                 }
+                _events.emit(RecordEvent.RequestComposerFocus)
             }
         }
     }

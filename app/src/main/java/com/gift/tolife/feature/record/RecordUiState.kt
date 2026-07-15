@@ -21,4 +21,5 @@ sealed class RecordEvent {
     data class ShowSnackbar(val message: String) : RecordEvent()
     data object EntrySaved : RecordEvent()
     data class EntryMovedToRecycleBin(val entryId: Long) : RecordEvent()
+    data object RequestComposerFocus : RecordEvent()
 }

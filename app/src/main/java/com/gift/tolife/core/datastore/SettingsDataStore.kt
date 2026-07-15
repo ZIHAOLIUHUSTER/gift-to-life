@@ -30,7 +30,8 @@ class SettingsDataStore @Inject constructor(
             tagModel = prefs.getString("tag_model", "deepseek-chat") ?: "deepseek-chat",
             summaryModel = prefs.getString("summary_model", "deepseek-chat") ?: "deepseek-chat",
             visionModel = prefs.getString("vision_model", "deepseek-chat") ?: "deepseek-chat",
-            biometricEnabled = prefs.getBoolean("biometric_enabled", false)
+            biometricEnabled = prefs.getBoolean("biometric_enabled", false),
+            themeMode = prefs.getString("theme_mode", "system") ?: "system"
         )
     }
 
@@ -61,6 +62,11 @@ class SettingsDataStore @Inject constructor(
 
     fun updateBiometricEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("biometric_enabled", enabled).apply()
+        _settings.tryEmit(readAll())
+    }
+
+    fun updateThemeMode(mode: String) {
+        prefs.edit().putString("theme_mode", mode).apply()
         _settings.tryEmit(readAll())
     }
 }

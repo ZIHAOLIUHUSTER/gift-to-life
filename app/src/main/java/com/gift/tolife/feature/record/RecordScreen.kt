@@ -14,6 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -40,6 +42,9 @@ fun RecordScreen(
     var previewImagePath by remember { mutableStateOf<String?>(null) }
     var previewEntry by remember { mutableStateOf<Pair<Entry, List<TagType>>?>(null) }
     val focusRequester = remember { FocusRequester() }
+    val composerFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -59,6 +64,7 @@ fun RecordScreen(
             when (event) {
                 is RecordEvent.EntrySaved -> snackbarHostState.showSnackbar("已记录")
                 is RecordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is RecordEvent.RequestComposerFocus -> composerFocusRequester.requestFocus()
                 is RecordEvent.EntryMovedToRecycleBin -> {
                     val result = snackbarHostState.showSnackbar(
                         message = "已移至回收站",
@@ -76,6 +82,13 @@ fun RecordScreen(
     LaunchedEffect(uiState.isSearchMode) {
         if (uiState.isSearchMode) {
             focusRequester.requestFocus()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
         }
     }
 
@@ -125,7 +138,8 @@ fun RecordScreen(
                 isSaving = uiState.isSaving,
                 onSave = viewModel::saveDraft,
                 onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                onClearImage = viewModel::clearImage
+                onClearImage = viewModel::clearImage,
+                focusRequester = composerFocusRequester
             )
             }
 

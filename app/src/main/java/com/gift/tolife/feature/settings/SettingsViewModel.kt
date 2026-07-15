@@ -79,6 +79,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isSaved = false) }
     }
 
+    fun updateThemeMode(mode: String) {
+        settingsDataStore.updateThemeMode(mode)
+        _uiState.update { it.copy(isSaved = true) }
+    }
+
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
 

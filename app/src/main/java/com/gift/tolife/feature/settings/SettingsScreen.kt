@@ -27,7 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.ui.UiTestTags
 
-private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN }
+private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,6 +39,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         SettingsPage.MODEL_CONFIG -> ModelConfigPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.DATA_MANAGE -> DataManagePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RECYCLE_BIN -> RecycleBinPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.APPEARANCE -> AppearancePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -83,6 +84,14 @@ private fun SettingsMainPage(onNavigate: (SettingsPage) -> Unit) {
                     description = "恢复或彻底删除已移除的记录",
                     painter = painterResource(R.drawable.ic_refresh),
                     onClick = { onNavigate(SettingsPage.RECYCLE_BIN) }
+                )
+            }
+            item {
+                SettingsSectionCard(
+                    title = "外观",
+                    description = "浅色、深色或跟随系统",
+                    painter = painterResource(R.drawable.ic_auto_awesome),
+                    onClick = { onNavigate(SettingsPage.APPEARANCE) }
                 )
             }
         }
@@ -376,6 +385,50 @@ private fun SettingsCard(title: String, content: @Composable ColumnScope.() -> U
             Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
             content()
+        }
+    }
+}
+
+// ===== 外观子页 =====
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
+    val uiState by viewModel.uiState.collectAsState()
+    val currentTheme = uiState.settings.themeMode
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("外观") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                "system" to "跟随系统",
+                "light" to "浅色",
+                "dark" to "深色"
+            ).forEach { (value, label) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.updateThemeMode(value) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentTheme == value,
+                        onClick = { viewModel.updateThemeMode(value) }
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(label, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
         }
     }
 }

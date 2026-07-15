@@ -1,5 +1,7 @@
 package com.gift.tolife.feature.memory
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,13 +13,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import com.gift.tolife.R
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
@@ -41,6 +46,9 @@ fun MemoryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
+
+    val configuration = LocalConfiguration.current
+    val stageHeight = (configuration.screenHeightDp * 0.4f).dp
 
     LaunchedEffect(Unit) {
         summaryVM.events.collect { event ->
@@ -111,9 +119,29 @@ fun MemoryScreen(
                         RandomReviewCard(
                             entry = randomEntry,
                             tags = randomState.tags,
+                            stageHeight = stageHeight,
                             onRefresh = randomVM::fetchRandom,
                             onClick = { previewEntry = randomEntry }
                         )
+                    }
+                }
+
+                // 总结与归档预览
+                val summaryEntries = summaryState.weekSummaries + summaryState.monthSummaries
+                val latestSummary = summaryEntries.maxByOrNull { it.createdAt }
+                if (latestSummary != null) {
+                    item(key = "summary_preview") {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text("最近总结", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.height(8.dp))
+                                Text(latestSummary.content.take(80) + "…", style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                            }
+                        }
                     }
                 }
 
@@ -182,13 +210,16 @@ fun MemoryScreen(
 private fun RandomReviewCard(
     entry: Entry,
     tags: List<TagType>,
+    stageHeight: Dp,
     onRefresh: () -> Unit,
     onClick: () -> Unit = {}
 ) {
+    var refreshEnabled by remember { mutableStateOf(true) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 320.dp)
+            .height(stageHeight)
             .clickable(onClick = onClick)
             .testTag(UiTestTags.MEMORY_CARD),
         shape = MaterialTheme.shapes.large,
@@ -197,91 +228,107 @@ private fun RandomReviewCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(28.dp)) {
-            // 标题
-            Text(
-                "随机回顾",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 内容区（文字 + 图片）
-            Column {
-                // 内容（带引号装饰）
+        Crossfade(targetState = entry.id, animationSpec = tween(300)) { _ ->
+            Column(modifier = Modifier.padding(28.dp)) {
+                // 标题
                 Text(
-                    "「${entry.content}」",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 6,
-                    overflow = TextOverflow.Ellipsis
+                    "随机回顾",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // 内容区（文字 + 图片）
+                Column {
+                    // 内容（带引号装饰）
+                    Text(
+                        "「${entry.content}」",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 6,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // 图片
+                    if (!entry.imagePath.isNullOrBlank()) {
+                        AsyncImage(
+                            model = File(entry.imagePath),
+                            contentDescription = "回顾图片",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .heightIn(max = 180.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // 图片
-                if (!entry.imagePath.isNullOrBlank()) {
-                    AsyncImage(
-                        model = File(entry.imagePath),
-                        contentDescription = "回顾图片",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(16f / 9f)
-                            .heightIn(max = 180.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 标签 + 时间（居中）
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (tags.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        tags.forEach { tag ->
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            ) {
-                                Text(
-                                    tag.label,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                // 标签 + 时间（居中）
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (tags.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            tags.forEach { tag ->
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                ) {
+                                    Text(
+                                        tag.label,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
+                        Spacer(modifier = Modifier.width(12.dp))
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        formatTime(entry.createdAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-                Text(
-                    formatTime(entry.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-            Spacer(modifier = Modifier.height(12.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onRefresh, modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)) {
-                    Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("再抽一条", style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(
+                        onClick = {
+                            refreshEnabled = false
+                            onRefresh()
+                        },
+                        enabled = refreshEnabled,
+                        modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)
+                    ) {
+                        Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("再抽一条", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(refreshEnabled) {
+        if (!refreshEnabled) {
+            delay(300)
+            refreshEnabled = true
         }
     }
 }

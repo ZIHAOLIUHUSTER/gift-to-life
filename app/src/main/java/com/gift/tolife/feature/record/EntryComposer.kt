@@ -28,9 +28,9 @@ fun EntryComposer(
     isSaving: Boolean,
     onSave: () -> Unit,
     onPickImage: () -> Unit,
-    onClearImage: () -> Unit
+    onClearImage: () -> Unit,
+    focusRequester: FocusRequester = remember { FocusRequester() }
 ) {
-    val focusRequester = remember { FocusRequester() }
 
     Card(
         modifier = Modifier
@@ -108,9 +108,5 @@ fun EntryComposer(
                 }
             }
         }
-    }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
     }
 }

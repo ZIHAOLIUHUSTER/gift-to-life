@@ -6,5 +6,6 @@ data class AppSettings(
     val tagModel: String = "deepseek-chat",
     val summaryModel: String = "deepseek-chat",
     val visionModel: String = "deepseek-chat",
-    val biometricEnabled: Boolean = false
+    val biometricEnabled: Boolean = false,
+    val themeMode: String = "system"
 )
