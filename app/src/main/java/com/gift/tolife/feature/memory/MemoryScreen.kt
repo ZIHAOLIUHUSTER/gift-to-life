@@ -215,7 +215,7 @@ private fun RandomReviewCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(420.dp)
+            .height(460.dp)
             .clickable(onClick = onClick)
             .testTag(UiTestTags.MEMORY_CARD),
         shape = MaterialTheme.shapes.large,
@@ -287,7 +287,8 @@ private fun RandomReviewCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(hasImage.let { if (it) 12.dp else 0.dp }))
+                // 弹性空间，把标签和按钮推到底部
+                Spacer(modifier = Modifier.weight(1f))
 
                 // 标签 + 时间（固定位置）
                 Row(
