@@ -103,7 +103,7 @@ private fun SettingsSectionCard(title: String, description: String, painter: Pai
                 Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -232,7 +232,7 @@ private fun ModelRow(value: String, onValueChange: (String) -> Unit, label: Stri
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onTest, enabled = !testing, modifier = Modifier.padding(top = 4.dp)) {
                 if (testing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Icon(painterResource(R.drawable.ic_check_circle), "测试", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                else Text("测试", style = MaterialTheme.typography.labelSmall)
             }
             if (testResult != null) {
                 Text(testResult, style = MaterialTheme.typography.labelSmall,
@@ -280,7 +280,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
             if (showImportConfirm) {
                 AlertDialog(onDismissRequest = { showImportConfirm = false },
-                    title = { Text("导入数据") }, text = { Text("导入将清空所有现有记录，确定继续？") },
+                    title = { Text("导入数据") }, text = { Text("导入将清空并替换所有现有记录，确定继续？") },
                     confirmButton = { TextButton(onClick = { showImportConfirm = false; importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("确定", color = MaterialTheme.colorScheme.error) } },
                     dismissButton = { TextButton(onClick = { showImportConfirm = false }) { Text("取消") } })
             }
@@ -295,6 +295,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     var deletedEntries by remember { mutableStateOf<List<com.gift.tolife.core.model.Entry>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var showClearConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -316,7 +317,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 actions = {
                     if (deletedEntries.isNotEmpty()) {
                         TextButton(
-                            onClick = { scope.launch { viewModel.permanentlyDeleteAll(); deletedEntries = emptyList() } },
+                            onClick = { showClearConfirm = true },
                             modifier = Modifier.testTag(UiTestTags.RECYCLE_CLEAR)
                         ) {
                             Text("清空", color = MaterialTheme.colorScheme.error)
@@ -326,6 +327,26 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground))
         }
     ) { innerPadding ->
+        if (showClearConfirm) {
+            AlertDialog(
+                onDismissRequest = { showClearConfirm = false },
+                title = { Text("清空回收站") },
+                text = { Text("将永久删除 ${deletedEntries.size} 条记录，不可恢复。确定清空？") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        scope.launch {
+                            viewModel.permanentlyDeleteAll()
+                            deletedEntries = emptyList()
+                            showClearConfirm = false
+                        }
+                    }) { Text("清空", color = MaterialTheme.colorScheme.error) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearConfirm = false }) { Text("取消") }
+                }
+            )
+        }
+
         if (deletedEntries.isEmpty() && !loading) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text("回收站为空", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
