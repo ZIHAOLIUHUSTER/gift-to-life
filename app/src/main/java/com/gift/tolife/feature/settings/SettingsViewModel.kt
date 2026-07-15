@@ -180,14 +180,18 @@ class SettingsViewModel @Inject constructor(
     fun exportModelConfig(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
-                val settings = _uiState.value.settings
-                val json = GsonBuilder().setPrettyPrinting().create().toJson(settings)
-                context.contentResolver.openOutputStream(uri)?.use {
-                    it.write(json.toByteArray())
-                }
-                _events.emit(SettingsEvent.ShowMessage("模型配置已导出"))
+                val s = _uiState.value.settings
+                val config = ModelConfigExport(
+                    baseUrl = s.baseUrl,
+                    tagModel = s.tagModel,
+                    summaryModel = s.summaryModel,
+                    visionModel = s.visionModel
+                )
+                val json = GsonBuilder().setPrettyPrinting().create().toJson(config)
+                context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导出（不含 API Key）"))
             } catch (t: Throwable) {
-                _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: "未知错误"}"))
+                _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: ""}"))
             }
         }
     }
@@ -195,20 +199,28 @@ class SettingsViewModel @Inject constructor(
     fun importModelConfig(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
-                val json = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) } ?: return@launch
-                val settings = Gson().fromJson(json, AppSettings::class.java) ?: return@launch
-                settingsDataStore.updateApiKey(settings.apiKey)
-                settingsDataStore.updateBaseUrl(settings.baseUrl)
-                settingsDataStore.updateTagModel(settings.tagModel)
-                settingsDataStore.updateSummaryModel(settings.summaryModel)
-                settingsDataStore.updateVisionModel(settings.visionModel)
-                _events.emit(SettingsEvent.ShowMessage("模型配置已导入"))
+                val json = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) }
+                    ?: return@launch
+                val config = Gson().fromJson(json, ModelConfigExport::class.java) ?: return@launch
+                settingsDataStore.updateBaseUrl(config.baseUrl)
+                settingsDataStore.updateTagModel(config.tagModel)
+                settingsDataStore.updateSummaryModel(config.summaryModel)
+                settingsDataStore.updateVisionModel(config.visionModel)
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导入（API Key 已保留）"))
             } catch (t: Throwable) {
-                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
+                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: ""}"))
             }
         }
     }
 }
+
+data class ModelConfigExport(
+    val version: Int = 2,
+    val baseUrl: String,
+    val tagModel: String,
+    val summaryModel: String,
+    val visionModel: String
+)
 
 sealed class SettingsEvent {
     data class ShowMessage(val message: String) : SettingsEvent()

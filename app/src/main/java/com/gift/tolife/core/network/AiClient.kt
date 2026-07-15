@@ -26,7 +26,11 @@ class AiClient @Inject constructor(
     private var cachedService: OpenAiService? = null
 
     private fun getService(baseUrl: String): OpenAiService? {
-        val url = normalizeUrl(baseUrl) ?: return null
+        val url = try {
+            BaseUrlValidator.normalize(baseUrl)
+        } catch (e: Exception) {
+            return null
+        }
         if (url != cachedBaseUrl || cachedService == null) {
             cachedService = try {
                 Retrofit.Builder()
@@ -41,16 +45,6 @@ class AiClient @Inject constructor(
             cachedBaseUrl = url
         }
         return cachedService
-    }
-
-    private fun normalizeUrl(raw: String): String? {
-        var url = raw.trim()
-        if (url.isEmpty()) return null
-        if (url.endsWith("/v1/chat/completions")) {
-            url = url.removeSuffix("/v1/chat/completions")
-        }
-        if (!url.endsWith("/")) url += "/"
-        return url
     }
 
     suspend fun chat(model: String, systemPrompt: String, userMessage: String, disableThinking: Boolean = false): AiResult<String> {

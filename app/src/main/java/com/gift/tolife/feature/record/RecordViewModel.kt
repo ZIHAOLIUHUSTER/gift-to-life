@@ -111,37 +111,40 @@ class RecordViewModel @Inject constructor(
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
             val oldPath = entry.imagePath
-            val updated = entry.copy(imagePath = null, imageDescription = null)
+            val revision = entryTransactions.updateUserContent(
+                entry.id, entry.content, null
+            )
+            val deleted = imageStore.delete(oldPath)
+            if (!deleted && !oldPath.isNullOrBlank()) {
+                _events.emit(RecordEvent.ShowSnackbar("记录已更新，旧图片将在后续清理"))
+            }
+            tagScheduler.enqueue(entry.id, revision)
             _uiState.update { state ->
                 state.copy(
-                    selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry
+                    selectedEntry = state.selectedEntry?.copy(imagePath = null, imageDescription = null)
                 )
             }
-            // 删除旧图片文件
-            imageStore.delete(oldPath)
-
-            val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, null)
-            tagScheduler.enqueue(entry.id, newRevision)
         }
     }
 
     fun replaceImage(entry: Entry, uri: android.net.Uri) {
         viewModelScope.launch {
+            val newPath = ImageUtil.copyToPrivateDir(context, uri)
+            if (newPath == null) {
+                _events.emit(RecordEvent.ShowSnackbar("图片处理失败"))
+                return@launch
+            }
             val oldPath = entry.imagePath
-            val imagePath = ImageUtil.copyToPrivateDir(context, uri)
-            if (imagePath != null) {
-                val updated = entry.copy(imagePath = imagePath)
-                _uiState.update { state ->
-                    state.copy(
-                        selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry,
-                        editingImageEntry = null
-                    )
-                }
-                // 删除旧图片文件
-                imageStore.delete(oldPath)
-
-                val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, imagePath)
-                tagScheduler.enqueue(entry.id, newRevision)
+            val revision = entryTransactions.updateUserContent(
+                entry.id, entry.content, newPath
+            )
+            imageStore.delete(oldPath)
+            tagScheduler.enqueue(entry.id, revision)
+            _uiState.update { state ->
+                state.copy(
+                    selectedEntry = state.selectedEntry?.copy(imagePath = newPath),
+                    editingImageEntry = null
+                )
             }
         }
     }
