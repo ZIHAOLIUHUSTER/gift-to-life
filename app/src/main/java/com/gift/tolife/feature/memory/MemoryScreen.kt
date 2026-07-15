@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -233,7 +234,8 @@ private fun RandomReviewCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Crossfade(targetState = entry.id, animationSpec = tween(300)) { _ ->
+        Crossfade(targetState = entry.id, animationSpec = tween(300)) { targetId ->
+            key(targetId) {
             Column(modifier = Modifier.padding(28.dp)) {
                 // 标题
                 Text(
@@ -351,6 +353,7 @@ private fun RandomReviewCard(
                         Text("再抽一条", style = MaterialTheme.typography.bodySmall)
                     }
                 }
+            }
             }
         }
     }
