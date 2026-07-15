@@ -157,26 +157,14 @@ fun RecordScreen(
         // Edit bottom sheet
         if (uiState.selectedEntry != null) {
             EditEntryBottomSheet(
-                entry = uiState.selectedEntry!!,
-                onSave = { entry ->
-                    viewModel.saveWithTags(entry, editTags)
-                },
-                onDismiss = {
-                    viewModel.clearSelection()
-                    viewModel.setEditTags(emptyList())
-                },
-                onRemoveImage = viewModel::removeImage,
-                onReplaceImage = {
+                originalEntry = uiState.selectedEntry!!,
+                originalTags = editTags.toSet(),
+                onSave = { draft -> viewModel.saveEdit(draft) },
+                onDismiss = viewModel::clearSelection,
+                onPickImage = {
                     viewModel.setEditingImage(uiState.selectedEntry!!)
-                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
-                onAddImage = {
-                    viewModel.setEditingImage(uiState.selectedEntry!!)
-                    imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                },
-                onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath },
-                currentTags = editTags,
-                onTagsChanged = { viewModel.setEditTags(it) }
+                onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath }
             )
         }
     }

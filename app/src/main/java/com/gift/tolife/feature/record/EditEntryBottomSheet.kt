@@ -1,13 +1,19 @@
 package com.gift.tolife.feature.record
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.model.Entry
@@ -19,127 +25,176 @@ import java.util.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEntryBottomSheet(
-    entry: Entry,
-    onSave: (Entry) -> Unit,
+    originalEntry: Entry,
+    originalTags: Set<TagType>,
+    onSave: (EntryEditDraft) -> Unit,
     onDismiss: () -> Unit,
-    onRemoveImage: ((Entry) -> Unit)? = null,
-    onReplaceImage: (() -> Unit)? = null,
-    onAddImage: (() -> Unit)? = null,
-    onImageClick: (() -> Unit)? = null,
-    currentTags: List<TagType> = emptyList(),
-    onTagsChanged: ((List<TagType>) -> Unit)? = null,
+    onPickImage: () -> Unit,
+    onImageClick: (() -> Unit)? = null
 ) {
-    var editedContent by remember(entry.id) { mutableStateOf(entry.content) }
+    var draft by remember(originalEntry.id) {
+        mutableStateOf(EntryEditDraft.from(originalEntry, originalTags))
+    }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        uri?.let { draft = draft.copy(imageChange = ImageChange.Replace(it)) }
+    }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val onDismissRequest: () -> Unit = {
+        if (draft.isDirtyComparedWith(originalEntry, originalTags)) {
+            showDiscardDialog = true
+        } else {
+            onDismiss()
+        }
+    }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
+                .imePadding()
         ) {
-            // 时间信息
-            Text(
-                text = formatFullTime(entry.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 标签选择
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // 可滚动内容区
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
             ) {
-                TagType.entries.forEach { tag ->
-                    val selected = tag in currentTags
-                    FilterChip(
-                        selected = selected,
-                        onClick = {
-                            val updated = if (selected) currentTags - tag else currentTags + tag
-                            onTagsChanged?.invoke(updated)
-                        },
-                        label = { Text(tag.label, style = MaterialTheme.typography.labelSmall) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // 已有图片显示
-            if (!entry.imagePath.isNullOrBlank()) {
-                AsyncImage(
-                    model = File(entry.imagePath),
-                    contentDescription = "记录图片",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 200.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
+                // 时间信息
+                Text(
+                    text = formatFullTime(originalEntry.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
+                // 标签选择
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TextButton(onClick = { onImageClick?.invoke() }) {
-                        Text("查看大图")
+                    TagType.entries.forEach { tag ->
+                        val selected = tag in draft.tags
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                draft = draft.copy(
+                                    tags = if (selected) draft.tags - tag else draft.tags + tag
+                                )
+                            },
+                            label = { Text(tag.label, style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                selectedLabelColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
                     }
-                    TextButton(onClick = { onRemoveImage?.invoke(entry) }) {
-                        Text("删除图片", color = MaterialTheme.colorScheme.error)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 图片区
+                val imageChange = draft.imageChange
+                val displayImagePath = when (imageChange) {
+                    is ImageChange.Keep -> draft.originalImagePath
+                    is ImageChange.Remove -> null
+                    is ImageChange.Replace -> imageChange.uri.toString()
+                }
+
+                if (displayImagePath != null) {
+                    val model: Any = if (imageChange is ImageChange.Replace) {
+                        imageChange.uri
+                    } else {
+                        File(displayImagePath)
                     }
-                    if (onReplaceImage != null) {
-                        TextButton(onClick = onReplaceImage) {
+
+                    AsyncImage(
+                        model = model,
+                        contentDescription = "记录图片",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TextButton(onClick = { onImageClick?.invoke() }) {
+                            Text("查看大图")
+                        }
+                        TextButton(onClick = { draft = draft.copy(imageChange = ImageChange.Remove) }) {
+                            Text("删除图片", color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = {
+                            onPickImage()
+                            imagePicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }) {
                             Text("替换图片")
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else {
+                    TextButton(onClick = {
+                        onPickImage()
+                        imagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }) {
+                        Text("＋ 添加图片")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-            } else if (onAddImage != null) {
-                TextButton(onClick = onAddImage) {
-                    Text("＋ 添加图片")
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+                // 编辑区
+                OutlinedTextField(
+                    value = draft.content,
+                    onValueChange = { draft = draft.copy(content = it) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 300.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
 
-            // 编辑区
-            OutlinedTextField(
-                value = editedContent,
-                onValueChange = { editedContent = it },
+            // 底部固定按钮行
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 100.dp, max = 300.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 按钮行
-            Row(
-                modifier = Modifier.fillMaxWidth(),
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.End
             ) {
                 Button(
                     onClick = {
-                        onSave(entry.copy(content = editedContent.trim()))
+                        keyboardController?.hide()
+                        onSave(draft.copy(content = draft.content.trim()))
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -150,6 +205,24 @@ fun EditEntryBottomSheet(
                 }
             }
         }
+    }
+
+    // 放弃修改对话框
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("放弃修改") },
+            text = { Text("您的修改尚未保存，确定放弃？") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onDismiss()
+                }) { Text("放弃修改") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) { Text("继续编辑") }
+            }
+        )
     }
 }
 

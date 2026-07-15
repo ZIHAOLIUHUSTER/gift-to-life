@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 
 data class EntryWithTags(val entry: Entry, val tags: List<TagType>)
@@ -255,10 +257,13 @@ class RecordViewModel @Inject constructor(
     private val _editTags = MutableStateFlow<List<TagType>>(emptyList())
     val editTags: StateFlow<List<TagType>> = _editTags.asStateFlow()
 
+    private var _originalEditTags: Set<TagType> = emptySet()
+
     fun loadTags(entryId: Long) {
         viewModelScope.launch {
             val tags = repository.getTags(entryId).map { it.tag }
             _editTags.value = tags
+            _originalEditTags = tags.toSet()
         }
     }
 
@@ -293,6 +298,64 @@ class RecordViewModel @Inject constructor(
                 }
             }
             _uiState.update { it.copy(selectedEntry = null) }
+        }
+    }
+
+    fun saveEdit(draft: EntryEditDraft) {
+        viewModelScope.launch {
+            try {
+                // 处理图片变更
+                val finalImagePath = when (draft.imageChange) {
+                    is ImageChange.Keep -> draft.originalImagePath
+                    is ImageChange.Remove -> null
+                    is ImageChange.Replace -> {
+                        val stageDir = File(context.cacheDir, "edit-stage")
+                        stageDir.mkdirs()
+                        val stageFile = File(stageDir, "${UUID.randomUUID()}.webp")
+                        try {
+                            val bytes = context.contentResolver.openInputStream(draft.imageChange.uri)?.use { it.readBytes() }
+                            if (bytes != null) {
+                                stageFile.writeBytes(bytes)
+                                val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
+                                val finalFile = File(imagesDir, "${UUID.randomUUID()}.webp")
+                                stageFile.copyTo(finalFile, overwrite = true)
+                                stageFile.delete()
+                                finalFile.absolutePath
+                            } else null
+                        } catch (e: Exception) {
+                            stageFile.delete()
+                            throw e
+                        }
+                    }
+                }
+
+                // 更新正文和图片
+                val revision = entryTransactions.updateUserContent(
+                    draft.entryId, draft.content, finalImagePath
+                )
+
+                // 更新标签
+                if (draft.tags.isNotEmpty()) {
+                    entryTransactions.replaceUserTags(draft.entryId, draft.tags)
+                }
+
+                // 删除旧图片
+                if (draft.imageChange != ImageChange.Keep && !draft.originalImagePath.isNullOrBlank()) {
+                    imageStore.delete(draft.originalImagePath)
+                }
+
+                // 如果正文或图片变化但标签未变，投递 AI 重新打标签
+                val contentChanged = draft.content != _uiState.value.selectedEntry?.content ||
+                    finalImagePath != _uiState.value.selectedEntry?.imagePath
+                if (contentChanged && draft.tags == _originalEditTags) {
+                    tagScheduler.enqueue(draft.entryId, revision)
+                }
+
+                _uiState.update { it.copy(selectedEntry = null) }
+                _events.emit(RecordEvent.ShowSnackbar("修改已保存"))
+            } catch (t: Throwable) {
+                _events.emit(RecordEvent.ShowSnackbar("保存失败: ${t.message ?: ""}"))
+            }
         }
     }
 }
