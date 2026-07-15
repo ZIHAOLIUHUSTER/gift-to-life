@@ -15,6 +15,7 @@ import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.export.ExportImportManager
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
+import com.gift.tolife.core.network.BaseUrlValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -152,8 +153,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun updateBaseUrl(url: String) {
-        settingsDataStore.updateBaseUrl(url)
-        _uiState.update { it.copy(isSaved = true) }
+        try {
+            BaseUrlValidator.normalize(url)
+            settingsDataStore.updateBaseUrl(url)
+            _uiState.update { it.copy(isSaved = true) }
+        } catch (e: IllegalArgumentException) {
+            viewModelScope.launch { _events.emit(SettingsEvent.ShowMessage(e.message ?: "API 地址无效")) }
+        }
     }
 
     fun updateTagModel(model: String) {
