@@ -194,11 +194,11 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
             // 模型
             SettingsCard(title = "模型") {
-                ModelRow(tagModel, { tagModel = it }, "标签模型", "轻量模型即可", uiState.testingTag, uiState.testResultTag, viewModel::testTagModel)
+                ModelRow(tagModel, { tagModel = it }, "标签模型", "轻量模型即可", uiState.testingTag, uiState.testResultTag) { viewModel.testTagModel(tagModel) }
                 Spacer(modifier = Modifier.height(12.dp))
-                ModelRow(summaryModel, { summaryModel = it }, "总结模型", "需要较强文本理解力", uiState.testingSummary, uiState.testResultSummary, viewModel::testSummaryModel)
+                ModelRow(summaryModel, { summaryModel = it }, "总结模型", "需要较强文本理解力", uiState.testingSummary, uiState.testResultSummary) { viewModel.testSummaryModel(summaryModel) }
                 Spacer(modifier = Modifier.height(12.dp))
-                ModelRow(visionModel, { visionModel = it }, "视觉模型", "用于识别纯图片记录", uiState.testingVision, uiState.testResultVision, viewModel::testVisionModel)
+                ModelRow(visionModel, { visionModel = it }, "视觉模型", "用于识别纯图片记录", uiState.testingVision, uiState.testResultVision) { viewModel.testVisionModel(visionModel) }
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { viewModel.updateTagModel(tagModel); viewModel.updateSummaryModel(summaryModel); viewModel.updateVisionModel(visionModel) },
                     modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(8.dp)) { Text("保存") }

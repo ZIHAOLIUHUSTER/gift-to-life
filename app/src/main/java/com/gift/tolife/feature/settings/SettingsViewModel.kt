@@ -104,13 +104,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testTagModel() {
+    fun testTagModel(model: String) {
         if (_uiState.value.testingTag) return
         _uiState.update { it.copy(testingTag = true, testResultTag = null) }
         viewModelScope.launch {
             try {
-                val current = _uiState.value.settings
-                val result = chatClient.chat(current.tagModel, "你是一个助手。", "回复：ok")
+                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
                 _uiState.update {
                     it.copy(testingTag = false, testResultTag = when (result) {
                         is AiResult.Success -> "✓ 连接成功"
@@ -124,13 +123,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testSummaryModel() {
+    fun testSummaryModel(model: String) {
         if (_uiState.value.testingSummary) return
         _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
         viewModelScope.launch {
             try {
-                val current = _uiState.value.settings
-                val result = chatClient.chat(current.summaryModel, "你是一个助手。", "回复：ok")
+                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
                 _uiState.update {
                     it.copy(testingSummary = false, testResultSummary = when (result) {
                         is AiResult.Success -> "✓ 连接成功"
@@ -144,13 +142,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testVisionModel() {
+    fun testVisionModel(model: String) {
         if (_uiState.value.testingVision) return
         _uiState.update { it.copy(testingVision = true, testResultVision = null) }
         viewModelScope.launch {
             try {
-                val current = _uiState.value.settings
-                val result = chatClient.chat(current.visionModel, "你是一个助手。", "回复：ok")
+                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
                 _uiState.update {
                     it.copy(testingVision = false, testResultVision = when (result) {
                         is AiResult.Success -> "✓ 连接成功"
