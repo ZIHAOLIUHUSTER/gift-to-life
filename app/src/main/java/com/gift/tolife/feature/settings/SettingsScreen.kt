@@ -20,10 +20,12 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
+import com.gift.tolife.core.ui.UiTestTags
 
 private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN }
 
@@ -189,7 +191,10 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { viewModel.updateApiKey(apiKey); viewModel.updateBaseUrl(baseUrl) },
-                    modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(8.dp)) { Text("保存") }
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .testTag(UiTestTags.SETTINGS_SAVE),
+                    shape = RoundedCornerShape(8.dp)) { Text("保存") }
             }
 
             // 模型
@@ -201,7 +206,10 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 ModelRow(visionModel, { visionModel = it }, "视觉模型", "用于识别纯图片记录", uiState.testingVision, uiState.testResultVision) { viewModel.testVisionModel(visionModel) }
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { viewModel.updateTagModel(tagModel); viewModel.updateSummaryModel(summaryModel); viewModel.updateVisionModel(visionModel) },
-                    modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(8.dp)) { Text("保存") }
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .testTag(UiTestTags.SETTINGS_SAVE),
+                    shape = RoundedCornerShape(8.dp)) { Text("保存") }
             }
 
             // 导入导出
@@ -307,7 +315,10 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 actions = {
                     if (deletedEntries.isNotEmpty()) {
-                        TextButton(onClick = { scope.launch { viewModel.permanentlyDeleteAll(); deletedEntries = emptyList() } }) {
+                        TextButton(
+                            onClick = { scope.launch { viewModel.permanentlyDeleteAll(); deletedEntries = emptyList() } },
+                            modifier = Modifier.testTag(UiTestTags.RECYCLE_CLEAR)
+                        ) {
                             Text("清空", color = MaterialTheme.colorScheme.error)
                         }
                     }

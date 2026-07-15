@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,6 +22,7 @@ import com.gift.tolife.R
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
+import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
 import java.text.SimpleDateFormat
@@ -176,7 +178,8 @@ private fun RandomReviewCard(
         modifier = Modifier
             .fillMaxWidth()
             .height(520.dp)
-            .clickable(onClick = onClick),
+            .clickable(onClick = onClick)
+            .testTag(UiTestTags.MEMORY_CARD),
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
@@ -281,7 +284,8 @@ private fun RandomReviewCard(
 
                 TextButton(
                     onClick = onRefresh,
-                    enabled = !isGenerating
+                    enabled = !isGenerating,
+                    modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)
                 ) {
                     Icon(
                         painterResource(R.drawable.ic_refresh),

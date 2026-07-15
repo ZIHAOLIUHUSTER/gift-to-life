@@ -12,12 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.feature.record.EntryWithTags
@@ -223,7 +225,9 @@ private fun SearchTopBar(
             TextField(
                 value = query,
                 onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(UiTestTags.SEARCH_INPUT),
                 placeholder = { Text("搜索记录...") },
                 singleLine = true,
                 colors = TextFieldDefaults.colors(

@@ -13,11 +13,13 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.R
+import com.gift.tolife.core.ui.UiTestTags
 
 @Composable
 fun EntryComposer(
@@ -47,7 +49,8 @@ fun EntryComposer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 80.dp, max = 200.dp)
-                    .focusRequester(focusRequester),
+                    .focusRequester(focusRequester)
+                    .testTag(UiTestTags.COMPOSER_INPUT),
                 placeholder = {
                     Text(
                         "此刻的想法...",
@@ -111,6 +114,7 @@ fun EntryComposer(
                             text = ""
                         }
                     },
+                    modifier = Modifier.testTag(UiTestTags.COMPOSER_SAVE),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
