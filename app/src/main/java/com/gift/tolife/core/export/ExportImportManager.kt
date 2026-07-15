@@ -37,13 +37,16 @@ class ExportImportManager @Inject constructor(
 
     suspend fun exportToUri(uri: Uri): Int = withContext(Dispatchers.IO) {
         val allEntries = entryDao.getAllEntriesAsList()
-        val entryTagsMap = mutableMapOf<Long, MutableList<TagType>>()
-        allEntries.forEach { e ->
-            entryTagsMap[e.id] = entryTagDao.getByEntryId(e.id).map { it.tag }.toMutableList()
+        val allIds = allEntries.map { it.id }
+        val tagMap = mutableMapOf<Long, MutableList<TagType>>()
+        allIds.chunked(500).forEach { chunk ->
+            entryTagDao.getByEntryIds(chunk).forEach { tag ->
+                tagMap.getOrPut(tag.entryId) { mutableListOf() }.add(tag.tag)
+            }
         }
 
         val manifestEntries = allEntries.map { entry ->
-            val tags = entryTagsMap[entry.id]?.map { it.label } ?: emptyList()
+            val tags = tagMap[entry.id]?.map { it.label } ?: emptyList()
             var imageEntry: String? = null
             var imageSha256: String? = null
             if (!entry.imagePath.isNullOrBlank()) {

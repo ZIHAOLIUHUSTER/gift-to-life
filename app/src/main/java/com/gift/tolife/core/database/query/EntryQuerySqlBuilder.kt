@@ -10,8 +10,12 @@ object EntryQuerySqlBuilder {
         val bindArgs = mutableListOf<Any>()
 
         if (query.searchText.isNotBlank()) {
-            bindArgs.add("%${query.searchText}%")
-            where.append(" AND e.content LIKE ?")
+            val escaped = query.searchText
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            bindArgs.add("%$escaped%")
+            where.append(" AND e.content LIKE ? ESCAPE '\\'")
         }
         query.startDate?.let {
             bindArgs.add(it)
