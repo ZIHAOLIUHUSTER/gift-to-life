@@ -108,7 +108,7 @@ fun MemoryScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 随机回顾卡片
                 val randomEntry = randomState.entry
@@ -408,8 +408,6 @@ private fun OnThisDaySection(onViewAll: () -> Unit) {
     val month = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
     val day = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)
 
-    if (state.yearEntries.isEmpty() && !state.loading) return
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -432,6 +430,12 @@ private fun OnThisDaySection(onViewAll: () -> Unit) {
                 if (state.loading) {
                     Spacer(Modifier.height(4.dp))
                     CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                } else if (state.yearEntries.isEmpty()) {
+                    Text(
+                        "暂无那年的回忆",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
                     val totalEntries = state.yearEntries.values.sumOf { it.size }
                     val years = state.yearEntries.keys.sortedDescending()

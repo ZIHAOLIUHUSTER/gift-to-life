@@ -499,7 +499,7 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(monthLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(monthLabel, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
 
             Spacer(Modifier.height(16.dp))
 
@@ -532,7 +532,7 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .aspectRatio(1f)
+                                            .height(18.dp)
                                             .clip(RoundedCornerShape(3.dp))
                                             .background(
                                                 when {
