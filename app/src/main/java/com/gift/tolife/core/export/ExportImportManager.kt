@@ -160,170 +160,158 @@ class ExportImportManager @Inject constructor(
         val stagedImages = mutableMapOf<String, StagedImage>() // sourceEntryName -> StagedImage
         val finalImagePaths = mutableMapOf<String, String>()    // sourceEntryName -> final absolute path
 
-        java.util.zip.ZipFile(tempFile).use { zip ->
-            // Phase 1: Parse manifest
-            val manifestEntry = zip.getEntry(BackupV2Config.MANIFEST_ENTRY_NAME)
-                ?: throw IOException("备份缺少 manifest.json")
-            val manifest = zip.getInputStream(manifestEntry).use { stream ->
-                gson.fromJson(String(stream.readBytes()), BackupV2Manifest::class.java)
-            }
-            require(manifest.formatVersion == 2) { "不支持的备份版本: ${manifest.formatVersion}" }
-            require(manifest.entryCount == manifest.entries.size) { "条目数不匹配" }
-            require(manifest.entries.size <= BackupV2Config.MAX_ENTRY_COUNT) { "条目数超过上限" }
+        val stagingDir = File(context.cacheDir, "import-staging-${UUID.randomUUID()}").apply { mkdirs() }
+        try {
+            java.util.zip.ZipFile(tempFile).use { zip ->
+                // Phase 1: Parse manifest
+                val manifestEntry = zip.getEntry(BackupV2Config.MANIFEST_ENTRY_NAME)
+                    ?: throw IOException("备份缺少 manifest.json")
+                val manifest = zip.getInputStream(manifestEntry).use { stream ->
+                    gson.fromJson(String(stream.readBytes()), BackupV2Manifest::class.java)
+                }
+                require(manifest.formatVersion == 2) { "不支持的备份版本: ${manifest.formatVersion}" }
+                require(manifest.entryCount == manifest.entries.size) { "条目数不匹配" }
+                require(manifest.entries.size <= BackupV2Config.MAX_ENTRY_COUNT) { "条目数超过上限" }
 
-            // Phase 2: Validate and stage images to cacheDir/import-staging
-            val stagingDir = File(context.cacheDir, "import-staging-${UUID.randomUUID()}").apply { mkdirs() }
-            var totalImageBytes = 0L
+                // Phase 2: Validate and stage images to cacheDir/import-staging
+                var totalImageBytes = 0L
 
-            manifest.entries.forEach { e ->
-                e.imageEntry?.let { imageEntry ->
-                    requireSafeImageEntry(imageEntry)
-                    val zipEntry = zip.getEntry(imageEntry)
-                        ?: throw IOException("清单声明了图片但 ZIP 中不存在: $imageEntry")
-                    val size = zipEntry.size
-                    require(size <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) { "图片过大: $imageEntry" }
-                    totalImageBytes += size
-                    require(totalImageBytes <= BackupV2Config.MAX_TOTAL_IMAGE_BYTES) { "图片总大小超过限制" }
+                manifest.entries.forEach { e ->
+                    e.imageEntry?.let { imageEntry ->
+                        requireSafeImageEntry(imageEntry)
+                        val zipEntry = zip.getEntry(imageEntry)
+                            ?: throw IOException("清单声明了图片但 ZIP 中不存在: $imageEntry")
+                        val size = zipEntry.size
+                        require(size <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) { "图片过大: $imageEntry" }
+                        totalImageBytes += size
+                        require(totalImageBytes <= BackupV2Config.MAX_TOTAL_IMAGE_BYTES) { "图片总大小超过限制" }
 
-                    // Stream hash computation while writing to staging
-                    val digest = java.security.MessageDigest.getInstance("SHA-256")
-                    val stageFile = File(stagingDir, imageEntry.substringAfter("images/"))
-                    zip.getInputStream(zipEntry).use { input ->
-                        stageFile.outputStream().use { output ->
-                            val buffer = ByteArray(8192)
-                            var bytes = input.read(buffer)
-                            while (bytes > 0) {
-                                digest.update(buffer, 0, bytes)
-                                output.write(buffer, 0, bytes)
-                                bytes = input.read(buffer)
+                        // Stream hash computation while writing to staging
+                        val digest = java.security.MessageDigest.getInstance("SHA-256")
+                        val stageFile = File(stagingDir, imageEntry.substringAfter("images/"))
+                        zip.getInputStream(zipEntry).use { input ->
+                            stageFile.outputStream().use { output ->
+                                val buffer = ByteArray(8192)
+                                var bytes = input.read(buffer)
+                                while (bytes > 0) {
+                                    digest.update(buffer, 0, bytes)
+                                    output.write(buffer, 0, bytes)
+                                    bytes = input.read(buffer)
+                                }
                             }
                         }
+                        val actualHash = digest.digest().joinToString("") { "%02x".format(it) }
+                        require(e.imageSha256 != null) { "图片缺少 SHA-256: $imageEntry" }
+                        require(actualHash == e.imageSha256) { "图片哈希不匹配: $imageEntry" }
+
+                        stagedImages[imageEntry] = StagedImage(stageFile, actualHash)
                     }
-                    val actualHash = digest.digest().joinToString("") { "%02x".format(it) }
-                    require(e.imageSha256 != null) { "图片缺少 SHA-256: $imageEntry" }
-                    require(actualHash == e.imageSha256) { "图片哈希不匹配: $imageEntry" }
-
-                    stagedImages[imageEntry] = StagedImage(stageFile, actualHash)
                 }
+
+                // Phase 3: Move staged images to final location (filesDir/images)
+                val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
+                try {
+                    stagedImages.forEach { (sourceName, staged) ->
+                        val finalName = "${UUID.randomUUID()}.webp"
+                        val finalFile = File(imagesDir, finalName)
+                        staged.file.copyTo(finalFile, overwrite = true)
+                        finalImagePaths[sourceName] = finalFile.absolutePath
+                    }
+                } catch (e: Exception) {
+                    // 清理已复制到正式目录的图片
+                    finalImagePaths.values.forEach { File(it).delete() }
+                    throw e
+                }
+
+                // Phase 4: Build staged entries with final paths
+                val stagedEntries = manifest.entries.map { e ->
+                    val finalPath = e.imageEntry?.let { finalImagePaths[it] }
+                    StagedImportEntry(
+                        entry = Entry(
+                            content = e.content,
+                            type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
+                            createdAt = e.createdAt,
+                            updatedAt = e.updatedAt,
+                            imagePath = finalPath,
+                            imageDescription = e.imageDescription,
+                            isDeleted = e.isDeleted,
+                            summaryStart = e.summaryStart,
+                            summaryEnd = e.summaryEnd,
+                            summaryModel = e.summaryModel
+                        ),
+                        tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
+                    )
+                }
+
+                // Phase 5: Capture old paths, then DB transaction
+                val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+                try {
+                    database.replaceAll(stagedEntries)
+                } catch (e: Exception) {
+                    // Rollback: delete newly created final images
+                    finalImagePaths.values.forEach { File(it).delete() }
+                    throw e
+                }
+
+                // Phase 6: Delete old images (only after successful commit)
+                oldPaths.forEach { File(it).delete() }
+
+                return stagedEntries.size
             }
-
-            // Phase 3: Move staged images to final location (filesDir/images)
-            val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
-            stagedImages.forEach { (sourceName, staged) ->
-                val finalName = "${UUID.randomUUID()}.webp"
-                val finalFile = File(imagesDir, finalName)
-                staged.file.copyTo(finalFile, overwrite = true)
-                finalImagePaths[sourceName] = finalFile.absolutePath
-            }
-
-            // Phase 4: Build staged entries with final paths
-            val stagedEntries = manifest.entries.map { e ->
-                val finalPath = e.imageEntry?.let { finalImagePaths[it] }
-                StagedImportEntry(
-                    entry = Entry(
-                        content = e.content,
-                        type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
-                        createdAt = e.createdAt,
-                        updatedAt = e.updatedAt,
-                        imagePath = finalPath,
-                        imageDescription = e.imageDescription,
-                        isDeleted = e.isDeleted,
-                        summaryStart = e.summaryStart,
-                        summaryEnd = e.summaryEnd,
-                        summaryModel = e.summaryModel
-                    ),
-                    tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
-                )
-            }
-
-            // Phase 5: Capture old paths, then DB transaction
-            val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
-            try {
-                database.replaceAll(stagedEntries)
-            } catch (e: Exception) {
-                // Rollback: delete newly created final images
-                finalImagePaths.values.forEach { File(it).delete() }
-                throw e
-            }
-
-            // Phase 6: Delete old images (only after successful commit)
-            oldPaths.forEach { File(it).delete() }
-
-            // Cleanup staging
+        } catch (e: Exception) {
             stagingDir.deleteRecursively()
-
-            return stagedEntries.size
+            throw e
+        } finally {
+            if (stagingDir.exists()) stagingDir.deleteRecursively()
         }
     }
 
     // ---- V1 Safe Import (staging strategy) ----
 
-    private suspend fun importLegacyV1Safe(tempFile: File): Int {
-        val json = String(tempFile.readBytes())
+    private suspend fun importLegacyV1Safe(tempFile: File): Int = withContext(Dispatchers.IO) {
+        val json = tempFile.inputStream().buffered().use { String(it.readBytes()) }
         val data = gson.fromJson(json, ExportData::class.java)
             ?: throw IOException("JSON 解析失败")
         require(data.entries.size <= BackupV2Config.MAX_ENTRY_COUNT) { "条目数超过上限" }
 
-        val finalImagePaths = mutableMapOf<Int, String>() // index -> final absolute path
-        val stagedImages = mutableListOf<File>() // staging files to clean up
+        val stagedEntries = mutableListOf<StagedImportEntry>()
+        val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
+        var totalImageBytes = 0L
 
-        // Phase 1: Decode base64 images to staging dir
-        val stagingDir = File(context.cacheDir, "import-staging-${UUID.randomUUID()}").apply { mkdirs() }
-        data.entries.forEachIndexed { index, e ->
+        data.entries.forEach { e ->
+            var imagePath: String? = null
             if (!e.imageBase64.isNullOrBlank()) {
                 val bytes = android.util.Base64.decode(e.imageBase64, android.util.Base64.NO_WRAP)
                 require(bytes.size.toLong() <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) { "图片过大" }
-                val stageFile = File(stagingDir, "v1-img-${index}.webp")
-                stageFile.writeBytes(bytes)
-                stagedImages.add(stageFile)
+                totalImageBytes += bytes.size
+                require(totalImageBytes <= BackupV2Config.MAX_TOTAL_IMAGE_BYTES) { "图片总大小超过限制" }
+                val file = File(imagesDir, "${UUID.randomUUID()}.webp")
+                file.writeBytes(bytes)
+                imagePath = file.absolutePath
             }
-        }
-
-        // Phase 2: Move staged images to final location
-        val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
-        var stagedIndex = 0
-        data.entries.forEachIndexed { index, e ->
-            if (!e.imageBase64.isNullOrBlank()) {
-                val finalName = "${UUID.randomUUID()}.webp"
-                val finalFile = File(imagesDir, finalName)
-                stagedImages[stagedIndex].copyTo(finalFile, overwrite = true)
-                finalImagePaths[index] = finalFile.absolutePath
-                stagedIndex++
-            }
-        }
-
-        // Phase 3: Build staged entries
-        val stagedEntries = data.entries.mapIndexed { index, e ->
-            val finalPath = finalImagePaths[index]
-            StagedImportEntry(
+            stagedEntries.add(StagedImportEntry(
                 entry = Entry(
                     content = e.content,
                     type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
                     createdAt = e.createdAt,
-                    imagePath = finalPath,
+                    imagePath = imagePath,
                     imageDescription = e.imageDescription
                 ),
                 tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
-            )
+            ))
         }
 
-        // Phase 4: Capture old paths, then DB transaction
         val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
         try {
             database.replaceAll(stagedEntries)
         } catch (e: Exception) {
-            // Rollback: delete newly created final images
-            finalImagePaths.values.forEach { File(it).delete() }
+            // 回滚：删除本次导入的图片
+            stagedEntries.forEach { it.entry.imagePath?.let { path -> File(path).delete() } }
             throw e
         }
-
-        // Phase 5: Delete old images
         oldPaths.forEach { File(it).delete() }
 
-        // Cleanup staging
-        stagingDir.deleteRecursively()
-
-        return stagedEntries.size
+        stagedEntries.size
     }
 
     // ---- Data management ----
