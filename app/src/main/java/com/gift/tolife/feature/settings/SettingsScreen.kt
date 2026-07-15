@@ -28,6 +28,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.ui.UiTestTags
 import java.util.Calendar
 
@@ -421,7 +422,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(entry.content.take(40) + if (entry.content.length > 40) "..." else "", style = MaterialTheme.typography.bodySmall)
-                                Text(formatTime(entry.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(DateFormats.formatShortDateTime(entry.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             TextButton(onClick = { scope.launch { viewModel.restoreEntry(entry.id); deletedEntries = deletedEntries.filter { it.id != entry.id } } }) { Text("恢复") }
                         }
@@ -577,11 +578,6 @@ private fun StatItem(value: String, label: String, isPrimary: Boolean = false) {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-}
-
-private fun formatTime(ts: Long): String {
-    val sdf = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
-    return sdf.format(java.util.Date(ts))
 }
 
 private fun formatSize(bytes: Long): String {

@@ -14,9 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.feature.record.EntryPreviewSheet
-import java.util.*
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +72,7 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
                                 Text(entry.content, style = MaterialTheme.typography.bodyMedium, maxLines = 4, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    formatTime(entry.createdAt),
+                                    DateFormats.formatDateTime(entry.createdAt),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -95,9 +96,4 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
             }
         )
     }
-}
-
-private fun formatTime(timestamp: Long): String {
-    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(java.util.Date(timestamp))
 }

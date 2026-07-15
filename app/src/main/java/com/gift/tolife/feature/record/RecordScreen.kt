@@ -147,7 +147,10 @@ fun RecordScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                items(lazyItems.itemCount) { index ->
+                items(
+                    count = lazyItems.itemCount,
+                    key = { index -> lazyItems[index]?.entry?.id ?: index }
+                ) { index ->
                     val item = lazyItems[index]
                     if (item != null) {
                         EntryCard(

@@ -13,6 +13,9 @@ interface EntryDao {
     @Insert
     suspend fun insert(entry: Entry): Long
 
+    @Insert
+    suspend fun insertAll(entries: List<Entry>): List<Long>
+
     @Update
     suspend fun update(entry: Entry)
 
@@ -87,12 +90,6 @@ interface EntryDao {
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0")
     suspend fun getSummaryCount(): Int
 
-    @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
-    suspend fun getActiveEntryCount(): Int
-
-    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1 OFFSET :offset")
-    suspend fun getEntryAtOffset(offset: Int): Entry?
-
     @Query("SELECT * FROM entries WHERE id > :lastId AND isDeleted = 0 ORDER BY id ASC LIMIT :limit")
     suspend fun getEntriesAfterId(lastId: Long, limit: Int): List<Entry>
 
@@ -110,4 +107,15 @@ interface EntryDao {
 
     @Query("SELECT createdAt FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
     suspend fun getMonthlyTimestamps(start: Long, end: Long): List<Long>
+
+    @Query("SELECT id FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY id ASC")
+    suspend fun getAllActiveIds(): List<Long>
+
+    @Query("""
+        SELECT * FROM entries
+        WHERE type = 'NORMAL' AND isDeleted = 0
+          AND strftime('%m-%d', createdAt / 1000, 'unixepoch', 'localtime') = :monthDay
+        ORDER BY createdAt ASC
+    """)
+    suspend fun getEntriesByMonthDay(monthDay: String): List<Entry>
 }

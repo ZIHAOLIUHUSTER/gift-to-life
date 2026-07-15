@@ -33,42 +33,21 @@ class OnThisDayViewModel @Inject constructor(
             _state.value = OnThisDayState(loading = true)
             val cal = Calendar.getInstance()
             val today = cal.get(Calendar.DAY_OF_MONTH)
-            val month = cal.get(Calendar.MONTH)
-            val thisYear = cal.get(Calendar.YEAR)
+            val month = cal.get(Calendar.MONTH) + 1
 
-            if (month == Calendar.FEBRUARY && today == 29 && !cal.getActualMaximum(Calendar.DAY_OF_MONTH).let { it >= 29 }) {
+            val monthDay = "%02d-%02d".format(month, today)
+            val entries = entryDao.getEntriesByMonthDay(monthDay)
+
+            if (entries.isEmpty()) {
                 _state.value = OnThisDayState()
                 return@launch
             }
 
-            // 查最早记录年份
-            val firstTimestamp = entryDao.getFirstEntryTimestamp()
-            val firstYear = if (firstTimestamp != null) {
-                Calendar.getInstance().apply { timeInMillis = firstTimestamp }.get(Calendar.YEAR)
-            } else {
-                _state.value = OnThisDayState()
-                return@launch
-            }
-
-            val result = mutableMapOf<Int, List<Entry>>()
-            for (year in thisYear - 1 downTo firstYear) {
-                if (month == Calendar.FEBRUARY && today == 29) {
-                    val yearCal = Calendar.getInstance().apply { set(Calendar.YEAR, year) }
-                    if (yearCal.getActualMaximum(Calendar.DAY_OF_MONTH) < 29) continue
-                }
-
-                val startCal = Calendar.getInstance().apply {
-                    set(year, month, today, 0, 0, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }
-                val endCal = Calendar.getInstance().apply {
-                    set(year, month, today, 23, 59, 59)
-                    set(Calendar.MILLISECOND, 999)
-                }
-                val entries = entryDao.getEntriesByDateRange(startCal.timeInMillis, endCal.timeInMillis)
-                if (entries.isNotEmpty()) {
-                    result[year] = entries
-                }
+            val result = mutableMapOf<Int, MutableList<Entry>>()
+            entries.forEach { entry ->
+                val entryCal = Calendar.getInstance().apply { timeInMillis = entry.createdAt }
+                val year = entryCal.get(Calendar.YEAR)
+                result.getOrPut(year) { mutableListOf() }.add(entry)
             }
             _state.value = OnThisDayState(yearEntries = result)
         }

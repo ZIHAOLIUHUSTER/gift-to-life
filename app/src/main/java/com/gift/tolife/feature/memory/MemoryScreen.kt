@@ -25,14 +25,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import com.gift.tolife.R
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -333,7 +332,7 @@ private fun RandomReviewCard(
                         Spacer(modifier = Modifier.width(12.dp))
                     }
                     Text(
-                        formatTime(entry.createdAt),
+                        DateFormats.formatDateTime(entry.createdAt),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -405,7 +404,7 @@ internal fun SummaryCard(entry: Entry, onClick: () -> Unit = {}) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(entry.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(formatTime(entry.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(DateFormats.formatDateTime(entry.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -464,9 +463,4 @@ private fun OnThisDaySection(onViewAll: () -> Unit) {
             )
         }
     }
-}
-
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }

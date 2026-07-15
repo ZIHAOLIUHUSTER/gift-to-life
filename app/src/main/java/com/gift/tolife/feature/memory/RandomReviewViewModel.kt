@@ -34,10 +34,10 @@ class RandomReviewViewModel @Inject constructor(
 
     fun fetchRandom() {
         viewModelScope.launch {
-            val count = entryDao.getActiveEntryCount()
-            if (count == 0) return@launch
-            val offset = kotlin.random.Random.nextInt(count)
-            val entry = entryDao.getEntryAtOffset(offset)
+            val ids = entryDao.getAllActiveIds()
+            if (ids.isEmpty()) return@launch
+            val randomId = ids[kotlin.random.Random.nextInt(ids.size)]
+            val entry = entryDao.getById(randomId)
             if (entry != null) {
                 val tags = repository.getTags(entry.id).map { it.tag }
                 _state.update { RandomReviewState(entry, tags) }

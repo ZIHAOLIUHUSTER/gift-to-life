@@ -16,11 +16,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +72,7 @@ fun EditEntryBottomSheet(
             ) {
                 // 时间信息
                 Text(
-                    text = formatFullTime(originalEntry.createdAt),
+                    text = DateFormats.formatDateTime(originalEntry.createdAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -224,9 +223,4 @@ fun EditEntryBottomSheet(
             }
         )
     }
-}
-
-private fun formatFullTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }

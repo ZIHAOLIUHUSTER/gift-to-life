@@ -11,11 +11,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.*
 
 @Composable
 fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Unit, onImageClick: () -> Unit = {}) {
@@ -90,16 +89,11 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                 }
 
                 Text(
-                    text = formatTime(entry.createdAt),
+                    text = DateFormats.formatShortDateTime(entry.createdAt),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
     }
-}
-
-private fun formatTime(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }

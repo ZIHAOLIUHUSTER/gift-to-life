@@ -22,14 +22,15 @@ abstract class AppDatabase : RoomDatabase() {
     suspend fun replaceAll(stagedEntries: List<StagedImportEntry>): Int = withTransaction {
         entryTagDao().deleteAll()
         entryDao().deleteAll()
-        var count = 0
-        stagedEntries.forEach { staged ->
-            val id = entryDao().insert(staged.entry)
+        val entries = stagedEntries.map { it.entry }
+        val ids = entryDao().insertAll(entries)
+        for (i in stagedEntries.indices) {
+            val staged = stagedEntries[i]
             if (staged.tags.isNotEmpty()) {
-                entryTagDao().insertAll(staged.tags.map { EntryTag(id, it) })
+                val entryId = ids[i]
+                entryTagDao().insertAll(staged.tags.map { EntryTag(entryId, it) })
             }
-            count++
         }
-        count
+        stagedEntries.size
     }
 }

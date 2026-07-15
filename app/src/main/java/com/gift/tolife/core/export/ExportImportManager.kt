@@ -251,7 +251,7 @@ class ExportImportManager @Inject constructor(
                 }
 
                 // Phase 5: Capture old paths, then DB transaction
-                val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+                val oldPaths = entryDao.getAllImagePaths().toSet()
                 try {
                     database.replaceAll(stagedEntries)
                 } catch (e: Exception) {
@@ -308,7 +308,7 @@ class ExportImportManager @Inject constructor(
             ))
         }
 
-        val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+        val oldPaths = entryDao.getAllImagePaths().toSet()
         try {
             database.replaceAll(stagedEntries)
         } catch (e: Exception) {
@@ -324,7 +324,7 @@ class ExportImportManager @Inject constructor(
     // ---- Data management ----
 
     suspend fun clearAllEntries() {
-        val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+        val oldPaths = entryDao.getAllImagePaths().toSet()
         entryDao.deleteAll()
         oldPaths.forEach { File(it).delete() }
     }
