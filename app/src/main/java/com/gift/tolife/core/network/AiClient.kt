@@ -84,6 +84,10 @@ class AiClient @Inject constructor(
                 408, 429, in 500..599 -> AiResult.RetryableFailure(e)
                 else -> AiResult.PermanentFailure("HTTP ${e.code()}")
             }
+        } catch (e: IllegalArgumentException) {
+            AiResult.PermanentFailure("配置错误: ${e.message}")
+        } catch (e: com.google.gson.JsonParseException) {
+            AiResult.PermanentFailure("响应解析错误: ${e.message}")
         } catch (t: Throwable) {
             AiResult.RetryableFailure(t)
         }
@@ -129,6 +133,10 @@ class AiClient @Inject constructor(
                 408, 429, in 500..599 -> AiResult.RetryableFailure(e)
                 else -> AiResult.PermanentFailure("HTTP ${e.code()}")
             }
+        } catch (e: IllegalArgumentException) {
+            AiResult.PermanentFailure("配置错误: ${e.message}")
+        } catch (e: com.google.gson.JsonParseException) {
+            AiResult.PermanentFailure("响应解析错误: ${e.message}")
         } catch (t: Throwable) {
             AiResult.RetryableFailure(t)
         }

@@ -69,7 +69,7 @@ fun MemoryScreen(
             )
         }
     ) { innerPadding ->
-        if (randomState.entry == null && (summaryState.weekSummaries + summaryState.monthSummaries).isEmpty()) {
+        if (randomState.entry == null && summaryState.weekSummaries.isEmpty() && summaryState.monthSummaries.isEmpty()) {
             // 空状态
             Box(
                 modifier = Modifier

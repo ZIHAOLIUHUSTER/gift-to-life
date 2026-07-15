@@ -23,6 +23,7 @@ import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
@@ -340,7 +342,7 @@ class RecordViewModel @Inject constructor(
         }
     }
 
-    private fun updateStreak() {
+    private suspend fun updateStreak() = withContext(Dispatchers.IO) {
         val today = java.time.LocalDate.now()
         val todayEpochDay = today.toEpochDay()
         val lastDay = settingsDataStore.getLastActiveDay()
