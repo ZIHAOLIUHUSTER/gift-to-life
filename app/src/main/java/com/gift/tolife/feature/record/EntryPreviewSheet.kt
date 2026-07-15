@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +29,8 @@ fun EntryPreviewSheet(
     onDelete: () -> Unit,
     onImageClick: (() -> Unit)? = null
 ) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -100,15 +102,12 @@ fun EntryPreviewSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(
-                    onClick = {
-                        onDismiss()
-                        onDelete()
-                    },
+                    onClick = { showDeleteConfirm = true },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("删除")
+                    Text("移至回收站")
                 }
 
                 Button(
@@ -124,6 +123,25 @@ fun EntryPreviewSheet(
                     Text("编辑")
                 }
             }
+        }
+
+        // 移至回收站确认对话框
+        if (showDeleteConfirm) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                title = { Text("移至回收站？") },
+                text = { Text("这条记录可以稍后在设置 → 回收站中恢复。") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        onDismiss()
+                        onDelete()
+                        showDeleteConfirm = false
+                    }) { Text("移至回收站") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) { Text("取消") }
+                }
+            )
         }
     }
 }

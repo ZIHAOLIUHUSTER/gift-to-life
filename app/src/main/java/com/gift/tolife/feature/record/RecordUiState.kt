@@ -20,4 +20,5 @@ data class RecordUiState(
 sealed class RecordEvent {
     data class ShowSnackbar(val message: String) : RecordEvent()
     data object EntrySaved : RecordEvent()
+    data class EntryMovedToRecycleBin(val entryId: Long) : RecordEvent()
 }

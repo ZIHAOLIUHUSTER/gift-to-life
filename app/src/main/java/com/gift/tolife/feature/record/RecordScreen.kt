@@ -12,14 +12,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.ui.UiTestTags
+import com.gift.tolife.core.ui.component.AppEmptyState
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.feature.record.EntryWithTags
@@ -35,7 +39,7 @@ fun RecordScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
     var previewEntry by remember { mutableStateOf<Pair<Entry, List<TagType>>?>(null) }
-    var showDeleteConfirm by remember { mutableStateOf<Entry?>(null) }
+    val focusRequester = remember { FocusRequester() }
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -55,7 +59,23 @@ fun RecordScreen(
             when (event) {
                 is RecordEvent.EntrySaved -> snackbarHostState.showSnackbar("已记录")
                 is RecordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is RecordEvent.EntryMovedToRecycleBin -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = "已移至回收站",
+                        actionLabel = "撤销",
+                        duration = SnackbarDuration.Long
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.restoreEntry(event.entryId)
+                    }
+                }
             }
+        }
+    }
+
+    LaunchedEffect(uiState.isSearchMode) {
+        if (uiState.isSearchMode) {
+            focusRequester.requestFocus()
         }
     }
 
@@ -66,7 +86,8 @@ fun RecordScreen(
                 SearchTopBar(
                     query = uiState.searchQuery,
                     onQueryChange = viewModel::setSearchQuery,
-                    onClose = viewModel::closeSearch
+                    onClose = viewModel::closeSearch,
+                    focusRequester = focusRequester
                 )
             } else {
                 TopAppBar(
@@ -93,16 +114,7 @@ fun RecordScreen(
                 FilterBar(
                     entryQuery = uiState.entryQuery,
                     onToggleTag = viewModel::toggleTagFilter,
-                    onToggleHasImage = {
-                        val current = uiState.entryQuery.hasImage
-                        viewModel.setFilterHasImage(
-                            when (current) {
-                                null -> true
-                                true -> false
-                                false -> null
-                            }
-                        )
-                    },
+                    onSetHasImage = viewModel::setFilterHasImage,
                     onClearFilters = viewModel::clearFilters
                 )
             } else {
@@ -134,6 +146,19 @@ fun RecordScreen(
                         )
                     }
                 }
+                if (lazyItems.loadState.refresh is LoadState.NotLoading && lazyItems.itemCount == 0) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AppEmptyState(
+                                title = "没有找到记录",
+                                description = "换个关键词或清除部分筛选条件"
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -149,7 +174,7 @@ fun RecordScreen(
                     previewEntry = null
                 },
                 onDismiss = { previewEntry = null },
-                onDelete = { showDeleteConfirm = pEntry },
+                onDelete = { viewModel.delete(pEntry) },
                 onImageClick = { previewImagePath = pEntry.imagePath }
             )
         }
@@ -169,30 +194,6 @@ fun RecordScreen(
         }
     }
 
-    // 删除确认弹窗
-    if (showDeleteConfirm != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = null },
-            title = { Text("删除记录") },
-            text = { Text("删除后无法恢复，确定删除？") },
-            confirmButton = {
-                TextButton(onClick = {
-                    val entry = showDeleteConfirm!!
-                    viewModel.delete(entry)
-                    showDeleteConfirm = null
-                    previewEntry = null
-                }) {
-                    Text("删除", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = null }) {
-                    Text("取消")
-                }
-            }
-        )
-    }
-
     // 图片预览 Dialog
     if (previewImagePath != null) {
         ImagePreviewDialog(
@@ -207,7 +208,8 @@ fun RecordScreen(
 private fun SearchTopBar(
     query: String,
     onQueryChange: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    focusRequester: FocusRequester
 ) {
     TopAppBar(
         title = {
@@ -216,6 +218,7 @@ private fun SearchTopBar(
                 onValueChange = onQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .testTag(UiTestTags.SEARCH_INPUT),
                 placeholder = { Text("搜索记录...") },
                 singleLine = true,
@@ -243,7 +246,7 @@ private fun SearchTopBar(
 private fun FilterBar(
     entryQuery: EntryQuery,
     onToggleTag: (TagType) -> Unit,
-    onToggleHasImage: () -> Unit,
+    onSetHasImage: (Boolean?) -> Unit,
     onClearFilters: () -> Unit
 ) {
     val tagTypes = TagType.entries
@@ -275,29 +278,29 @@ private fun FilterBar(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 图片筛选 + 清除
+        // 图片筛选（三个独立选项）
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(null to "全部", true to "有图", false to "无图").forEach { (value, label) ->
+                FilterChip(
+                    selected = entryQuery.hasImage == value,
+                    onClick = { onSetHasImage(value) },
+                    label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            horizontalArrangement = Arrangement.End
         ) {
-            val hasImageLabel = when (entryQuery.hasImage) {
-                null -> "全部"
-                true -> "有图"
-                false -> "无图"
-            }
-            FilterChip(
-                selected = entryQuery.hasImage != null,
-                onClick = onToggleHasImage,
-                label = { Text(hasImageLabel, style = MaterialTheme.typography.labelSmall) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                    selectedLabelColor = MaterialTheme.colorScheme.primary
-                )
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
             TextButton(onClick = onClearFilters) {
                 Text("清除筛选", style = MaterialTheme.typography.labelSmall)
             }

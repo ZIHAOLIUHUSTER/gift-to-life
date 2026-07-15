@@ -37,7 +37,7 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                     contentDescription = "记录图片",
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 180.dp)
+                        .heightIn(max = 148.dp)
                         .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                         .clickable(onClick = onImageClick),
                     contentScale = ContentScale.Crop
@@ -48,13 +48,13 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(onClick = onClick)
-                    .padding(16.dp)
+                    .padding(12.dp)
             ) {
                 Text(
                     text = entry.content,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 5,
+                    maxLines = 4,
                     overflow = TextOverflow.Ellipsis
                 )
 
@@ -63,7 +63,9 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                 // 标签
                 if (tags.isNotEmpty()) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        tags.forEach { tag ->
+                        val visibleTags = tags.take(2)
+                        val remaining = tags.size - 2
+                        visibleTags.forEach { tag ->
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
@@ -75,6 +77,13 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
+                        }
+                        if (remaining > 0) {
+                            Text(
+                                "+$remaining",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))

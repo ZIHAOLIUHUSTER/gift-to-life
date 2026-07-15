@@ -23,7 +23,9 @@ import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -71,8 +73,18 @@ class RecordViewModel @Inject constructor(
     private val _events = MutableSharedFlow<RecordEvent>()
     val events: SharedFlow<RecordEvent> = _events.asSharedFlow()
 
+    @OptIn(FlowPreview::class)
+    private val searchText = MutableStateFlow("")
+
     init {
         consumeSharedContent()
+        // 搜索防抖：250ms 后更新 entryQuery
+        @OptIn(FlowPreview::class)
+        viewModelScope.launch {
+            searchText.debounce(250).collect { text ->
+                _uiState.update { it.copy(entryQuery = it.entryQuery.copy(searchText = text)) }
+            }
+        }
     }
 
     private fun consumeSharedContent() {
@@ -201,7 +213,14 @@ class RecordViewModel @Inject constructor(
     fun delete(entry: Entry) {
         viewModelScope.launch {
             repository.softDelete(entry.id)
-            _events.emit(RecordEvent.ShowSnackbar("已移至回收站"))
+            _events.emit(RecordEvent.EntryMovedToRecycleBin(entry.id))
+        }
+    }
+
+    fun restoreEntry(entryId: Long) {
+        viewModelScope.launch {
+            repository.restoreEntry(entryId)
+            _events.emit(RecordEvent.ShowSnackbar("已恢复"))
         }
     }
 
@@ -222,12 +241,8 @@ class RecordViewModel @Inject constructor(
     }
 
     fun setSearchQuery(query: String) {
-        _uiState.update { 
-            it.copy(
-                searchQuery = query, 
-                entryQuery = it.entryQuery.copy(searchText = query)
-            ) 
-        }
+        searchText.value = query
+        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun setFilterStartDate(date: Long?) {
