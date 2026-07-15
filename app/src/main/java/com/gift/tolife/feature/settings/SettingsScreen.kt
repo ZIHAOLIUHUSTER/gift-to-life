@@ -301,19 +301,29 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                Column(modifier = Modifier.padding(20.dp)) {
+                Column(modifier = Modifier.padding(24.dp)) {
                     Text("使用统计", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
+
+                    // 第一行（核心数据）
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        StatItem("${dataStats.totalEntries}", "条记录")
-                        StatItem("${dataStats.usageDays}", "天使用")
+                        StatItem("${dataStats.totalEntries}", "条记录", isPrimary = true)
+                        StatItem("${dataStats.usageDays}", "天使用", isPrimary = true)
                     }
                     Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                    Spacer(Modifier.height(12.dp))
+
+                    // 第二行
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         StatItem("${dataStats.imageCount}", "张图片")
                         StatItem("${dataStats.summaryCount}", "篇总结")
                     }
                     Spacer(Modifier.height(12.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                    Spacer(Modifier.height(12.dp))
+
+                    // 第三行
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         StatItem(formatSize(dataStats.imageSizeBytes), "图片占用")
                         StatItem(String.format("%.1f 条/天", dataStats.dailyAvg), "日均记录")
@@ -480,42 +490,65 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit) {
     LaunchedEffect(Unit) { onRefresh() }
 
+    val cal = java.util.Calendar.getInstance()
+    val monthLabel = "${cal.get(java.util.Calendar.MONTH) + 1}月统计"
+
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("本月统计", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text("${stats.monthlyCount} 条", style = MaterialTheme.typography.bodySmall)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(monthLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+
+            Spacer(Modifier.height(16.dp))
+
+            // 数据行
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                StatItem("${stats.monthlyCount}", "条记录")
+                StatItem("${stats.streakCount}", "连续天数")
             }
-            Spacer(Modifier.height(4.dp))
-            Text("连续 ${stats.streakCount} 天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+            Spacer(Modifier.height(16.dp))
 
-            // 热力图
+            // 热力图（多排）
             if (stats.dailyCounts.isNotEmpty()) {
-                val daysInMonth = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    for (day in 1..daysInMonth) {
-                        val count = stats.dailyCounts[day] ?: 0
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    when {
-                                        count == 0 -> MaterialTheme.colorScheme.surface
-                                        count == 1 -> Color(0xFFC8E6C9)
-                                        count in 2..3 -> Color(0xFF81C784)
-                                        count in 4..6 -> Color(0xFF4CAF50)
-                                        else -> Color(0xFF2E7D32)
-                                    }
-                                )
-                        )
+                val daysInMonth = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+                val cols = 7
+                val rows = (daysInMonth + cols - 1) / cols
+
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    for (row in 0 until rows) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            for (col in 0 until cols) {
+                                val day = row * cols + col + 1
+                                if (day <= daysInMonth) {
+                                    val count = stats.dailyCounts[day] ?: 0
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(
+                                                when {
+                                                    count == 0 -> MaterialTheme.colorScheme.surface
+                                                    count == 1 -> Color(0xFFC8E6C9)
+                                                    count in 2..3 -> Color(0xFF81C784)
+                                                    count in 4..6 -> Color(0xFF4CAF50)
+                                                    else -> Color(0xFF2E7D32)
+                                                }
+                                            )
+                                    )
+                                } else {
+                                    Spacer(Modifier.weight(1f))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -524,10 +557,18 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
 }
 
 @Composable
-private fun StatItem(value: String, label: String) {
+private fun StatItem(value: String, label: String, isPrimary: Boolean = false) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            value,
+            style = if (isPrimary) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleLarge,
+            color = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
