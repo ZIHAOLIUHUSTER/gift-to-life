@@ -87,6 +87,9 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE isDeleted = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesAsList(): List<Entry>
 
+    @Query("SELECT imagePath FROM entries WHERE imagePath IS NOT NULL AND imagePath != ''")
+    suspend fun getAllImagePaths(): List<String>
+
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
     suspend fun getTotalEntryCount(): Int
 

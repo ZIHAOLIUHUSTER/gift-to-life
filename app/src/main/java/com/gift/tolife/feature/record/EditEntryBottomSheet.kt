@@ -32,7 +32,7 @@ fun EditEntryBottomSheet(
     onPickImage: () -> Unit,
     onImageClick: (() -> Unit)? = null
 ) {
-    var draft by remember(originalEntry.id) {
+    var draft by remember(originalEntry.id, originalTags) {
         mutableStateOf(EntryEditDraft.from(originalEntry, originalTags))
     }
     var showDiscardDialog by remember { mutableStateOf(false) }

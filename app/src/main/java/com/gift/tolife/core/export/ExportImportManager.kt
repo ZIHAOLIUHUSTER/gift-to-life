@@ -330,8 +330,11 @@ class ExportImportManager @Inject constructor(
         entryDao.restoreDeleted(id)
     }
 
-    suspend fun permanentlyDeleteAllDeleted() {
+    suspend fun permanentlyDeleteAllDeleted() = withContext(Dispatchers.IO) {
+        val deleted = entryDao.getDeletedEntries()
+        val imagePaths = deleted.mapNotNull { it.imagePath }
         entryDao.permanentlyDeleteAllDeleted()
+        imagePaths.forEach { runCatching { File(it).delete() } }
     }
 
     // ---- Utilities ----

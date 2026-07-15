@@ -262,7 +262,7 @@ class RecordViewModel @Inject constructor(
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(selectedEntry = null) }
+        _uiState.update { it.copy(selectedEntry = null, editingImageEntry = null) }
     }
 
     fun openSearch() {
@@ -391,7 +391,7 @@ class RecordViewModel @Inject constructor(
                     imageStore.delete(draft.originalImagePath)
                 }
 
-                _uiState.update { it.copy(selectedEntry = null) }
+                _uiState.update { it.copy(selectedEntry = null, editingImageEntry = null) }
                 _events.emit(RecordEvent.ShowSnackbar("修改已保存"))
             } catch (t: Throwable) {
                 // 失败时清理新写入的图片
