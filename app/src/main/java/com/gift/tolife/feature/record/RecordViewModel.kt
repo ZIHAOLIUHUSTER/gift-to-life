@@ -11,6 +11,7 @@ import com.gift.tolife.core.ai.TagWorkScheduler
 import com.gift.tolife.core.common.ImageStore
 import com.gift.tolife.core.common.ImageUtil
 import com.gift.tolife.core.common.ShareReceiver
+import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.EntryTransactions
 import com.gift.tolife.core.database.dao.EntryDao
@@ -43,7 +44,8 @@ class RecordViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val tagScheduler: TagWorkScheduler,
     private val imageStore: ImageStore,
-    private val entryDao: EntryDao
+    private val entryDao: EntryDao,
+    private val settingsDataStore: SettingsDataStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecordUiState())
@@ -154,6 +156,7 @@ class RecordViewModel @Inject constructor(
                     }
                 }
                 _events.emit(RecordEvent.EntrySaved)
+                updateStreak()
             } catch (t: Throwable) {
                 _uiState.update { it.copy(isSaving = false, saveError = t.message) }
                 _events.emit(RecordEvent.ShowSnackbar("保存失败，请重试"))
@@ -396,6 +399,23 @@ class RecordViewModel @Inject constructor(
                 val newPath = ImageUtil.copyToPrivateDir(context, draft.imageChange.uri)
                 if (newPath == null) throw IllegalStateException("图片处理失败")
                 newPath
+            }
+        }
+    }
+
+    private fun updateStreak() {
+        val cal = java.util.Calendar.getInstance()
+        val todayEpochDay = cal.timeInMillis / (24 * 60 * 60 * 1000)
+        val lastDay = settingsDataStore.getLastActiveDay()
+        val currentStreak = settingsDataStore.getStreakCount()
+
+        when {
+            todayEpochDay == lastDay -> { /* 同一天，不更新 */ }
+            todayEpochDay == lastDay + 1 -> {
+                settingsDataStore.updateStreak(todayEpochDay, currentStreak + 1)
+            }
+            else -> {
+                settingsDataStore.updateStreak(todayEpochDay, 1)
             }
         }
     }

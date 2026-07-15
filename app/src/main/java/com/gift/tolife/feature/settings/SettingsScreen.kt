@@ -2,6 +2,7 @@ package com.gift.tolife.feature.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.ui.UiTestTags
+import java.util.Calendar
 
 private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE }
 
@@ -33,9 +36,10 @@ private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
+    val stats by viewModel.stats.collectAsState()
 
     when (currentPage) {
-        SettingsPage.MAIN -> SettingsMainPage(onNavigate = { currentPage = it })
+        SettingsPage.MAIN -> SettingsMainPage(stats = stats, onRefreshStats = viewModel::refreshStats, onNavigate = { currentPage = it })
         SettingsPage.MODEL_CONFIG -> ModelConfigPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.DATA_MANAGE -> DataManagePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.RECYCLE_BIN -> RecycleBinPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
@@ -45,7 +49,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SettingsMainPage(onNavigate: (SettingsPage) -> Unit) {
+private fun SettingsMainPage(
+    stats: SettingsViewModel.StatsData,
+    onRefreshStats: () -> Unit,
+    onNavigate: (SettingsPage) -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,6 +70,9 @@ private fun SettingsMainPage(onNavigate: (SettingsPage) -> Unit) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                StatsCard(stats = stats, onRefresh = onRefreshStats)
+            }
             item {
                 SettingsSectionCard(
                     title = "模型配置",
@@ -427,6 +438,53 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(label, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit) {
+    LaunchedEffect(Unit) { onRefresh() }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("本月统计", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text("${stats.monthlyCount} 条", style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("连续 ${stats.streakCount} 天", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Spacer(Modifier.height(12.dp))
+
+            // 热力图
+            if (stats.dailyCounts.isNotEmpty()) {
+                val daysInMonth = Calendar.getInstance().getActualMaximum(Calendar.DAY_OF_MONTH)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    for (day in 1..daysInMonth) {
+                        val count = stats.dailyCounts[day] ?: 0
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(
+                                    when {
+                                        count == 0 -> MaterialTheme.colorScheme.surface
+                                        count == 1 -> Color(0xFFC8E6C9)
+                                        count in 2..3 -> Color(0xFF81C784)
+                                        count in 4..6 -> Color(0xFF4CAF50)
+                                        else -> Color(0xFF2E7D32)
+                                    }
+                                )
+                        )
+                    }
                 }
             }
         }

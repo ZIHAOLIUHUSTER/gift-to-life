@@ -69,4 +69,12 @@ class SettingsDataStore @Inject constructor(
         prefs.edit().putString("theme_mode", mode).apply()
         _settings.tryEmit(readAll())
     }
+
+    fun getLastActiveDay(): Long = prefs.getLong("last_active_day", 0L)
+
+    fun getStreakCount(): Int = prefs.getInt("streak_count", 0)
+
+    fun updateStreak(lastActiveDay: Long, streak: Int) {
+        prefs.edit().putLong("last_active_day", lastActiveDay).putInt("streak_count", streak).apply()
+    }
 }

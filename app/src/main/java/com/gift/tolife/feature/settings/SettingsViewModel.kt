@@ -11,12 +11,14 @@ import com.gift.tolife.core.ai.AiResult
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
+import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.export.ExportImportManager
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 data class SettingsUiState(
@@ -36,11 +38,55 @@ class SettingsViewModel @Inject constructor(
     private val chatClient: AiClient,
     private val exportManager: ExportImportManager,
     private val repository: EntryRepository,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val entryDao: EntryDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    data class StatsData(
+        val monthlyCount: Int = 0,
+        val streakCount: Int = 0,
+        val dailyCounts: Map<Int, Int> = emptyMap()
+    )
+
+    private val _stats = MutableStateFlow(StatsData())
+    val stats: StateFlow<StatsData> = _stats.asStateFlow()
+
+    fun refreshStats() {
+        viewModelScope.launch {
+            val cal = Calendar.getInstance()
+            val year = cal.get(Calendar.YEAR)
+            val month = cal.get(Calendar.MONTH)
+
+            val startCal = Calendar.getInstance().apply {
+                set(year, month, 1, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val endCal = Calendar.getInstance().apply {
+                set(year, month, getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
+                set(Calendar.MILLISECOND, 999)
+            }
+
+            val count = entryDao.getMonthlyCount(startCal.timeInMillis, endCal.timeInMillis)
+            val timestamps = entryDao.getMonthlyTimestamps(startCal.timeInMillis, endCal.timeInMillis)
+
+            val dailyCounts = mutableMapOf<Int, Int>()
+            val localCal = Calendar.getInstance()
+            timestamps.forEach { ts ->
+                localCal.timeInMillis = ts
+                val day = localCal.get(Calendar.DAY_OF_MONTH)
+                dailyCounts[day] = (dailyCounts[day] ?: 0) + 1
+            }
+
+            _stats.value = StatsData(
+                monthlyCount = count,
+                streakCount = settingsDataStore.getStreakCount(),
+                dailyCounts = dailyCounts
+            )
+        }
+    }
 
     init {
         viewModelScope.launch {
