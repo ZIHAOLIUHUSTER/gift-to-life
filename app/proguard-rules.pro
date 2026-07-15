@@ -2,10 +2,17 @@
 -keepattributes Signature
 -keepattributes *Annotation*
 
+# Keep Retrofit service interfaces
+-keep,allowobfuscation interface com.gift.tolife.core.network.OpenAiService { *; }
+-keep class com.gift.tolife.core.network.** { *; }
+
 # Gson
 -keep class com.gift.tolife.core.network.dto.** { *; }
 -keep class com.gift.tolife.core.export.** { *; }
 -keep class com.gift.tolife.core.datastore.AppSettings { *; }
+-keep class com.gift.tolife.feature.settings.ModelConfigExport { *; }
+-keep class com.gift.tolife.core.ai.AiResult { *; }
+-keep class com.gift.tolife.core.ai.AiResult$* { *; }
 
 # Room
 -keep class * extends androidx.room.RoomDatabase
