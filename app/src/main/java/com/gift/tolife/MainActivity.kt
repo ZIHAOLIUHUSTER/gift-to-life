@@ -7,21 +7,31 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.common.SharedContent
+import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.ui.theme.GiftTheme
 import com.gift.tolife.navigation.AppNavigation
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject lateinit var settingsDataStore: SettingsDataStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleShareIntent(intent)
         handleWidgetIntent(intent)
         setContent {
-            GiftTheme {
+            val settings by settingsDataStore.settings.collectAsState(
+                initial = com.gift.tolife.core.datastore.AppSettings()
+            )
+            GiftTheme(themeMode = settings.themeMode) {
                 AppNavigation()
             }
         }

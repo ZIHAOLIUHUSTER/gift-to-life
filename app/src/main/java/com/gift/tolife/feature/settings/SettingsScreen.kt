@@ -1,5 +1,6 @@
 package com.gift.tolife.feature.settings
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -38,6 +39,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
     val stats by viewModel.stats.collectAsState()
     val dataStats by viewModel.dataStats.collectAsState()
+
+    BackHandler(enabled = currentPage != SettingsPage.MAIN) {
+        currentPage = SettingsPage.MAIN
+    }
 
     when (currentPage) {
         SettingsPage.MAIN -> SettingsMainPage(stats = stats, onRefreshStats = viewModel::refreshStats, onNavigate = { currentPage = it })

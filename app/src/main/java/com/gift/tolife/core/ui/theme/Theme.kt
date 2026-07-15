@@ -1,16 +1,13 @@
 package com.gift.tolife.core.ui.theme
 
 import android.app.Activity
-import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -42,11 +39,9 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun GiftTheme(
+    themeMode: String = "system",
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("gift_settings", Context.MODE_PRIVATE) }
-    val themeMode = prefs.getString("theme_mode", "system") ?: "system"
     val darkTheme = when (themeMode) {
         "light" -> false
         "dark" -> true
