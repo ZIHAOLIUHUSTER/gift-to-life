@@ -6,7 +6,7 @@ import com.gift.tolife.core.model.EntryQuery
 
 object EntryQuerySqlBuilder {
     fun build(query: EntryQuery): SupportSQLiteQuery {
-        val where = StringBuilder("e.isDeleted = 0")
+        val where = StringBuilder("e.isDeleted = 0 AND e.type = 'NORMAL'")
         val bindArgs = mutableListOf<Any>()
 
         if (query.searchText.isNotBlank()) {

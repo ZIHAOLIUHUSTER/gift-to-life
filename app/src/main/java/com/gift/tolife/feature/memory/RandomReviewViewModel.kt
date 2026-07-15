@@ -39,4 +39,10 @@ class RandomReviewViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteEntry(entryId: Long) {
+        viewModelScope.launch {
+            repository.softDelete(entryId)
+        }
+    }
 }

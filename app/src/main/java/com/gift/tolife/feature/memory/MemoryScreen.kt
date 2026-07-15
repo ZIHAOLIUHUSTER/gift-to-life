@@ -174,7 +174,7 @@ fun MemoryScreen(
                     }
 
                     items(allSummaries, key = { it.id }) { entry ->
-                        SummaryCard(entry = entry)
+                        SummaryCard(entry = entry, onClick = { previewEntry = entry })
                     }
                 }
             }
@@ -188,7 +188,10 @@ fun MemoryScreen(
             tags = randomState.tags,
             onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
-            onDelete = { previewEntry = null },
+            onDelete = {
+                randomVM.deleteEntry(previewEntry!!.id)
+                previewEntry = null
+            },
             onImageClick = { previewImagePath = previewEntry!!.imagePath }
         )
     }
@@ -355,7 +358,7 @@ private fun RandomReviewCard(
 }
 
 @Composable
-internal fun SummaryCard(entry: Entry) {
+internal fun SummaryCard(entry: Entry, onClick: () -> Unit = {}) {
     val timeLabel = if (entry.summaryStart != null && entry.summaryEnd != null) {
         if (entry.summaryEnd!! - entry.summaryStart!! > 25L * 24 * 60 * 60 * 1000) {
             TimeUtil.formatMonth(entry.summaryStart!!, entry.summaryEnd!!)
@@ -365,7 +368,7 @@ internal fun SummaryCard(entry: Entry) {
     } else null
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
