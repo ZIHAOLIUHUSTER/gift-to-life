@@ -84,7 +84,7 @@ interface EntryDao {
     """)
     suspend fun updateImageDescription(id: Long, expectedRevision: Long, description: String?): Int
 
-    @Query("SELECT * FROM entries ORDER BY createdAt DESC")
+    @Query("SELECT * FROM entries WHERE isDeleted = 0 ORDER BY createdAt DESC")
     suspend fun getAllEntriesAsList(): List<Entry>
 
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
@@ -105,7 +105,7 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1 OFFSET :offset")
     suspend fun getEntryAtOffset(offset: Int): Entry?
 
-    @Query("SELECT * FROM entries WHERE id > :lastId ORDER BY id ASC LIMIT :limit")
+    @Query("SELECT * FROM entries WHERE id > :lastId AND isDeleted = 0 ORDER BY id ASC LIMIT :limit")
     suspend fun getEntriesAfterId(lastId: Long, limit: Int): List<Entry>
 
     @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
