@@ -48,7 +48,7 @@ fun MemoryScreen(
     var previewImagePath by remember { mutableStateOf<String?>(null) }
 
     val configuration = LocalConfiguration.current
-    val stageHeight = (configuration.screenHeightDp * 0.4f).dp
+    val stageHeight = (configuration.screenHeightDp * 0.7f).dp
 
     LaunchedEffect(Unit) {
         summaryVM.events.collect { event ->
