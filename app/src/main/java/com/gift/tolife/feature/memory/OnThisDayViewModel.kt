@@ -36,7 +36,7 @@ class OnThisDayViewModel @Inject constructor(
             val thisYear = cal.get(Calendar.YEAR)
 
             val result = mutableMapOf<Int, List<Entry>>()
-            for (year in thisYear downTo (thisYear - 10)) {
+            for (year in thisYear - 1 downTo (thisYear - 10)) {
                 if (month == Calendar.FEBRUARY && today == 29) {
                     val yearCal = Calendar.getInstance().apply { set(Calendar.YEAR, year) }
                     if (yearCal.getActualMaximum(Calendar.DAY_OF_MONTH) < 29) continue

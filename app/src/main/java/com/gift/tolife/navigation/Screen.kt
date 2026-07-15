@@ -43,6 +43,13 @@ sealed class Screen(
         selectedIconRes = R.drawable.ic_auto_awesome,
         unselectedIconRes = R.drawable.ic_auto_awesome
     )
+
+    data object OnThisDay : Screen(
+        route = "on_this_day",
+        label = "那年今日",
+        selectedIconRes = R.drawable.ic_auto_awesome,
+        unselectedIconRes = R.drawable.ic_auto_awesome
+    )
 }
 
 val bottomNavItems = listOf(Screen.Memory, Screen.Record, Screen.Settings)

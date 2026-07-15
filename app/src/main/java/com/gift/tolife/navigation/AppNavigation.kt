@@ -14,6 +14,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.gift.tolife.feature.memory.MemoryScreen
 import com.gift.tolife.feature.memory.MonthSummaryScreen
+import com.gift.tolife.feature.memory.OnThisDayScreen
 import com.gift.tolife.feature.memory.WeekSummaryScreen
 import com.gift.tolife.feature.record.RecordScreen
 import com.gift.tolife.feature.settings.SettingsScreen
@@ -28,7 +29,7 @@ fun AppNavigation() {
     Scaffold(
         bottomBar = {
             val route = currentDestination?.route
-            if (route != "week_summary" && route != "month_summary") {
+            if (route != "week_summary" && route != "month_summary" && route != "on_this_day") {
                 NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
@@ -77,7 +78,8 @@ fun AppNavigation() {
             composable(Screen.Memory.route) {
                 MemoryScreen(
                     onNavigateToWeekSummary = { navController.navigate(Screen.WeekSummary.route) },
-                    onNavigateToMonthSummary = { navController.navigate(Screen.MonthSummary.route) }
+                    onNavigateToMonthSummary = { navController.navigate(Screen.MonthSummary.route) },
+                    onNavigateToOnThisDay = { navController.navigate(Screen.OnThisDay.route) }
                 )
             }
             composable(Screen.Record.route) { RecordScreen() }
@@ -87,6 +89,9 @@ fun AppNavigation() {
             }
             composable(Screen.MonthSummary.route) {
                 MonthSummaryScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Screen.OnThisDay.route) {
+                OnThisDayScreen(onBack = { navController.popBackStack() })
             }
         }
     }

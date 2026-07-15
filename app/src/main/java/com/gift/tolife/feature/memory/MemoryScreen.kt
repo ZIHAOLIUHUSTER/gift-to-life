@@ -38,6 +38,7 @@ import java.util.*
 fun MemoryScreen(
     onNavigateToWeekSummary: () -> Unit = {},
     onNavigateToMonthSummary: () -> Unit = {},
+    onNavigateToOnThisDay: () -> Unit = {},
     randomVM: RandomReviewViewModel = hiltViewModel(),
     summaryVM: SummaryViewModel = hiltViewModel()
 ) {
@@ -107,7 +108,7 @@ fun MemoryScreen(
                     .fillMaxSize()
                     .padding(innerPadding),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // 随机回顾卡片
                 val randomEntry = randomState.entry
@@ -164,7 +165,7 @@ fun MemoryScreen(
 
                 // 那年今日
                 item(key = "on_this_day") {
-                    OnThisDaySection()
+                    OnThisDaySection(onViewAll = onNavigateToOnThisDay)
                 }
 
                 // 历史总结列表
@@ -400,55 +401,53 @@ internal fun SummaryCard(entry: Entry, onClick: () -> Unit = {}) {
 }
 
 @Composable
-private fun OnThisDaySection() {
+private fun OnThisDaySection(onViewAll: () -> Unit) {
     val viewModel: OnThisDayViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
 
-    val month = Calendar.getInstance().get(Calendar.MONTH) + 1
-    val day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
+    val month = java.util.Calendar.getInstance().get(java.util.Calendar.MONTH) + 1
+    val day = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_MONTH)
 
     if (state.yearEntries.isEmpty() && !state.loading) return
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .clickable(onClick = onViewAll),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "那年今日 · ${month}月${day}日",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            if (state.loading) {
-                Spacer(Modifier.height(8.dp))
-                CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-            } else {
-                state.yearEntries.forEach { (year, entries) ->
-                    Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "${year}年",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "${entries.size} 条记录",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
-                    }
-                    entries.forEach { entry ->
-                        Text(
-                            entry.content.take(60) + if (entry.content.length > 60) "…" else "",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
-                        )
-                    }
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "那年今日 · ${month}月${day}日",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                if (state.loading) {
+                    Spacer(Modifier.height(4.dp))
+                    CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                } else {
+                    val totalEntries = state.yearEntries.values.sumOf { it.size }
+                    val years = state.yearEntries.keys.sortedDescending()
+                    Text(
+                        "${years.size} 年前的今天，共 ${totalEntries} 条记录",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+            Icon(
+                painterResource(R.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
