@@ -36,57 +36,54 @@ class ExportImportManager @Inject constructor(
     // ---- Public API ----
 
     suspend fun exportToUri(uri: Uri): Int = withContext(Dispatchers.IO) {
-        val allEntries = entryDao.getAllEntriesAsList()
-        val allIds = allEntries.map { it.id }
-        val tagMap = mutableMapOf<Long, MutableList<TagType>>()
-        allIds.chunked(500).forEach { chunk ->
-            entryTagDao.getByEntryIds(chunk).forEach { tag ->
-                tagMap.getOrPut(tag.entryId) { mutableListOf() }.add(tag.tag)
-            }
-        }
-
-        val manifestEntries = allEntries.map { entry ->
-            val tags = tagMap[entry.id]?.map { it.label } ?: emptyList()
-            var imageEntry: String? = null
-            var imageSha256: String? = null
-            if (!entry.imagePath.isNullOrBlank()) {
-                val file = File(entry.imagePath)
-                if (file.exists()) {
-                    imageEntry = "images/${file.name}"
-                    imageSha256 = sha256(file)
-                }
-            }
-            BackupV2Entry(
-                id = entry.id,
-                content = entry.content,
-                type = entry.type.name,
-                createdAt = entry.createdAt,
-                updatedAt = entry.updatedAt,
-                summaryStart = entry.summaryStart,
-                summaryEnd = entry.summaryEnd,
-                imageDescription = entry.imageDescription,
-                isDeleted = entry.isDeleted,
-                summaryModel = entry.summaryModel,
-                tags = tags,
-                imageEntry = imageEntry,
-                imageSha256 = imageSha256
-            )
-        }
+        val pageSize = 100
+        var offset = 0
+        var totalCount = 0
+        val manifestEntries = mutableListOf<BackupV2Entry>()
 
         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
             ZipOutputStream(BufferedOutputStream(outputStream)).use { zip ->
-                // Write image files first
-                allEntries.forEach { entry ->
-                    if (!entry.imagePath.isNullOrBlank()) {
-                        val file = File(entry.imagePath)
-                        if (file.exists()) {
-                            zip.putNextEntry(ZipEntry("images/${file.name}"))
-                            file.inputStream().use { it.copyTo(zip) }
-                            zip.closeEntry()
+                while (true) {
+                    val batch = entryDao.getEntriesPaged(pageSize, offset)
+                    if (batch.isEmpty()) break
+                    totalCount += batch.size
+
+                    // 批量获取标签
+                    val batchIds = batch.map { it.id }
+                    val tagMap = mutableMapOf<Long, MutableList<String>>()
+                    batchIds.chunked(500).forEach { chunk ->
+                        entryTagDao.getByEntryIds(chunk).forEach { tag ->
+                            tagMap.getOrPut(tag.entryId) { mutableListOf() }.add(tag.tag.label)
                         }
                     }
+
+                    batch.forEach { entry ->
+                        val tags = tagMap[entry.id] ?: emptyList()
+                        var imageEntry: String? = null
+                        var imageSha256: String? = null
+                        if (!entry.imagePath.isNullOrBlank()) {
+                            val file = File(entry.imagePath)
+                            if (file.exists()) {
+                                imageEntry = "images/${file.name}"
+                                imageSha256 = sha256(file)
+                                zip.putNextEntry(ZipEntry(imageEntry))
+                                file.inputStream().use { it.copyTo(zip) }
+                                zip.closeEntry()
+                            }
+                        }
+                        manifestEntries.add(BackupV2Entry(
+                            id = entry.id, content = entry.content, type = entry.type.name,
+                            createdAt = entry.createdAt, updatedAt = entry.updatedAt,
+                            summaryStart = entry.summaryStart, summaryEnd = entry.summaryEnd,
+                            imageDescription = entry.imageDescription, isDeleted = entry.isDeleted,
+                            summaryModel = entry.summaryModel, tags = tags,
+                            imageEntry = imageEntry, imageSha256 = imageSha256
+                        ))
+                    }
+                    offset += pageSize
                 }
-                // Write manifest last
+
+                // 最后写 manifest
                 val manifest = BackupV2Manifest(
                     exportedAt = System.currentTimeMillis(),
                     entryCount = manifestEntries.size,
@@ -98,7 +95,7 @@ class ExportImportManager @Inject constructor(
             }
         } ?: throw IOException("Cannot open output stream")
 
-        allEntries.size
+        totalCount
     }
 
     // ---- Safe Import ----

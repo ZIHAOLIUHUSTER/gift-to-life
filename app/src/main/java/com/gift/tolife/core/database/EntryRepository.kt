@@ -66,7 +66,5 @@ class EntryRepository @Inject constructor(
         return emptyList()
     }
 
-    suspend fun getRandomActiveEntry(): Entry? = entryDao.getRandomActiveEntry()
-
     fun observeSummaries(): Flow<List<Entry>> = entryDao.observeSummaries()
 }
