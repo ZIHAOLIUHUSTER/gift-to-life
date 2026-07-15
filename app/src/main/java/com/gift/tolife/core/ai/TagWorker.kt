@@ -41,37 +41,42 @@ class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         val entry = repository.getById(entryId) ?: return Result.success()
         if (entry.isDeleted || entry.entryRevision != expectedRevision) return Result.success()
 
-        try {
-            var content = entry.content
-            var imageDescription: String? = null
+        var content = entry.content
+        var imageDescription: String? = null
 
-            if (!entry.imagePath.isNullOrBlank()) {
-                val descResult = aiClient.describeImage(settings.visionModel, entry.imagePath, disableThinking = true)
-                if (descResult is AiResult.Success) {
+        if (!entry.imagePath.isNullOrBlank()) {
+            when (val descResult = aiClient.describeImage(settings.visionModel, entry.imagePath, disableThinking = true)) {
+                is AiResult.Success -> {
                     imageDescription = descResult.value
                     content = if (content.isNotBlank()) "$content\n[图片描述: ${descResult.value}]" else descResult.value
                 }
+                is AiResult.RetryableFailure -> return Result.retry()
+                is AiResult.PermanentFailure -> {
+                    if (content.isBlank()) return Result.failure()
+                }
             }
+        }
 
-            if (content.isNotBlank()) {
-                val tagResult = aiClient.chat(
-                    model = settings.tagModel,
-                    systemPrompt = TagPrompt.SYSTEM,
-                    userMessage = TagPrompt.userPrompt(content),
-                    disableThinking = true
-                )
-                if (tagResult is AiResult.Success) {
+        if (content.isNotBlank()) {
+            when (val tagResult = aiClient.chat(
+                model = settings.tagModel,
+                systemPrompt = TagPrompt.SYSTEM,
+                userMessage = TagPrompt.userPrompt(content),
+                disableThinking = true
+            )) {
+                is AiResult.Success -> {
                     val tags = parseTags(tagResult.value).toSet()
                     if (tags.isNotEmpty()) {
                         transactions.applyAiEnhancement(entryId, expectedRevision, imageDescription, tags)
                     }
+                    return Result.success()
                 }
+                is AiResult.RetryableFailure -> return Result.retry()
+                is AiResult.PermanentFailure -> return Result.failure()
             }
-
-            return Result.success()
-        } catch (e: Exception) {
-            return Result.retry()
         }
+
+        return Result.success()
     }
 
     private fun parseTags(response: String): List<TagType> {

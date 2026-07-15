@@ -49,8 +49,8 @@ class SummaryViewModel @Inject constructor(
             repository.observeSummaries().collect { summaries ->
                 val weeks = summaries.filter { it.summaryStart != null && it.summaryEnd != null && it.summaryEnd!! - it.summaryStart!! < 8L * 24 * 60 * 60 * 1000 }
                 val months = summaries.filter { it.summaryStart != null && it.summaryEnd != null && it.summaryEnd!! - it.summaryStart!! > 25L * 24 * 60 * 60 * 1000 }
-                val (wStart, wEnd) = TimeUtil.currentWeekRange()
-                val (mStart, mEnd) = TimeUtil.currentMonthRange()
+                val (wStart, wEnd) = TimeUtil.previousWeekRange()
+                val (mStart, mEnd) = TimeUtil.previousMonthRange()
                 _state.update {
                     it.copy(
                         weekSummaries = weeks,
