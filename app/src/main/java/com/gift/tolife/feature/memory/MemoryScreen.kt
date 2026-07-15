@@ -47,9 +47,6 @@ fun MemoryScreen(
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
 
-    val configuration = LocalConfiguration.current
-    val stageHeight = (configuration.screenHeightDp * 0.7f).dp
-
     LaunchedEffect(Unit) {
         summaryVM.events.collect { event ->
             when (event) {
@@ -119,7 +116,6 @@ fun MemoryScreen(
                         RandomReviewCard(
                             entry = randomEntry,
                             tags = randomState.tags,
-                            stageHeight = stageHeight,
                             onRefresh = randomVM::fetchRandom,
                             onClick = { previewEntry = randomEntry }
                         )
@@ -210,16 +206,16 @@ fun MemoryScreen(
 private fun RandomReviewCard(
     entry: Entry,
     tags: List<TagType>,
-    stageHeight: Dp,
     onRefresh: () -> Unit,
     onClick: () -> Unit = {}
 ) {
     var refreshEnabled by remember { mutableStateOf(true) }
+    val hasImage = !entry.imagePath.isNullOrBlank()
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(stageHeight)
+            .height(420.dp)
             .clickable(onClick = onClick)
             .testTag(UiTestTags.MEMORY_CARD),
         shape = MaterialTheme.shapes.large,
@@ -237,39 +233,63 @@ private fun RandomReviewCard(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // 内容区（文字 + 图片）
-                Column {
-                    // 内容（带引号装饰）
+                if (hasImage) {
+                    // --- 有图模板：文字 2-3 行 + 图片 160dp ---
                     Text(
-                        "「${entry.content}」",
-                        style = MaterialTheme.typography.headlineMedium,
+                        entry.content,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 6,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    // 图片
-                    if (!entry.imagePath.isNullOrBlank()) {
-                        AsyncImage(
-                            model = File(entry.imagePath),
-                            contentDescription = "回顾图片",
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .heightIn(max = 180.dp)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+                    AsyncImage(
+                        model = File(entry.imagePath!!),
+                        contentDescription = "回顾图片",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(16f / 9f)
+                            .heightIn(max = 160.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // --- 纯文字模板：文字区填满图片槽位 ---
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val isShort = entry.content.length < 60
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "「${entry.content}」",
+                                style = if (isShort) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = if (isShort) Int.MAX_VALUE else 5,
+                                overflow = if (isShort) TextOverflow.Clip else TextOverflow.Ellipsis,
+                                textAlign = if (isShort) TextAlign.Center else TextAlign.Start
+                            )
+                            if (!isShort) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "点击查看全文",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(hasImage.let { if (it) 12.dp else 0.dp }))
 
-                // 标签 + 时间（居中）
+                // 标签 + 时间（固定位置）
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center,
@@ -300,7 +320,7 @@ private fun RandomReviewCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                 Spacer(modifier = Modifier.height(12.dp))
