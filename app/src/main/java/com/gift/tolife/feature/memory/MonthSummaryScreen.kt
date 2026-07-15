@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.ui.component.AppEmptyState
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -79,7 +80,10 @@ fun MonthSummaryScreen(
 
             if (monthSummaries.isEmpty()) {
                 item(key = "empty") {
-                    Text("暂无月总结", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppEmptyState(
+                        title = "暂无月总结",
+                        description = if (state.canGenerateMonth) "点击上方按钮生成上月总结" else "请在月初生成上月总结"
+                    )
                 }
             }
 

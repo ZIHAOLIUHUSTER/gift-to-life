@@ -27,7 +27,9 @@ fun AppNavigation() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
+            val route = currentDestination?.route
+            if (route != "week_summary" && route != "month_summary") {
+                NavigationBar(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
@@ -63,6 +65,7 @@ fun AppNavigation() {
                         )
                     )
                 }
+            }
             }
         }
     ) { innerPadding ->

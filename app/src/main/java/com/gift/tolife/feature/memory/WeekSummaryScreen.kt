@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.ui.component.AppEmptyState
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -79,7 +80,10 @@ fun WeekSummaryScreen(
 
             if (weekSummaries.isEmpty()) {
                 item(key = "empty") {
-                    Text("暂无周总结", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    AppEmptyState(
+                        title = "暂无周总结",
+                        description = if (state.canGenerateWeek) "点击上方按钮生成上周总结" else "请在周一生成上周总结"
+                    )
                 }
             }
 

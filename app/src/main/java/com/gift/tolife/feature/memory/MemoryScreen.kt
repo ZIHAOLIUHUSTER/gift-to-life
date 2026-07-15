@@ -112,13 +112,29 @@ fun MemoryScreen(
                             entry = randomEntry,
                             tags = randomState.tags,
                             onRefresh = randomVM::fetchRandom,
-                            isGenerating = summaryState.isGenerating,
-                            canGenerateWeek = summaryState.canGenerateWeek,
-                            canGenerateMonth = summaryState.canGenerateMonth,
-                            onWeekSummary = onNavigateToWeekSummary,
-                            onMonthSummary = onNavigateToMonthSummary,
                             onClick = { previewEntry = randomEntry }
                         )
+                    }
+                }
+
+                // 总结入口（独立于随机卡片）
+                item(key = "summary_actions") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onNavigateToWeekSummary,
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.medium
+                        ) { Text("周总结") }
+                        OutlinedButton(
+                            onClick = onNavigateToMonthSummary,
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.medium
+                        ) { Text("月总结") }
                     }
                 }
 
@@ -167,17 +183,12 @@ private fun RandomReviewCard(
     entry: Entry,
     tags: List<TagType>,
     onRefresh: () -> Unit,
-    isGenerating: Boolean = false,
-    canGenerateWeek: Boolean = false,
-    canGenerateMonth: Boolean = false,
-    onWeekSummary: () -> Unit = {},
-    onMonthSummary: () -> Unit = {},
     onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(520.dp)
+            .heightIn(min = 320.dp)
             .clickable(onClick = onClick)
             .testTag(UiTestTags.MEMORY_CARD),
         shape = MaterialTheme.shapes.large,
@@ -259,40 +270,14 @@ private fun RandomReviewCard(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 分割线
             HorizontalDivider(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
             Spacer(modifier = Modifier.height(12.dp))
-
-            // 按钮行（小按钮，右对齐）
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.End
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(
-                        onClick = onWeekSummary
-                    ) {
-                        Text("本周", style = MaterialTheme.typography.bodySmall)
-                    }
-                    TextButton(
-                        onClick = onMonthSummary
-                    ) {
-                        Text("本月", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-
-                TextButton(
-                    onClick = onRefresh,
-                    enabled = !isGenerating,
-                    modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)
-                ) {
-                    Icon(
-                        painterResource(R.drawable.ic_refresh),
-                        contentDescription = "再抽一条",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                TextButton(onClick = onRefresh, modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)) {
+                    Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("再抽一条", style = MaterialTheme.typography.bodySmall)
                 }
