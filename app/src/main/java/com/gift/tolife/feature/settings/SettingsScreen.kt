@@ -308,6 +308,16 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
                         StatItem("${dataStats.totalEntries}", "条记录")
                         StatItem("${dataStats.usageDays}", "天使用")
                     }
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatItem("${dataStats.imageCount}", "张图片")
+                        StatItem("${dataStats.summaryCount}", "篇总结")
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatItem(formatSize(dataStats.imageSizeBytes), "图片占用")
+                        StatItem(String.format("%.1f 条/天", dataStats.dailyAvg), "日均记录")
+                    }
                 }
             }
 
@@ -524,4 +534,12 @@ private fun StatItem(value: String, label: String) {
 private fun formatTime(ts: Long): String {
     val sdf = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
     return sdf.format(java.util.Date(ts))
+}
+
+private fun formatSize(bytes: Long): String {
+    return when {
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
+    }
 }

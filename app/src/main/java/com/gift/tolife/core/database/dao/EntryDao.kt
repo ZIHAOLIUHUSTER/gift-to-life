@@ -93,6 +93,12 @@ interface EntryDao {
     @Query("SELECT MIN(createdAt) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
     suspend fun getFirstEntryTimestamp(): Long?
 
+    @Query("SELECT COUNT(*) FROM entries WHERE imagePath IS NOT NULL AND imagePath != '' AND isDeleted = 0")
+    suspend fun getImageCount(): Int
+
+    @Query("SELECT COUNT(*) FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0")
+    suspend fun getSummaryCount(): Int
+
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
     suspend fun getActiveEntryCount(): Int
 

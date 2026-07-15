@@ -56,7 +56,11 @@ class SettingsViewModel @Inject constructor(
 
     data class DataStats(
         val totalEntries: Int = 0,
-        val usageDays: Int = 0
+        val usageDays: Int = 0,
+        val imageCount: Int = 0,
+        val summaryCount: Int = 0,
+        val imageSizeBytes: Long = 0,
+        val dailyAvg: Float = 0f
     )
 
     private val _dataStats = MutableStateFlow(DataStats())
@@ -70,7 +74,20 @@ class SettingsViewModel @Inject constructor(
                 val elapsed = System.currentTimeMillis() - firstTimestamp
                 (elapsed / (24 * 60 * 60 * 1000)).toInt() + 1
             } else 0
-            _dataStats.value = DataStats(totalEntries = total, usageDays = days)
+            val imageCount = entryDao.getImageCount()
+            val summaryCount = entryDao.getSummaryCount()
+            val imagesDir = java.io.File(context.filesDir, "images")
+            val imageSize = if (imagesDir.exists()) imagesDir.listFiles()?.sumOf { it.length() } ?: 0 else 0
+            val avg = if (days > 0) total.toFloat() / days else 0f
+
+            _dataStats.value = DataStats(
+                totalEntries = total,
+                usageDays = days,
+                imageCount = imageCount,
+                summaryCount = summaryCount,
+                imageSizeBytes = imageSize,
+                dailyAvg = avg
+            )
         }
     }
 
