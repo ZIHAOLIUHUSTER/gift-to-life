@@ -61,8 +61,8 @@ set ANDROID_HOME=C:\Users\LZH\AppData\Local\Android\Sdk
 # Debug（未混淆，~18MB）
 gradlew assembleDebug
 
-# Release（R8 混淆，~1.7MB）  
-gradlew assembleReleaseTest
+# Release（当前为 debug 签名测试包，~18MB，R8 暂未开启）
+gradlew assembleRelease
 ```
 
 需要 JDK 21 + Android SDK 34。

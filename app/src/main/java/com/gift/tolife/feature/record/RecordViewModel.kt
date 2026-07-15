@@ -320,57 +320,54 @@ class RecordViewModel @Inject constructor(
     fun saveEdit(draft: EntryEditDraft) {
         viewModelScope.launch {
             try {
-                // 处理图片变更
-                val finalImagePath = when (draft.imageChange) {
-                    is ImageChange.Keep -> draft.originalImagePath
-                    is ImageChange.Remove -> null
-                    is ImageChange.Replace -> {
-                        val stageDir = File(context.cacheDir, "edit-stage")
-                        stageDir.mkdirs()
-                        val stageFile = File(stageDir, "${UUID.randomUUID()}.webp")
-                        try {
-                            val bytes = context.contentResolver.openInputStream(draft.imageChange.uri)?.use { it.readBytes() }
-                            if (bytes != null) {
-                                stageFile.writeBytes(bytes)
-                                val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
-                                val finalFile = File(imagesDir, "${UUID.randomUUID()}.webp")
-                                stageFile.copyTo(finalFile, overwrite = true)
-                                stageFile.delete()
-                                finalFile.absolutePath
-                            } else null
-                        } catch (e: Exception) {
-                            stageFile.delete()
-                            throw e
+                val originalTags = _originalEditTags.toSet()
+                val tagsChanged = draft.tags != originalTags
+                val contentChanged = draft.content != _uiState.value.selectedEntry?.content ||
+                    draft.imageChange != ImageChange.Keep
+
+                when {
+                    tagsChanged -> {
+                        // 用户改了标签，用 updateUserEntryAndTags，不投递 AI
+                        val finalPath = resolveImagePath(draft)
+                        entryTransactions.updateUserEntryAndTags(
+                            draft.entryId, draft.content, finalPath, draft.tags
+                        )
+                        // 清理旧图片
+                        if (draft.imageChange != ImageChange.Keep && !draft.originalImagePath.isNullOrBlank()) {
+                            imageStore.delete(draft.originalImagePath)
                         }
                     }
-                }
-
-                // 更新正文和图片
-                val revision = entryTransactions.updateUserContent(
-                    draft.entryId, draft.content, finalImagePath
-                )
-
-                // 更新标签
-                if (draft.tags.isNotEmpty()) {
-                    entryTransactions.replaceUserTags(draft.entryId, draft.tags)
-                }
-
-                // 删除旧图片
-                if (draft.imageChange != ImageChange.Keep && !draft.originalImagePath.isNullOrBlank()) {
-                    imageStore.delete(draft.originalImagePath)
-                }
-
-                // 如果正文或图片变化但标签未变，投递 AI 重新打标签
-                val contentChanged = draft.content != _uiState.value.selectedEntry?.content ||
-                    finalImagePath != _uiState.value.selectedEntry?.imagePath
-                if (contentChanged && draft.tags == _originalEditTags) {
-                    tagScheduler.enqueue(draft.entryId, revision)
+                    contentChanged -> {
+                        // 只改正文或图片，走 updateUserContent 并投递 AI
+                        val finalPath = resolveImagePath(draft)
+                        val revision = entryTransactions.updateUserContent(
+                            draft.entryId, draft.content, finalPath
+                        )
+                        // 清理旧图片
+                        if (draft.imageChange != ImageChange.Keep && !draft.originalImagePath.isNullOrBlank()) {
+                            imageStore.delete(draft.originalImagePath)
+                        }
+                        tagScheduler.enqueue(draft.entryId, revision)
+                    }
+                    else -> { /* 什么都没变 */ }
                 }
 
                 _uiState.update { it.copy(selectedEntry = null) }
                 _events.emit(RecordEvent.ShowSnackbar("修改已保存"))
             } catch (t: Throwable) {
                 _events.emit(RecordEvent.ShowSnackbar("保存失败: ${t.message ?: ""}"))
+            }
+        }
+    }
+
+    private suspend fun resolveImagePath(draft: EntryEditDraft): String? {
+        return when (draft.imageChange) {
+            is ImageChange.Keep -> draft.originalImagePath
+            is ImageChange.Remove -> null
+            is ImageChange.Replace -> {
+                val newPath = ImageUtil.copyToPrivateDir(context, draft.imageChange.uri)
+                if (newPath == null) throw IllegalStateException("图片处理失败")
+                newPath
             }
         }
     }
