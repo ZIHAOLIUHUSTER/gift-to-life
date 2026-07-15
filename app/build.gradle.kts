@@ -17,8 +17,8 @@ android {
         applicationId = "com.gift.tolife"
         minSdk = 26
         targetSdk = 34
-        versionCode = 16
-        versionName = "1.5.0"
+        versionCode = 20
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,6 +28,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
