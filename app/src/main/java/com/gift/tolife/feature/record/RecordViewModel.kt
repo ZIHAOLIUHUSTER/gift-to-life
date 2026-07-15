@@ -131,8 +131,18 @@ class RecordViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isSaving = true, saveError = null) }
                 val snapshot = _uiState.value
-                val imagePath = snapshot.pendingImageUri?.let { uri ->
+                val pendingImage = snapshot.pendingImageUri
+                if (!EntrySavePolicy.canSave(snapshot.draftText, pendingImage != null)) {
+                    _uiState.update { it.copy(isSaving = false) }
+                    return@launch
+                }
+                val imagePath = pendingImage?.let { uri ->
                     ImageUtil.copyToPrivateDir(context, uri)
+                }
+                if (pendingImage != null && imagePath == null) {
+                    _uiState.update { it.copy(isSaving = false) }
+                    _events.emit(RecordEvent.ShowSnackbar("图片处理失败，记录尚未保存"))
+                    return@launch
                 }
                 val entry = Entry(
                     content = snapshot.draftText.trim(),

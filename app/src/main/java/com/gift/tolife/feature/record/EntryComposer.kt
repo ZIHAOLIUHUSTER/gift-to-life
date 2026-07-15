@@ -76,7 +76,7 @@ fun EntryComposer(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            val canSave = !isSaving && (value.isNotBlank() || pendingImageUri != null)
+            val canSave = !isSaving && EntrySavePolicy.canSave(value, pendingImageUri != null)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
