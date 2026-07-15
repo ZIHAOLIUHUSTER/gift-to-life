@@ -54,6 +54,26 @@ class SettingsViewModel @Inject constructor(
     private val _stats = MutableStateFlow(StatsData())
     val stats: StateFlow<StatsData> = _stats.asStateFlow()
 
+    data class DataStats(
+        val totalEntries: Int = 0,
+        val usageDays: Int = 0
+    )
+
+    private val _dataStats = MutableStateFlow(DataStats())
+    val dataStats: StateFlow<DataStats> = _dataStats.asStateFlow()
+
+    fun refreshDataStats() {
+        viewModelScope.launch {
+            val total = entryDao.getTotalEntryCount()
+            val firstTimestamp = entryDao.getFirstEntryTimestamp()
+            val days = if (firstTimestamp != null) {
+                val elapsed = System.currentTimeMillis() - firstTimestamp
+                (elapsed / (24 * 60 * 60 * 1000)).toInt() + 1
+            } else 0
+            _dataStats.value = DataStats(totalEntries = total, usageDays = days)
+        }
+    }
+
     fun refreshStats() {
         viewModelScope.launch {
             val cal = Calendar.getInstance()

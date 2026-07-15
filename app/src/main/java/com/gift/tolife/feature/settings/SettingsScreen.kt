@@ -37,11 +37,15 @@ private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, 
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var currentPage by remember { mutableStateOf(SettingsPage.MAIN) }
     val stats by viewModel.stats.collectAsState()
+    val dataStats by viewModel.dataStats.collectAsState()
 
     when (currentPage) {
         SettingsPage.MAIN -> SettingsMainPage(stats = stats, onRefreshStats = viewModel::refreshStats, onNavigate = { currentPage = it })
         SettingsPage.MODEL_CONFIG -> ModelConfigPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
-        SettingsPage.DATA_MANAGE -> DataManagePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.DATA_MANAGE -> {
+            LaunchedEffect(Unit) { viewModel.refreshDataStats() }
+            DataManagePage(viewModel, dataStats = dataStats, onBack = { currentPage = SettingsPage.MAIN })
+        }
         SettingsPage.RECYCLE_BIN -> RecycleBinPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.APPEARANCE -> AppearancePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
     }
@@ -265,7 +269,7 @@ private fun ModelRow(value: String, onValueChange: (String) -> Unit, label: Stri
 // ===== 数据管理子页 =====
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
+private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsViewModel.DataStats, onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     var showImportConfirm by remember { mutableStateOf(false) }
 
@@ -291,6 +295,24 @@ private fun DataManagePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     ) { innerPadding ->
         Column(Modifier.fillMaxSize().padding(innerPadding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            // 统计卡片
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text("使用统计", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(16.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        StatItem("${dataStats.totalEntries}", "条记录")
+                        StatItem("${dataStats.usageDays}", "天使用")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             SettingsCard(title = "备份与恢复") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedButton(onClick = { exportLauncher.launch("gift_backup.gtlbackup") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导出备份") }
@@ -488,6 +510,14 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun StatItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

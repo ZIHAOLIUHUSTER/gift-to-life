@@ -88,6 +88,12 @@ interface EntryDao {
     suspend fun getAllEntriesAsList(): List<Entry>
 
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
+    suspend fun getTotalEntryCount(): Int
+
+    @Query("SELECT MIN(createdAt) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
+    suspend fun getFirstEntryTimestamp(): Long?
+
+    @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0")
     suspend fun getActiveEntryCount(): Int
 
     @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1 OFFSET :offset")

@@ -20,10 +20,12 @@ object SummaryPrompt {
     fun buildUserPrompt(entries: List<Entry>): String? {
         if (entries.size < 3) return null
 
-        // 按时间排序（早→晚）
         val sorted = entries.sortedBy { it.createdAt }
+        val days = sorted.map { it.createdAt / (24 * 60 * 60 * 1000) }.distinct().size
+        val withImages = sorted.count { !it.imagePath.isNullOrBlank() }
 
-        // 截断每条记录
+        val statsLine = "本周期共 ${sorted.size} 条记录，覆盖 $days 天，其中 $withImages 条含图片。\n"
+
         val formatted = sorted.map { entry ->
             val time = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
                 .format(java.util.Date(entry.createdAt))
@@ -31,13 +33,14 @@ object SummaryPrompt {
             "[$time] ${text.take(MAX_ENTRY_CHARS)}"
         }
 
-        // 时间序拼接，按总预算截断
-        // 策略：优先保留所有近期记录，超出预算时从最早开始丢弃
         val result = buildString {
-            var charCount = 0
-            for (line in formatted.reversed()) { // 从最新遍历
+            append(statsLine)
+            append("\n")
+            var charCount = statsLine.length + 1
+            for (line in formatted) {
                 if (charCount + line.length > MAX_CHARACTERS) break
-                insert(0, "$line\n\n") // 插入到开头，保持时间序
+                append(line)
+                append("\n\n")
                 charCount += line.length + 2
             }
         }.trimEnd()
