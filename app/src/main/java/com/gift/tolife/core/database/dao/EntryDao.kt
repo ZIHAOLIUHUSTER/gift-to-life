@@ -105,8 +105,8 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY createdAt ASC LIMIT 1 OFFSET :offset")
     suspend fun getEntryAtOffset(offset: Int): Entry?
 
-    @Query("SELECT * FROM entries ORDER BY id ASC LIMIT :limit OFFSET :offset")
-    suspend fun getEntriesPaged(limit: Int, offset: Int): List<Entry>
+    @Query("SELECT * FROM entries WHERE id > :lastId ORDER BY id ASC LIMIT :limit")
+    suspend fun getEntriesAfterId(lastId: Long, limit: Int): List<Entry>
 
     @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
     fun observeSummaries(): Flow<List<Entry>>

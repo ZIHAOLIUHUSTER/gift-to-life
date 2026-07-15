@@ -6,6 +6,7 @@ import com.gift.tolife.core.database.AppDatabase
 import com.gift.tolife.core.database.StagedImportEntry
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
+import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
@@ -29,7 +30,8 @@ class ExportImportManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val entryDao: EntryDao,
     private val entryTagDao: EntryTagDao,
-    private val database: AppDatabase
+    private val database: AppDatabase,
+    private val settingsDataStore: SettingsDataStore
 ) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -37,16 +39,17 @@ class ExportImportManager @Inject constructor(
 
     suspend fun exportToUri(uri: Uri): Int = withContext(Dispatchers.IO) {
         val pageSize = 100
-        var offset = 0
+        var lastId = 0L
         var totalCount = 0
         val manifestEntries = mutableListOf<BackupV2Entry>()
 
         context.contentResolver.openOutputStream(uri)?.use { outputStream ->
             ZipOutputStream(BufferedOutputStream(outputStream)).use { zip ->
                 while (true) {
-                    val batch = entryDao.getEntriesPaged(pageSize, offset)
+                    val batch = entryDao.getEntriesAfterId(lastId, pageSize)
                     if (batch.isEmpty()) break
                     totalCount += batch.size
+                    lastId = batch.last().id
 
                     // 批量获取标签
                     val batchIds = batch.map { it.id }
@@ -80,7 +83,6 @@ class ExportImportManager @Inject constructor(
                             imageEntry = imageEntry, imageSha256 = imageSha256
                         ))
                     }
-                    offset += pageSize
                 }
 
                 // 最后写 manifest
@@ -139,11 +141,14 @@ class ExportImportManager @Inject constructor(
                 if (stream.read(buf) != 2) throw IOException("文件太短")
                 buf
             }
-            when {
+            val result = when {
                 firstBytes.contentEquals(ZIP_MAGIC) -> importV2Safe(tempFile)
                 firstBytes[0] == '{'.code.toByte() -> importLegacyV1Safe(tempFile)
                 else -> throw IOException("不支持的备份格式")
             }
+            // 导入成功后清空 streak 缓存
+            settingsDataStore.updateStreak(0, 0)
+            result
         } finally {
             tempFile.delete()
         }

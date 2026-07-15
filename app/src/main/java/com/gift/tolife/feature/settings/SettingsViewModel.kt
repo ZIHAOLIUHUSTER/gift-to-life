@@ -16,6 +16,7 @@ import com.gift.tolife.core.export.ExportImportManager
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -67,7 +68,7 @@ class SettingsViewModel @Inject constructor(
     val dataStats: StateFlow<DataStats> = _dataStats.asStateFlow()
 
     fun refreshDataStats() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val total = entryDao.getTotalEntryCount()
             val firstTimestamp = entryDao.getFirstEntryTimestamp()
             val days = if (firstTimestamp != null) {
@@ -92,7 +93,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun refreshStats() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val cal = Calendar.getInstance()
             val year = cal.get(Calendar.YEAR)
             val month = cal.get(Calendar.MONTH)
@@ -117,9 +118,21 @@ class SettingsViewModel @Inject constructor(
                 dailyCounts[day] = (dailyCounts[day] ?: 0) + 1
             }
 
+            // 校验 streak: 如果最后活跃日不是今天或昨天，归零
+            val today = java.time.LocalDate.now().toEpochDay()
+            val lastDay = settingsDataStore.getLastActiveDay()
+            val streak = settingsDataStore.getStreakCount()
+            val correctedStreak = when {
+                lastDay == today || lastDay == today - 1 -> streak
+                else -> 0
+            }
+            if (correctedStreak != streak) {
+                settingsDataStore.updateStreak(lastDay, correctedStreak)
+            }
+
             _stats.value = StatsData(
                 monthlyCount = count,
-                streakCount = settingsDataStore.getStreakCount(),
+                streakCount = correctedStreak,
                 dailyCounts = dailyCounts
             )
         }

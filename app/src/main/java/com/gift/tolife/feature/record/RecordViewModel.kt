@@ -404,8 +404,8 @@ class RecordViewModel @Inject constructor(
     }
 
     private fun updateStreak() {
-        val cal = java.util.Calendar.getInstance()
-        val todayEpochDay = cal.timeInMillis / (24 * 60 * 60 * 1000)
+        val today = java.time.LocalDate.now()
+        val todayEpochDay = today.toEpochDay()
         val lastDay = settingsDataStore.getLastActiveDay()
         val currentStreak = settingsDataStore.getStreakCount()
 

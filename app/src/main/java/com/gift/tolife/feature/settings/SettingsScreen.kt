@@ -516,8 +516,13 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
             // 热力图（多排）
             if (stats.dailyCounts.isNotEmpty()) {
                 val daysInMonth = cal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH)
+                val firstDayCal = java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.DAY_OF_MONTH, 1)
+                }
+                val firstDayOfWeek = firstDayCal.get(java.util.Calendar.DAY_OF_WEEK) - 1 // 周日=0
+                val totalCells = firstDayOfWeek + daysInMonth
                 val cols = 7
-                val rows = (daysInMonth + cols - 1) / cols
+                val rows = (totalCells + cols - 1) / cols
 
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     for (row in 0 until rows) {
@@ -526,8 +531,9 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
                             horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
                             for (col in 0 until cols) {
-                                val day = row * cols + col + 1
-                                if (day <= daysInMonth) {
+                                val cellIndex = row * cols + col
+                                val day = cellIndex - firstDayOfWeek + 1
+                                if (day in 1..daysInMonth) {
                                     val count = stats.dailyCounts[day] ?: 0
                                     Box(
                                         modifier = Modifier

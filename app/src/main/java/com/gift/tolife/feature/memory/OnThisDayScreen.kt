@@ -1,5 +1,6 @@
 package com.gift.tolife.feature.memory
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,12 +15,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsState()
+    var previewEntry by remember { mutableStateOf<Entry?>(null) }
 
     val month = Calendar.getInstance().get(Calendar.MONTH) + 1
     val day = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
@@ -60,7 +63,7 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
                     }
                     items(entries, key = { it.id }) { entry ->
                         Card(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().clickable { previewEntry = entry },
                             shape = RoundedCornerShape(8.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
@@ -78,6 +81,16 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
                 }
             }
         }
+    }
+
+    if (previewEntry != null) {
+        EntryPreviewSheet(
+            entry = previewEntry!!,
+            tags = emptyList(),
+            onEdit = { previewEntry = null },
+            onDismiss = { previewEntry = null },
+            onDelete = { previewEntry = null }
+        )
     }
 }
 

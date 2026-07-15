@@ -35,8 +35,22 @@ class OnThisDayViewModel @Inject constructor(
             val month = cal.get(Calendar.MONTH)
             val thisYear = cal.get(Calendar.YEAR)
 
+            if (month == Calendar.FEBRUARY && today == 29 && !cal.getActualMaximum(Calendar.DAY_OF_MONTH).let { it >= 29 }) {
+                _state.value = OnThisDayState()
+                return@launch
+            }
+
+            // 查最早记录年份
+            val firstTimestamp = entryDao.getFirstEntryTimestamp()
+            val firstYear = if (firstTimestamp != null) {
+                Calendar.getInstance().apply { timeInMillis = firstTimestamp }.get(Calendar.YEAR)
+            } else {
+                _state.value = OnThisDayState()
+                return@launch
+            }
+
             val result = mutableMapOf<Int, List<Entry>>()
-            for (year in thisYear - 1 downTo (thisYear - 10)) {
+            for (year in thisYear - 1 downTo firstYear) {
                 if (month == Calendar.FEBRUARY && today == 29) {
                     val yearCal = Calendar.getInstance().apply { set(Calendar.YEAR, year) }
                     if (yearCal.getActualMaximum(Calendar.DAY_OF_MONTH) < 29) continue
