@@ -201,12 +201,23 @@ class SettingsViewModel @Inject constructor(
             try {
                 val json = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) }
                     ?: return@launch
-                val config = Gson().fromJson(json, ModelConfigExport::class.java) ?: return@launch
-                settingsDataStore.updateBaseUrl(config.baseUrl)
-                settingsDataStore.updateTagModel(config.tagModel)
-                settingsDataStore.updateSummaryModel(config.summaryModel)
-                settingsDataStore.updateVisionModel(config.visionModel)
-                _events.emit(SettingsEvent.ShowMessage("模型配置已导入（API Key 已保留）"))
+                // 尝试新格式 ModelConfigExport
+                val newConfig = try { Gson().fromJson(json, ModelConfigExport::class.java) } catch (_: Exception) { null }
+                if (newConfig != null) {
+                    settingsDataStore.updateBaseUrl(newConfig.baseUrl)
+                    settingsDataStore.updateTagModel(newConfig.tagModel)
+                    settingsDataStore.updateSummaryModel(newConfig.summaryModel)
+                    settingsDataStore.updateVisionModel(newConfig.visionModel)
+                } else {
+                    // 回退到旧 AppSettings 格式
+                    val oldConfig = Gson().fromJson(json, AppSettings::class.java) ?: return@launch
+                    settingsDataStore.updateApiKey(oldConfig.apiKey)
+                    settingsDataStore.updateBaseUrl(oldConfig.baseUrl)
+                    settingsDataStore.updateTagModel(oldConfig.tagModel)
+                    settingsDataStore.updateSummaryModel(oldConfig.summaryModel)
+                    settingsDataStore.updateVisionModel(oldConfig.visionModel)
+                }
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导入"))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: ""}"))
             }

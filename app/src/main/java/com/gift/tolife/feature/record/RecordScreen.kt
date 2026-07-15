@@ -20,6 +20,7 @@ import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
+import com.gift.tolife.feature.record.EntryWithTags
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,15 +119,15 @@ fun RecordScreen(
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
                 items(lazyItems.itemCount) { index ->
-                    val entry = lazyItems[index]
-                    if (entry != null) {
+                    val item = lazyItems[index]
+                    if (item != null) {
                         EntryCard(
-                            entry = entry,
-                            tags = emptyList(),
+                            entry = item.entry,
+                            tags = item.tags,
                             onClick = {
-                                previewEntry = entry to emptyList()
+                                previewEntry = item.entry to item.tags
                             },
-                            onImageClick = { previewImagePath = entry.imagePath }
+                            onImageClick = { previewImagePath = item.entry.imagePath }
                         )
                     }
                 }

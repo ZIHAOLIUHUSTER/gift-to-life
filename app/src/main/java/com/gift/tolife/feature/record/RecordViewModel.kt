@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class EntryWithTags(val entry: Entry, val tags: List<TagType>)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class RecordViewModel @Inject constructor(
@@ -42,7 +44,7 @@ class RecordViewModel @Inject constructor(
     val uiState: StateFlow<RecordUiState> = _uiState.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val entriesPagingData: Flow<PagingData<Entry>> = _uiState
+    val entriesPagingData: Flow<PagingData<EntryWithTags>> = _uiState
         .map { it.entryQuery }
         .distinctUntilChanged()
         .flatMapLatest { query ->
@@ -50,10 +52,13 @@ class RecordViewModel @Inject constructor(
                 entryDao.pagingSource(EntryQuerySqlBuilder.build(query))
             }.flow.map { pagingData: PagingData<EntryListRow> ->
                 pagingData.map { row ->
-                    Entry(
-                        id = row.id, content = row.content, imagePath = row.imagePath,
-                        type = row.type, createdAt = row.createdAt, updatedAt = row.updatedAt,
-                        imageDescription = row.imageDescription
+                    EntryWithTags(
+                        entry = Entry(
+                            id = row.id, content = row.content, imagePath = row.imagePath,
+                            type = row.type, createdAt = row.createdAt, updatedAt = row.updatedAt,
+                            imageDescription = row.imageDescription
+                        ),
+                        tags = row.tags()
                     )
                 }
             }

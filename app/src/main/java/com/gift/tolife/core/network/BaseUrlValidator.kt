@@ -7,13 +7,6 @@ object BaseUrlValidator {
         val trimmed = raw.trim().trimEnd('/')
         val parsed = trimmed.toHttpUrlOrNull()
             ?: throw IllegalArgumentException("API 地址格式无效")
-        require(parsed.isHttps) { "API 地址必须使用 HTTPS" }
-        require(parsed.username.isEmpty() && parsed.password.isEmpty()) {
-            "API 地址不能包含用户信息"
-        }
-        require(parsed.query == null && parsed.fragment == null) {
-            "API 地址不能包含 query 或 fragment"
-        }
         val base = parsed.toString().trimEnd('/')
             .removeSuffix("/v1/chat/completions")
             .trimEnd('/')
