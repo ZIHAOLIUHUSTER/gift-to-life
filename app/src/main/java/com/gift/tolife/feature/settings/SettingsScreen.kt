@@ -149,17 +149,13 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var tagModel by remember { mutableStateOf(uiState.settings.tagModel) }
     var summaryModel by remember { mutableStateOf(uiState.settings.summaryModel) }
     var visionModel by remember { mutableStateOf(uiState.settings.visionModel) }
-    var initialized by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (!initialized) {
-            apiKey = uiState.settings.apiKey
-            baseUrl = uiState.settings.baseUrl
-            tagModel = uiState.settings.tagModel
-            summaryModel = uiState.settings.summaryModel
-            visionModel = uiState.settings.visionModel
-            initialized = true
-        }
+    LaunchedEffect(uiState.settings) {
+        apiKey = uiState.settings.apiKey
+        baseUrl = uiState.settings.baseUrl
+        tagModel = uiState.settings.tagModel
+        summaryModel = uiState.settings.summaryModel
+        visionModel = uiState.settings.visionModel
     }
 
     LaunchedEffect(Unit) {
@@ -228,11 +224,11 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
             // 模型
             SettingsCard(title = "模型") {
-                ModelRow(tagModel, { tagModel = it }, "标签模型", "轻量模型即可", uiState.testingTag, uiState.testResultTag) { viewModel.testTagModel(tagModel) }
+                ModelRow(tagModel, { tagModel = it }, "标签模型", "轻量模型即可", uiState.testingTag, uiState.testResultTag) { viewModel.testTagModel(tagModel, apiKey, baseUrl) }
                 Spacer(modifier = Modifier.height(12.dp))
-                ModelRow(summaryModel, { summaryModel = it }, "总结模型", "需要较强文本理解力", uiState.testingSummary, uiState.testResultSummary) { viewModel.testSummaryModel(summaryModel) }
+                ModelRow(summaryModel, { summaryModel = it }, "总结模型", "需要较强文本理解力", uiState.testingSummary, uiState.testResultSummary) { viewModel.testSummaryModel(summaryModel, apiKey, baseUrl) }
                 Spacer(modifier = Modifier.height(12.dp))
-                ModelRow(visionModel, { visionModel = it }, "视觉模型", "用于识别纯图片记录", uiState.testingVision, uiState.testResultVision) { viewModel.testVisionModel(visionModel) }
+                ModelRow(visionModel, { visionModel = it }, "视觉模型", "用于识别纯图片记录", uiState.testingVision, uiState.testResultVision) { viewModel.testVisionModel(visionModel, apiKey, baseUrl) }
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(onClick = { viewModel.updateTagModel(tagModel); viewModel.updateSummaryModel(summaryModel); viewModel.updateVisionModel(visionModel) },
                     modifier = Modifier

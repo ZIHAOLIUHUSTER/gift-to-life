@@ -191,11 +191,16 @@ class ExportImportManager @Inject constructor(
                         // Stream hash computation while writing to staging
                         val digest = java.security.MessageDigest.getInstance("SHA-256")
                         val stageFile = File(stagingDir, imageEntry.substringAfter("images/"))
+                        var actualDecompressed = 0L
                         zip.getInputStream(zipEntry).use { input ->
                             stageFile.outputStream().use { output ->
                                 val buffer = ByteArray(8192)
                                 var bytes = input.read(buffer)
                                 while (bytes > 0) {
+                                    actualDecompressed += bytes
+                                    require(actualDecompressed <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) {
+                                        "图片实际大小超过限制: $imageEntry"
+                                    }
                                     digest.update(buffer, 0, bytes)
                                     output.write(buffer, 0, bytes)
                                     bytes = input.read(buffer)

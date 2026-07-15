@@ -19,7 +19,8 @@ data class OnThisDayState(
 
 @HiltViewModel
 class OnThisDayViewModel @Inject constructor(
-    private val entryDao: EntryDao
+    private val entryDao: EntryDao,
+    private val repository: com.gift.tolife.core.database.EntryRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OnThisDayState())
@@ -70,6 +71,12 @@ class OnThisDayViewModel @Inject constructor(
                 }
             }
             _state.value = OnThisDayState(yearEntries = result)
+        }
+    }
+
+    fun deleteEntry(entryId: Long) {
+        viewModelScope.launch {
+            repository.softDelete(entryId)
         }
     }
 }

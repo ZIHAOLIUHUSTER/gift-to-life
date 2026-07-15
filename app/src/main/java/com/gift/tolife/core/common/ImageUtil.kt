@@ -39,12 +39,14 @@ object ImageUtil {
                     BitmapFactory.decodeStream(input, null, decodeOptions)
                 } ?: return@withContext null
 
-                destFile.outputStream().use { output ->
-                    bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, output)
+                try {
+                    destFile.outputStream().use { output ->
+                        bitmap.compress(Bitmap.CompressFormat.WEBP, WEBP_QUALITY, output)
+                    }
+                    destFile.absolutePath
+                } finally {
+                    bitmap.recycle()
                 }
-                bitmap.recycle()
-
-                destFile.absolutePath
             } catch (e: Exception) {
                 null
             }

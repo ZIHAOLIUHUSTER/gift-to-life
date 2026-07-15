@@ -9,7 +9,6 @@ data class RecordUiState(
     val isSaving: Boolean = false,
     val saveError: String? = null,
     val pendingImageUri: android.net.Uri? = null,
-    val pendingContentText: String? = null,
     val isSearchMode: Boolean = false,
     val searchQuery: String = "",
     val selectedEntry: Entry? = null,

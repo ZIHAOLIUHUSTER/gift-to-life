@@ -47,6 +47,7 @@ fun MemoryScreen(
     val summaryState by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
+    var previewTags by remember { mutableStateOf<List<TagType>>(emptyList()) }
     var previewImagePath by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -119,7 +120,10 @@ fun MemoryScreen(
                             entry = randomEntry,
                             tags = randomState.tags,
                             onRefresh = randomVM::fetchRandom,
-                            onClick = { previewEntry = randomEntry }
+                            onClick = {
+                                previewEntry = randomEntry
+                                previewTags = randomState.tags
+                            }
                         )
                     }
                 }
@@ -181,7 +185,10 @@ fun MemoryScreen(
                     }
 
                     items(allSummaries, key = { it.id }) { entry ->
-                        SummaryCard(entry = entry, onClick = { previewEntry = entry })
+                        SummaryCard(entry = entry, onClick = {
+                            previewEntry = entry
+                            previewTags = emptyList()
+                        })
                     }
                 }
             }
@@ -192,7 +199,7 @@ fun MemoryScreen(
     if (previewEntry != null) {
         EntryPreviewSheet(
             entry = previewEntry!!,
-            tags = randomState.tags,
+            tags = previewTags,
             onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
             onDelete = {

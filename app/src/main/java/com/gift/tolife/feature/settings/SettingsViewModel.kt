@@ -211,12 +211,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testTagModel(model: String) {
+    fun testTagModel(model: String, apiKey: String = "", baseUrl: String = "") {
         if (_uiState.value.testingTag) return
         _uiState.update { it.copy(testingTag = true, testResultTag = null) }
         viewModelScope.launch {
             try {
-                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
+                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
+                    val s = _uiState.value.settings
+                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
+                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
+                } else {
+                    chatClient.chat(model, "你是一个助手。", "回复：ok")
+                }
                 _uiState.update {
                     it.copy(testingTag = false, testResultTag = when (result) {
                         is AiResult.Success -> "✓ 连接成功"
@@ -230,12 +236,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testSummaryModel(model: String) {
+    fun testSummaryModel(model: String, apiKey: String = "", baseUrl: String = "") {
         if (_uiState.value.testingSummary) return
         _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
         viewModelScope.launch {
             try {
-                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
+                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
+                    val s = _uiState.value.settings
+                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
+                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
+                } else {
+                    chatClient.chat(model, "你是一个助手。", "回复：ok")
+                }
                 _uiState.update {
                     it.copy(testingSummary = false, testResultSummary = when (result) {
                         is AiResult.Success -> "✓ 连接成功"
@@ -249,12 +261,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun testVisionModel(model: String) {
+    fun testVisionModel(model: String, apiKey: String = "", baseUrl: String = "") {
         if (_uiState.value.testingVision) return
         _uiState.update { it.copy(testingVision = true, testResultVision = null) }
         viewModelScope.launch {
             try {
-                val result = chatClient.chat(model, "你是一个助手。", "回复：ok")
+                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
+                    val s = _uiState.value.settings
+                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
+                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
+                } else {
+                    chatClient.chat(model, "你是一个助手。", "回复：ok")
+                }
                 _uiState.update {
                     it.copy(testingVision = false, testResultVision = when (result) {
                         is AiResult.Success -> "✓ 连接成功"

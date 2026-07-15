@@ -110,7 +110,6 @@ class RecordViewModel @Inject constructor(
                         }
                         shared.imageUri != null -> {
                             it.copy(
-                                draftText = "",
                                 pendingImageUri = shared.imageUri,
                                 draftVersion = it.draftVersion + 1
                             )
@@ -157,7 +156,6 @@ class RecordViewModel @Inject constructor(
                         it.copy(
                             draftText = "",
                             pendingImageUri = null,
-                            pendingContentText = null,
                             isSaving = false,
                             draftVersion = it.draftVersion + 1
                         )
@@ -192,25 +190,6 @@ class RecordViewModel @Inject constructor(
         _uiState.update { it.copy(editingImageEntry = entry) }
     }
 
-    fun removeImage(entry: Entry) {
-        viewModelScope.launch {
-            val oldPath = entry.imagePath
-            val revision = entryTransactions.updateUserContent(
-                entry.id, entry.content, null
-            )
-            val deleted = imageStore.delete(oldPath)
-            if (!deleted && !oldPath.isNullOrBlank()) {
-                _events.emit(RecordEvent.ShowSnackbar("记录已更新，旧图片将在后续清理"))
-            }
-            tagScheduler.enqueue(entry.id, revision)
-            _uiState.update { state ->
-                state.copy(
-                    selectedEntry = state.selectedEntry?.copy(imagePath = null, imageDescription = null)
-                )
-            }
-        }
-    }
-
     fun replaceImage(entry: Entry, uri: android.net.Uri) {
         viewModelScope.launch {
             val newPath = ImageUtil.copyToPrivateDir(context, uri)
@@ -230,16 +209,6 @@ class RecordViewModel @Inject constructor(
                     editingImageEntry = null
                 )
             }
-        }
-    }
-
-    fun update(entry: Entry) {
-        viewModelScope.launch {
-            _uiState.update { state ->
-                state.copy(selectedEntry = null)
-            }
-            val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, entry.imagePath)
-            tagScheduler.enqueue(entry.id, newRevision)
         }
     }
 
@@ -319,36 +288,6 @@ class RecordViewModel @Inject constructor(
         _editTags.value = tags
     }
 
-    fun saveWithTags(entry: Entry, tags: List<TagType>) {
-        viewModelScope.launch {
-            val original = _uiState.value.selectedEntry ?: return@launch
-            val oldTags = repository.getTags(entry.id).map { it.tag }.toSet()
-            val newTags = tags.toSet()
-            val contentChanged = entry.content != original.content ||
-                entry.imagePath != original.imagePath
-
-            when {
-                oldTags != newTags -> {
-                    // 用户显式修改标签，不投递 AI
-                    entryTransactions.updateUserEntryAndTags(
-                        entry.id, entry.content, entry.imagePath, newTags
-                    )
-                }
-                contentChanged -> {
-                    // 正文或图片变化，投递 AI 重新打标签
-                    val revision = entryTransactions.updateUserContent(
-                        entry.id, entry.content, entry.imagePath
-                    )
-                    tagScheduler.enqueue(entry.id, revision)
-                }
-                else -> {
-                    // 什么都没变
-                }
-            }
-            _uiState.update { it.copy(selectedEntry = null) }
-        }
-    }
-
     fun saveEdit(draft: EntryEditDraft) {
         viewModelScope.launch {
             var newImagePath: String? = null
@@ -397,18 +336,6 @@ class RecordViewModel @Inject constructor(
                 // 失败时清理新写入的图片
                 newImagePath?.let { imageStore.delete(it) }
                 _events.emit(RecordEvent.ShowSnackbar("保存失败: ${t.message ?: ""}"))
-            }
-        }
-    }
-
-    private suspend fun resolveImagePath(draft: EntryEditDraft): String? {
-        return when (draft.imageChange) {
-            is ImageChange.Keep -> draft.originalImagePath
-            is ImageChange.Remove -> null
-            is ImageChange.Replace -> {
-                val newPath = ImageUtil.copyToPrivateDir(context, draft.imageChange.uri)
-                if (newPath == null) throw IllegalStateException("图片处理失败")
-                newPath
             }
         }
     }

@@ -14,11 +14,13 @@ class Converters {
     fun fromEntryType(value: EntryType): String = value.name
 
     @TypeConverter
-    fun toEntryType(value: String): EntryType = EntryType.valueOf(value)
+    fun toEntryType(value: String): EntryType =
+        EntryType.entries.find { it.name == value } ?: EntryType.NORMAL
 
     @TypeConverter
     fun fromTagType(value: TagType): String = value.name
 
     @TypeConverter
-    fun toTagType(value: String): TagType = TagType.valueOf(value)
+    fun toTagType(value: String): TagType =
+        TagType.entries.find { it.name == value } ?: TagType.entries.first()
 }

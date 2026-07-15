@@ -25,6 +25,7 @@ class AiClient @Inject constructor(
     private var cachedBaseUrl: String = ""
     private var cachedService: OpenAiService? = null
 
+    @Synchronized
     private fun getService(baseUrl: String): OpenAiService? {
         val url = try {
             BaseUrlValidator.normalize(baseUrl)
@@ -48,10 +49,14 @@ class AiClient @Inject constructor(
     }
 
     suspend fun chat(model: String, systemPrompt: String, userMessage: String, disableThinking: Boolean = false): AiResult<String> {
+        val settings = settingsDataStore.settings.first()
+        return chatWith(model, systemPrompt, userMessage, settings.apiKey, settings.baseUrl, disableThinking)
+    }
+
+    suspend fun chatWith(model: String, systemPrompt: String, userMessage: String, apiKey: String, baseUrl: String, disableThinking: Boolean = false): AiResult<String> {
         return try {
-            val settings = settingsDataStore.settings.first()
-            if (settings.apiKey.isBlank()) return AiResult.PermanentFailure("API Key not configured")
-            val service = getService(settings.baseUrl) ?: return AiResult.PermanentFailure("Invalid base URL")
+            if (apiKey.isBlank()) return AiResult.PermanentFailure("API Key not configured")
+            val service = getService(baseUrl) ?: return AiResult.PermanentFailure("Invalid base URL")
             val request = ChatRequest(
                 model = model,
                 messages = listOf(
@@ -61,7 +66,7 @@ class AiClient @Inject constructor(
                 enable_thinking = if (disableThinking) false else null
             )
             val response = service.chatCompletion(
-                authorization = "Bearer ${settings.apiKey}",
+                authorization = "Bearer $apiKey",
                 request = request
             )
             val msg = response.choices?.firstOrNull()?.message

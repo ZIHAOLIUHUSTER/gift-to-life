@@ -28,23 +28,17 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
     suspend fun getNormalEntriesInRange(start: Long, end: Long): List<Entry>
 
-    @Query("SELECT * FROM entries WHERE type = :type ORDER BY createdAt DESC")
-    fun getByType(type: String): Flow<List<Entry>>
-
-    @Query("SELECT * FROM entries WHERE content LIKE '%' || :query || '%' AND isDeleted = 0 ORDER BY createdAt DESC")
-    fun searchByContent(query: String): Flow<List<Entry>>
-
     @Query("DELETE FROM entries")
     suspend fun deleteAll()
 
     @Query("SELECT * FROM entries WHERE isDeleted = 1 ORDER BY createdAt DESC")
     suspend fun getDeletedEntries(): List<Entry>
 
-    @Query("UPDATE entries SET isDeleted = 1 WHERE id = :id")
-    suspend fun softDelete(id: Long)
+    @Query("UPDATE entries SET isDeleted = 1 WHERE id = :id AND isDeleted = 0")
+    suspend fun softDeleteActive(id: Long): Int
 
-    @Query("UPDATE entries SET isDeleted = 0 WHERE id = :id")
-    suspend fun restore(id: Long)
+    @Query("UPDATE entries SET isDeleted = 0 WHERE id = :id AND isDeleted = 1")
+    suspend fun restoreDeleted(id: Long): Int
 
     @Query("DELETE FROM entries WHERE isDeleted = 1")
     suspend fun permanentlyDeleteAllDeleted()
@@ -59,15 +53,6 @@ interface EntryDao {
         WHERE id = :id AND isDeleted = 0
     """)
     suspend fun updateUserContent(id: Long, content: String, imagePath: String?, updatedAt: Long): Int
-
-    @Query("UPDATE entries SET isDeleted = 1 WHERE id = :id AND isDeleted = 0")
-    suspend fun softDeleteActive(id: Long): Int
-
-    @Query("UPDATE entries SET isDeleted = 0 WHERE id = :id AND isDeleted = 1")
-    suspend fun restoreDeleted(id: Long): Int
-
-    @Query("DELETE FROM entries WHERE id = :id AND isDeleted = 1")
-    suspend fun permanentlyDeleteOne(id: Long): Int
 
     @Query("""
         UPDATE entries
