@@ -135,7 +135,11 @@ class ExportImportManager @Inject constructor(
     suspend fun replaceImportFromUri(uri: Uri): Int = withContext(Dispatchers.IO) {
         val tempFile = copyToTempFile(uri)
         try {
-            val firstBytes = tempFile.inputStream().use { it.readNBytes(2) }
+            val firstBytes = tempFile.inputStream().use { stream ->
+                val buf = ByteArray(2)
+                if (stream.read(buf) != 2) throw IOException("文件太短")
+                buf
+            }
             when {
                 firstBytes.contentEquals(ZIP_MAGIC) -> importV2Safe(tempFile)
                 firstBytes[0] == '{'.code.toByte() -> importLegacyV1Safe(tempFile)
