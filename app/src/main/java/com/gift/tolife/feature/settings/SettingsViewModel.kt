@@ -154,8 +154,8 @@ class SettingsViewModel @Inject constructor(
 
     fun updateBaseUrl(url: String) {
         try {
-            BaseUrlValidator.normalize(url)
-            settingsDataStore.updateBaseUrl(url)
+            val normalized = BaseUrlValidator.normalize(url)
+            settingsDataStore.updateBaseUrl(normalized)
             _uiState.update { it.copy(isSaved = true) }
         } catch (e: IllegalArgumentException) {
             viewModelScope.launch { _events.emit(SettingsEvent.ShowMessage(e.message ?: "API 地址无效")) }

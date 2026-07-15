@@ -23,3 +23,6 @@
 -keep class dagger.hilt.** { *; }
 -keep class javax.inject.** { *; }
 -keep @dagger.hilt.android.HiltAndroidApp class *
+
+# Keep enum values() for Room type converters
+-keepclassmembers enum com.gift.tolife.core.model.** { public static **[] values(); }

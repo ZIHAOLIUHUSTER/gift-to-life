@@ -4,12 +4,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-internal object EntrySavePolicy {
-    fun canSave(content: String, hasImage: Boolean): Boolean {
-        return content.isNotBlank() || hasImage
-    }
-}
-
 class EntrySavePolicyTest {
     @Test
     fun imageOnlyEntryCanBeSaved() {
