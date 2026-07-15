@@ -38,12 +38,9 @@ fun RecordScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let {
-            val editingId = uiState.editingImageEntryId
-            if (editingId != null) {
-                val entry = uiState.entries.find { it.id == editingId }
-                if (entry != null) {
-                    viewModel.replaceImage(entry, it)
-                }
+            val editingEntry = uiState.editingImageEntry
+            if (editingEntry != null) {
+                viewModel.replaceImage(editingEntry, it)
             } else {
                 viewModel.selectImage(it)
             }
@@ -125,9 +122,9 @@ fun RecordScreen(
                     if (entry != null) {
                         EntryCard(
                             entry = entry,
-                            tags = uiState.entryTags[entry.id] ?: emptyList(),
+                            tags = emptyList(),
                             onClick = {
-                                previewEntry = entry to (uiState.entryTags[entry.id] ?: emptyList())
+                                previewEntry = entry to emptyList()
                             },
                             onImageClick = { previewImagePath = entry.imagePath }
                         )
@@ -166,11 +163,11 @@ fun RecordScreen(
                 },
                 onRemoveImage = viewModel::removeImage,
                 onReplaceImage = {
-                    viewModel.setEditingImage(uiState.selectedEntry!!.id)
+                    viewModel.setEditingImage(uiState.selectedEntry!!)
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
                 onAddImage = {
-                    viewModel.setEditingImage(uiState.selectedEntry!!.id)
+                    viewModel.setEditingImage(uiState.selectedEntry!!)
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 },
                 onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath },

@@ -63,19 +63,6 @@ class RecordViewModel @Inject constructor(
     val events: SharedFlow<RecordEvent> = _events.asSharedFlow()
 
     init {
-        viewModelScope.launch {
-            _uiState
-                .map { it.entryQuery }
-                .distinctUntilChanged()
-                .flatMapLatest { query ->
-                    repository.getFilteredEntries(query)
-                }
-                .collect { entries ->
-                    // 批量加载所有条目的标签
-                    val tagsMap = repository.getTagsBatch(entries.map { it.id })
-                    _uiState.update { it.copy(entries = entries, entryTags = tagsMap, isLoading = false) }
-                }
-        }
         consumeSharedContent()
     }
 
@@ -117,18 +104,16 @@ class RecordViewModel @Inject constructor(
         _uiState.update { it.copy(pendingImageUri = null) }
     }
 
-    fun setEditingImage(entryId: Long?) {
-        _uiState.update { it.copy(editingImageEntryId = entryId) }
+    fun setEditingImage(entry: Entry?) {
+        _uiState.update { it.copy(editingImageEntry = entry) }
     }
 
     fun removeImage(entry: Entry) {
         viewModelScope.launch {
             val oldPath = entry.imagePath
             val updated = entry.copy(imagePath = null, imageDescription = null)
-            // 乐观更新本地列表，避免等待 Flow 重发
             _uiState.update { state ->
                 state.copy(
-                    entries = state.entries.map { if (it.id == entry.id) updated else it },
                     selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry
                 )
             }
@@ -146,12 +131,10 @@ class RecordViewModel @Inject constructor(
             val imagePath = ImageUtil.copyToPrivateDir(context, uri)
             if (imagePath != null) {
                 val updated = entry.copy(imagePath = imagePath)
-                // 乐观更新本地列表和编辑状态
                 _uiState.update { state ->
                     state.copy(
-                        entries = state.entries.map { if (it.id == entry.id) updated else it },
                         selectedEntry = if (state.selectedEntry?.id == entry.id) updated else state.selectedEntry,
-                        editingImageEntryId = null
+                        editingImageEntry = null
                     )
                 }
                 // 删除旧图片文件
@@ -165,12 +148,8 @@ class RecordViewModel @Inject constructor(
 
     fun update(entry: Entry) {
         viewModelScope.launch {
-            // 乐观更新本地列表，避免等待 Flow 重发
             _uiState.update { state ->
-                state.copy(
-                    entries = state.entries.map { if (it.id == entry.id) entry else it },
-                    selectedEntry = null
-                )
+                state.copy(selectedEntry = null)
             }
             val newRevision = entryTransactions.updateUserContent(entry.id, entry.content, entry.imagePath)
             tagScheduler.enqueue(entry.id, newRevision)
