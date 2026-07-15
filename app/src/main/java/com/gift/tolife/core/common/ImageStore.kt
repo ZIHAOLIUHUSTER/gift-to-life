@@ -38,4 +38,15 @@ class ImageStore @Inject constructor(
         }
         return removed
     }
+
+    /**
+     * Clean up stale import-staging directories left by crashes during import.
+     */
+    fun cleanupStagingDirs() {
+        context.cacheDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory && dir.name.startsWith("import-staging-")) {
+                dir.deleteRecursively()
+            }
+        }
+    }
 }

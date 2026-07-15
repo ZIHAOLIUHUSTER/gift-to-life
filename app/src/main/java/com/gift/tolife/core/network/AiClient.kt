@@ -96,7 +96,7 @@ class AiClient @Inject constructor(
                     ContentPart(type = "text", text = VisionPrompt.SYSTEM),
                     ContentPart(
                         type = "image_url",
-                        image_url = ImageUrl(url = "data:image/jpeg;base64,$base64")
+                        image_url = ImageUrl(url = "data:image/webp;base64,$base64")
                     )
                 )
             )
