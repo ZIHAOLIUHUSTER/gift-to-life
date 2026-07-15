@@ -4,7 +4,6 @@
 
 # Keep Retrofit service interfaces
 -keep,allowobfuscation interface com.gift.tolife.core.network.OpenAiService { *; }
--keep class com.gift.tolife.core.network.** { *; }
 
 # Gson
 -keep class com.gift.tolife.core.network.dto.** { *; }
