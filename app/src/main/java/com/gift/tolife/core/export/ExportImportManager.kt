@@ -2,6 +2,8 @@ package com.gift.tolife.core.export
 
 import android.content.Context
 import android.net.Uri
+import com.gift.tolife.core.database.AppDatabase
+import com.gift.tolife.core.database.StagedImportEntry
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
 import com.gift.tolife.core.model.Entry
@@ -14,13 +16,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
-import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,7 +29,8 @@ import javax.inject.Singleton
 class ExportImportManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val entryDao: EntryDao,
-    private val entryTagDao: EntryTagDao
+    private val entryTagDao: EntryTagDao,
+    private val database: AppDatabase
 ) {
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 
@@ -98,21 +99,180 @@ class ExportImportManager @Inject constructor(
         allEntries.size
     }
 
+    // ---- Safe Import ----
+
+    /**
+     * Copy URI content to a temporary file, streaming with a 2 GiB cap.
+     */
+    private fun copyToTempFile(uri: Uri): File {
+        val target = File.createTempFile("gift-import-", ".bin", context.cacheDir)
+        var total = 0L
+        context.contentResolver.openInputStream(uri)!!.use { input ->
+            target.outputStream().buffered().use { output ->
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read < 0) break
+                    total += read
+                    check(total <= BackupV2Config.MAX_BACKUP_FILE_BYTES) { "备份文件超过 2 GiB" }
+                    output.write(buffer, 0, read)
+                }
+            }
+        }
+        return target
+    }
+
+    /**
+     * Reject path traversal and other malicious image entry names.
+     */
+    private fun requireSafeImageEntry(name: String) {
+        require(name.startsWith("images/")) { "非法路径: $name" }
+        require(!name.contains("\\")) { "包含反斜杠: $name" }
+        require(!name.contains("..")) { "包含路径穿越: $name" }
+        require(name.substringAfter("images/").isNotEmpty()) { "空文件名" }
+    }
+
     suspend fun replaceImportFromUri(uri: Uri): Int = withContext(Dispatchers.IO) {
-        val inputBytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-            ?: throw IOException("Cannot read input")
-
-        val isZip = inputBytes.size >= 2 && inputBytes[0] == 'P'.code.toByte() && inputBytes[1] == 'K'.code.toByte()
-        val isJson = inputBytes.isNotEmpty() && inputBytes[0] == '{'.code.toByte()
-
-        when {
-            isZip -> importV2(inputBytes)
-            isJson -> importLegacyV1(String(inputBytes))
-            else -> throw IOException("Unrecognized backup format")
+        val tempFile = copyToTempFile(uri)
+        try {
+            val firstBytes = tempFile.inputStream().use { it.readNBytes(2) }
+            when {
+                firstBytes.contentEquals(ZIP_MAGIC) -> importV2Safe(tempFile)
+                firstBytes[0] == '{'.code.toByte() -> importLegacyV1Safe(tempFile)
+                else -> throw IOException("不支持的备份格式")
+            }
+        } finally {
+            tempFile.delete()
         }
     }
 
     suspend fun importFromUri(uri: Uri): Int = replaceImportFromUri(uri)
+
+    // ---- V2 Safe Import ----
+
+    private suspend fun importV2Safe(tempFile: File): Int {
+        val stagedEntries = mutableListOf<StagedImportEntry>()
+        val imageMap = mutableMapOf<String, File>() // source entry name -> temp image file
+
+        java.util.zip.ZipFile(tempFile).use { zip ->
+            // Phase 1: Parse manifest
+            val manifestEntry = zip.getEntry(BackupV2Config.MANIFEST_ENTRY_NAME)
+                ?: throw IOException("备份缺少 manifest.json")
+            val manifest = zip.getInputStream(manifestEntry).use { stream ->
+                gson.fromJson(String(stream.readBytes()), BackupV2Manifest::class.java)
+            }
+            require(manifest.formatVersion == 2) { "不支持的备份版本: ${manifest.formatVersion}" }
+            require(manifest.entryCount == manifest.entries.size) { "条目数不匹配" }
+            require(manifest.entries.size <= BackupV2Config.MAX_ENTRY_COUNT) { "条目数超过上限" }
+
+            // Phase 2: Extract images to temp directory
+            val imageTempDir = File(context.cacheDir, "import-images-${UUID.randomUUID()}")
+            imageTempDir.mkdirs()
+            val imageEntries = zip.entries().asSequence()
+                .filter { it.name != BackupV2Config.MANIFEST_ENTRY_NAME }
+                .toList()
+
+            var totalImageBytes = 0L
+            imageEntries.forEach { entry ->
+                requireSafeImageEntry(entry.name)
+                val bytes = zip.getInputStream(entry).use { it.readBytes() }
+                require(bytes.size.toLong() <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) {
+                    "图片过大: ${entry.name}"
+                }
+                totalImageBytes += bytes.size
+                require(totalImageBytes <= BackupV2Config.MAX_TOTAL_IMAGE_BYTES) {
+                    "图片总大小超过限制"
+                }
+                val tempImageFile = File(imageTempDir, entry.name.substringAfter("images/"))
+                tempImageFile.writeBytes(bytes)
+                imageMap[entry.name] = tempImageFile
+            }
+
+            // Phase 3: Build staged entries
+            val finalImagesDir = File(context.filesDir, "images").apply { mkdirs() }
+            manifest.entries.forEach { e ->
+                var finalPath: String? = null
+                e.imageEntry?.let { imageEntry ->
+                    val tempImage = imageMap[imageEntry]
+                        ?: throw IOException("声明了图片但 ZIP 中不存在: $imageEntry")
+                    val fileName = "${UUID.randomUUID()}.webp"
+                    val dest = File(finalImagesDir, fileName)
+                    tempImage.copyTo(dest, overwrite = true)
+                    finalPath = dest.absolutePath
+                }
+                stagedEntries.add(StagedImportEntry(
+                    entry = Entry(
+                        content = e.content,
+                        type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
+                        createdAt = e.createdAt,
+                        updatedAt = e.updatedAt,
+                        imagePath = finalPath,
+                        imageDescription = e.imageDescription,
+                        isDeleted = e.isDeleted,
+                        summaryStart = e.summaryStart,
+                        summaryEnd = e.summaryEnd,
+                        summaryModel = e.summaryModel
+                    ),
+                    tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
+                ))
+            }
+
+            // Phase 4: Capture old image paths for cleanup *before* the transaction
+            val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+
+            // Phase 5: Replace in single Room transaction
+            database.replaceAll(stagedEntries)
+
+            // Phase 6: Clean old images (only after successful commit)
+            oldPaths.forEach { File(it).delete() }
+
+            // Clean temp
+            imageTempDir.deleteRecursively()
+        }
+
+        return stagedEntries.size
+    }
+
+    // ---- V1 Safe Import ----
+
+    private suspend fun importLegacyV1Safe(tempFile: File): Int {
+        val json = String(tempFile.readBytes())
+        val data = gson.fromJson(json, ExportData::class.java)
+            ?: throw IOException("JSON 解析失败")
+        require(data.entries.size <= BackupV2Config.MAX_ENTRY_COUNT) { "条目数超过上限" }
+
+        val stagedEntries = mutableListOf<StagedImportEntry>()
+        val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
+
+        data.entries.forEach { e ->
+            var imagePath: String? = null
+            if (!e.imageBase64.isNullOrBlank()) {
+                val bytes = android.util.Base64.decode(e.imageBase64, android.util.Base64.NO_WRAP)
+                require(bytes.size.toLong() <= BackupV2Config.MAX_SINGLE_IMAGE_BYTES) { "图片过大" }
+                val file = File(imagesDir, "${UUID.randomUUID()}.webp")
+                file.writeBytes(bytes)
+                imagePath = file.absolutePath
+            }
+            stagedEntries.add(StagedImportEntry(
+                entry = Entry(
+                    content = e.content,
+                    type = try { EntryType.valueOf(e.type) } catch (_: Exception) { EntryType.NORMAL },
+                    createdAt = e.createdAt,
+                    imagePath = imagePath,
+                    imageDescription = e.imageDescription
+                ),
+                tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
+            ))
+        }
+
+        val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
+        database.replaceAll(stagedEntries)
+        oldPaths.forEach { File(it).delete() }
+
+        return stagedEntries.size
+    }
+
+    // ---- Data management ----
 
     suspend fun clearAllEntries() {
         entryDao.deleteAll()
@@ -128,115 +288,6 @@ class ExportImportManager @Inject constructor(
         entryDao.permanentlyDeleteAllDeleted()
     }
 
-    // ---- Private import helpers ----
-
-    private suspend fun importV2(zipBytes: ByteArray): Int = withContext(Dispatchers.IO) {
-        var manifest: BackupV2Manifest? = null
-        val imageFiles = mutableMapOf<String, ByteArray>()
-
-        ZipInputStream(ByteArrayInputStream(zipBytes)).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                val bytes = zip.readBytes()
-                when {
-                    entry.name == BackupV2Config.MANIFEST_ENTRY_NAME -> {
-                        manifest = gson.fromJson(String(bytes), BackupV2Manifest::class.java)
-                    }
-                    entry.name.startsWith("images/") && entry.name.length > 7 -> {
-                        imageFiles[entry.name] = bytes
-                    }
-                }
-                zip.closeEntry()
-                entry = zip.nextEntry
-            }
-        }
-
-        val m = manifest ?: throw IOException("Manifest not found in backup")
-        if (m.formatVersion != 2) throw IOException("Unsupported backup version: ${m.formatVersion}")
-        if (m.entries.size != m.entryCount) throw IOException("Entry count mismatch")
-        if (m.entries.size > BackupV2Config.MAX_ENTRY_COUNT) throw IOException("Too many entries")
-
-        // Save images to disk
-        val imageMap = mutableMapOf<String, String>() // zipPath -> absolutePath
-        val imagesDir = File(context.filesDir, "images")
-        if (!imagesDir.exists()) imagesDir.mkdirs()
-        imageFiles.forEach { (zipPath, bytes) ->
-            val fileName = zipPath.removePrefix("images/")
-            val destFile = File(imagesDir, fileName)
-            destFile.writeBytes(bytes)
-            imageMap[zipPath] = destFile.absolutePath
-        }
-
-        // Import entries in transaction
-        entryDao.deleteAll()
-        m.entries.forEach { e ->
-            val imagePath = e.imageEntry?.let { imageMap[it] }
-            val entry = Entry(
-                id = 0,
-                content = e.content,
-                imagePath = imagePath,
-                type = try {
-                    EntryType.valueOf(e.type)
-                } catch (_: Exception) {
-                    EntryType.NORMAL
-                },
-                createdAt = e.createdAt,
-                updatedAt = e.updatedAt,
-                summaryStart = e.summaryStart,
-                summaryEnd = e.summaryEnd,
-                imageDescription = e.imageDescription,
-                isDeleted = e.isDeleted,
-                summaryModel = e.summaryModel
-            )
-            val entryId = entryDao.insert(entry)
-            val tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
-            if (tags.isNotEmpty()) {
-                entryTagDao.insertAll(tags.map { EntryTag(entryId, it) })
-            }
-        }
-        m.entries.size
-    }
-
-    private suspend fun importLegacyV1(json: String): Int = withContext(Dispatchers.IO) {
-        val data = gson.fromJson(json, ExportData::class.java)
-            ?: throw IOException("Invalid backup JSON")
-        entryDao.deleteAll()
-        var count = 0
-        data.entries.forEach { e ->
-            var imagePath: String? = null
-            if (!e.imageBase64.isNullOrBlank()) {
-                try {
-                    val bytes = android.util.Base64.decode(e.imageBase64, android.util.Base64.NO_WRAP)
-                    val imagesDir = File(context.filesDir, "images")
-                    if (!imagesDir.exists()) imagesDir.mkdirs()
-                    val file = File(imagesDir, "${UUID.randomUUID()}.webp")
-                    file.writeBytes(bytes)
-                    imagePath = file.absolutePath
-                } catch (_: Exception) {
-                    // Skip corrupted images
-                }
-            }
-            val entry = Entry(
-                content = e.content,
-                type = try {
-                    EntryType.valueOf(e.type)
-                } catch (_: Exception) {
-                    EntryType.NORMAL
-                },
-                createdAt = e.createdAt,
-                imagePath = imagePath,
-                imageDescription = e.imageDescription
-            )
-            val entryId = entryDao.insert(entry)
-            val tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
-            if (tags.isNotEmpty()) {
-                entryTagDao.insertAll(tags.map { EntryTag(entryId, it) })
-            }
-            count++
-        }
-        count
-    }
-
     // ---- Utilities ----
 
     private fun sha256(file: File): String {
@@ -250,5 +301,9 @@ class ExportImportManager @Inject constructor(
             }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    companion object {
+        private val ZIP_MAGIC = byteArrayOf('P'.code.toByte(), 'K'.code.toByte())
     }
 }

@@ -26,4 +26,7 @@ interface EntryTagDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(tags: List<EntryTag>)
+
+    @Query("DELETE FROM entry_tags")
+    suspend fun deleteAll()
 }
