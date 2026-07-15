@@ -28,7 +28,7 @@ class AppDatabaseMigrationTest {
     @Test
     @Throws(IOException::class)
     fun migrate1To4() {
-        // Create v1 database (without imageDescription)
+        // Create v1 database (without imageDescription, isDeleted, summaryModel, entryRevision)
         val db1 = helper.createDatabase(TEST_DB, 1).apply {
             execSQL("""
                 CREATE TABLE entries (
@@ -45,11 +45,14 @@ class AppDatabaseMigrationTest {
             execSQL("""
                 INSERT INTO entries VALUES (1, 'test', NULL, 'NORMAL', 1700000000000, 1700000000000, NULL, NULL)
             """)
+            execSQL("""
+                INSERT INTO entries VALUES (2, 'test with image', '/data/images/a.webp', 'NORMAL', 1700000001000, 1700000001000, NULL, NULL)
+            """)
             close()
         }
 
         // Migrate
-        val migratedDb = helper.runMigrationsAndValidate(TEST_DB, 4, true, Migrations.MIGRATION_1_3, Migrations.MIGRATION_3_4)
+        helper.runMigrationsAndValidate(TEST_DB, 4, true, Migrations.MIGRATION_1_3, Migrations.MIGRATION_3_4)
 
         // Verify
         val db = Room.databaseBuilder(
@@ -64,6 +67,60 @@ class AppDatabaseMigrationTest {
         assertEquals(0L, entry?.entryRevision ?: -1)
         assertEquals(null, entry?.imageDescription)
         assertEquals(null, entry?.summaryModel)
+
+        // Verify entry with image path preserved
+        val entry2 = db.entryDao().getById(2)
+        assertEquals("/data/images/a.webp", entry2?.imagePath)
+        assertEquals(0L, entry2?.entryRevision ?: -1)
+
+        db.close()
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate1To4_withTags() {
+        // Create v1 database WITH entry_tags table (some historical v1 had this)
+        val db1 = helper.createDatabase(TEST_DB_TAGS, 1).apply {
+            execSQL("""
+                CREATE TABLE entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    content TEXT NOT NULL,
+                    imagePath TEXT,
+                    type TEXT NOT NULL,
+                    createdAt INTEGER NOT NULL,
+                    updatedAt INTEGER NOT NULL,
+                    summaryStart INTEGER,
+                    summaryEnd INTEGER
+                )
+            """)
+            execSQL("""
+                CREATE TABLE entry_tags (
+                    entryId INTEGER NOT NULL,
+                    tag TEXT NOT NULL,
+                    PRIMARY KEY(entryId, tag),
+                    FOREIGN KEY(entryId) REFERENCES entries(id) ON DELETE CASCADE
+                )
+            """)
+            execSQL("INSERT INTO entries VALUES (1, 'tagged entry', NULL, 'NORMAL', 1700000000000, 1700000000000, NULL, NULL)")
+            execSQL("INSERT INTO entry_tags VALUES (1, 'FLASH_THOUGHT')")
+            execSQL("INSERT INTO entry_tags VALUES (1, 'EMOTION')")
+            close()
+        }
+
+        helper.runMigrationsAndValidate(TEST_DB_TAGS, 4, true, Migrations.MIGRATION_1_3, Migrations.MIGRATION_3_4)
+
+        val db = Room.databaseBuilder(
+            InstrumentationRegistry.getInstrumentation().targetContext,
+            AppDatabase::class.java, TEST_DB_TAGS
+        ).addMigrations(Migrations.MIGRATION_1_3, Migrations.MIGRATION_3_4).build()
+
+        val entry = db.entryDao().getById(1)
+        assertEquals("tagged entry", entry?.content)
+        assertEquals(0L, entry?.entryRevision)
+        assertFalse(entry?.isDeleted ?: true)
+
+        val tags = db.entryTagDao().getByEntryId(1).map { it.tag }.toSet()
+        assertEquals(setOf(TagType.FLASH_THOUGHT, TagType.EMOTION), tags)
 
         db.close()
     }
@@ -122,5 +179,6 @@ class AppDatabaseMigrationTest {
 
     companion object {
         private const val TEST_DB = "migration_test"
+        private const val TEST_DB_TAGS = "migration_test_tags"
     }
 }
