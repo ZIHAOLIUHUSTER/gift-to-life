@@ -25,6 +25,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 
 data class EntryWithTags(val entry: Entry, val tags: List<TagType>)
@@ -74,39 +76,69 @@ class RecordViewModel @Inject constructor(
     private fun consumeSharedContent() {
         viewModelScope.launch {
             ShareReceiver.events.collect { shared ->
-                _uiState.update { it.copy(
-                    pendingContentText = shared.text ?: it.pendingContentText,
-                    pendingImageUri = shared.imageUri ?: it.pendingImageUri
-                ) }
+                _uiState.update {
+                    it.copy(
+                        draftText = shared.text ?: it.draftText,
+                        pendingImageUri = shared.imageUri ?: it.pendingImageUri,
+                        draftVersion = it.draftVersion + 1
+                    )
+                }
             }
         }
     }
 
-    fun save(content: String) {
-        val pendingImage = _uiState.value.pendingImageUri
-        if (!EntrySavePolicy.canSave(content, pendingImage != null)) return
-        viewModelScope.launch {
-            val imagePath = pendingImage?.let { uri ->
-                ImageUtil.copyToPrivateDir(context, uri)
-            }
+    private val saveMutex = Mutex()
 
-            val entry = Entry(
-                content = content.trim(),
-                imagePath = imagePath,
-                type = EntryType.NORMAL
-            )
-            val entryId = repository.save(entry)
-            tagScheduler.enqueue(entryId, 0L)
-            _uiState.update { it.copy(pendingImageUri = null, pendingContentText = null) }
+    fun saveDraft() {
+        viewModelScope.launch {
+            if (!saveMutex.tryLock()) return@launch
+            try {
+                _uiState.update { it.copy(isSaving = true, saveError = null) }
+                val snapshot = _uiState.value
+                val imagePath = snapshot.pendingImageUri?.let { uri ->
+                    ImageUtil.copyToPrivateDir(context, uri)
+                }
+                val entry = Entry(
+                    content = snapshot.draftText.trim(),
+                    imagePath = imagePath,
+                    type = EntryType.NORMAL
+                )
+                val entryId = repository.save(entry)
+                tagScheduler.enqueue(entryId, 0L)
+
+                _uiState.update {
+                    if (it.draftVersion == snapshot.draftVersion) {
+                        it.copy(
+                            draftText = "",
+                            pendingImageUri = null,
+                            pendingContentText = null,
+                            isSaving = false,
+                            draftVersion = it.draftVersion + 1
+                        )
+                    } else {
+                        it.copy(isSaving = false)
+                    }
+                }
+                _events.emit(RecordEvent.EntrySaved)
+            } catch (t: Throwable) {
+                _uiState.update { it.copy(isSaving = false, saveError = t.message) }
+                _events.emit(RecordEvent.ShowSnackbar("保存失败，请重试"))
+            } finally {
+                saveMutex.unlock()
+            }
         }
+    }
+
+    fun setDraftText(text: String) {
+        _uiState.update { it.copy(draftText = text, draftVersion = it.draftVersion + 1) }
     }
 
     fun selectImage(uri: android.net.Uri) {
-        _uiState.update { it.copy(pendingImageUri = uri) }
+        _uiState.update { it.copy(pendingImageUri = uri, draftVersion = it.draftVersion + 1) }
     }
 
     fun clearImage() {
-        _uiState.update { it.copy(pendingImageUri = null) }
+        _uiState.update { it.copy(pendingImageUri = null, draftVersion = it.draftVersion + 1) }
     }
 
     fun setEditingImage(entry: Entry?) {

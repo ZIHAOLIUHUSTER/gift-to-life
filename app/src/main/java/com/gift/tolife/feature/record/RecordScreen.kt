@@ -53,9 +53,8 @@ fun RecordScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is RecordEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message)
-                }
+                is RecordEvent.EntrySaved -> snackbarHostState.showSnackbar("已记录")
+                is RecordEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -108,12 +107,14 @@ fun RecordScreen(
                 )
             } else {
                 EntryComposer(
-                    pendingImageUri = uiState.pendingImageUri,
-                    onSave = viewModel::save,
-                    onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                    onClearImage = viewModel::clearImage,
-                    initialText = uiState.pendingContentText
-                )
+                value = uiState.draftText,
+                onValueChange = viewModel::setDraftText,
+                pendingImageUri = uiState.pendingImageUri,
+                isSaving = uiState.isSaving,
+                onSave = viewModel::saveDraft,
+                onPickImage = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onClearImage = viewModel::clearImage
+            )
             }
 
             LazyColumn(
