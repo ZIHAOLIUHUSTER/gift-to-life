@@ -44,6 +44,20 @@ class EntryTransactions @Inject constructor(
         }
     }
 
+    suspend fun updateUserEntryAndTags(
+        id: Long,
+        content: String,
+        imagePath: String?,
+        tags: Set<TagType>
+    ): Long = database.withTransaction {
+        check(entryDao.updateUserContent(id, content, imagePath, System.currentTimeMillis()) == 1) {
+            "Entry is missing or deleted"
+        }
+        entryTagDao.deleteByEntryId(id)
+        entryTagDao.insertAll(tags.map { EntryTag(id, it) })
+        entryDao.getById(id)!!.entryRevision
+    }
+
     suspend fun applyAiEnhancement(
         entryId: Long,
         expectedRevision: Long,

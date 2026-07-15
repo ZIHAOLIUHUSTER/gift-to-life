@@ -91,10 +91,10 @@ class RecordViewModel @Inject constructor(
     }
 
     fun save(content: String) {
-        if (content.isBlank()) return
+        val pendingImage = _uiState.value.pendingImageUri
+        if (!EntrySavePolicy.canSave(content, pendingImage != null)) return
         viewModelScope.launch {
-            val currentState = _uiState.value
-            val imagePath = currentState.pendingImageUri?.let { uri ->
+            val imagePath = pendingImage?.let { uri ->
                 ImageUtil.copyToPrivateDir(context, uri)
             }
 
@@ -249,8 +249,31 @@ class RecordViewModel @Inject constructor(
 
     fun saveWithTags(entry: Entry, tags: List<TagType>) {
         viewModelScope.launch {
-            repository.setTags(entry.id, tags)
-            update(entry)
+            val original = _uiState.value.selectedEntry ?: return@launch
+            val oldTags = repository.getTags(entry.id).map { it.tag }.toSet()
+            val newTags = tags.toSet()
+            val contentChanged = entry.content != original.content ||
+                entry.imagePath != original.imagePath
+
+            when {
+                oldTags != newTags -> {
+                    // 用户显式修改标签，不投递 AI
+                    entryTransactions.updateUserEntryAndTags(
+                        entry.id, entry.content, entry.imagePath, newTags
+                    )
+                }
+                contentChanged -> {
+                    // 正文或图片变化，投递 AI 重新打标签
+                    val revision = entryTransactions.updateUserContent(
+                        entry.id, entry.content, entry.imagePath
+                    )
+                    tagScheduler.enqueue(entry.id, revision)
+                }
+                else -> {
+                    // 什么都没变
+                }
+            }
+            _uiState.update { it.copy(selectedEntry = null) }
         }
     }
 }

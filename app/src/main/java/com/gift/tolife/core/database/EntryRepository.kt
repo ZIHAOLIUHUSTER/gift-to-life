@@ -100,12 +100,6 @@ class EntryRepository @Inject constructor(
 
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
 
-    suspend fun setTags(entryId: Long, tags: List<TagType>) {
-        entryTagDao.deleteByEntryId(entryId)
-        tags.forEach { tag ->
-            entryTagDao.insert(EntryTag(entryId = entryId, tag = tag))
-        }
-    }
 
     suspend fun getAllTags(): List<EntryTag> {
         // Not directly available from DAO, but for now return empty
