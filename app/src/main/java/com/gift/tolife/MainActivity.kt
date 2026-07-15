@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleShareIntent(intent)
+        handleWidgetIntent(intent)
         setContent {
             GiftTheme {
                 AppNavigation()
@@ -29,6 +30,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShareIntent(intent)
+        handleWidgetIntent(intent)
     }
 
     private fun handleShareIntent(intent: Intent) {
@@ -41,5 +43,11 @@ class MainActivity : ComponentActivity() {
             intent.getParcelableExtra(Intent.EXTRA_STREAM)
         }
         ShareReceiver.publish(SharedContent(text, imageUri))
+    }
+
+    private fun handleWidgetIntent(intent: Intent) {
+        if (intent.getBooleanExtra("request_composer_focus", false)) {
+            ShareReceiver.publish(SharedContent(text = null, imageUri = null))
+        }
     }
 }

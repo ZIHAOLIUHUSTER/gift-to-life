@@ -317,7 +317,9 @@ class ExportImportManager @Inject constructor(
     // ---- Data management ----
 
     suspend fun clearAllEntries() {
+        val oldPaths = entryDao.getAllEntriesAsList().mapNotNull { it.imagePath }.toSet()
         entryDao.deleteAll()
+        oldPaths.forEach { File(it).delete() }
     }
 
     suspend fun getDeletedEntries(): List<Entry> = entryDao.getDeletedEntries()

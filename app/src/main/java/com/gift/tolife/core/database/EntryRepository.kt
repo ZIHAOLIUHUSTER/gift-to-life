@@ -33,6 +33,7 @@ class EntryRepository @Inject constructor(
     }
 
     suspend fun delete(entry: Entry) {
+        entry.imagePath?.let { imageStore.delete(it) }
         entryTagDao.deleteByEntryId(entry.id)
         entryDao.delete(entry)
     }

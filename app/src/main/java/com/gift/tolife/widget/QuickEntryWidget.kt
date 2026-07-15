@@ -19,6 +19,7 @@ class QuickEntryWidget : AppWidgetProvider() {
 
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("request_composer_focus", true)
             }
             val pendingIntent = PendingIntent.getActivity(
                 context, id, intent,

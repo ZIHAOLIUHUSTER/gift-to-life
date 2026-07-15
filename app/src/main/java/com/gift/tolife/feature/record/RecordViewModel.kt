@@ -91,11 +91,30 @@ class RecordViewModel @Inject constructor(
         viewModelScope.launch {
             ShareReceiver.events.collect { shared ->
                 _uiState.update {
-                    it.copy(
-                        draftText = shared.text ?: it.draftText,
-                        pendingImageUri = shared.imageUri ?: it.pendingImageUri,
-                        draftVersion = it.draftVersion + 1
-                    )
+                    when {
+                        shared.text != null && shared.imageUri != null -> {
+                            it.copy(
+                                draftText = shared.text,
+                                pendingImageUri = shared.imageUri,
+                                draftVersion = it.draftVersion + 1
+                            )
+                        }
+                        shared.text != null -> {
+                            it.copy(
+                                draftText = shared.text,
+                                pendingImageUri = null,
+                                draftVersion = it.draftVersion + 1
+                            )
+                        }
+                        shared.imageUri != null -> {
+                            it.copy(
+                                draftText = "",
+                                pendingImageUri = shared.imageUri,
+                                draftVersion = it.draftVersion + 1
+                            )
+                        }
+                        else -> it
+                    }
                 }
                 _events.emit(RecordEvent.RequestComposerFocus)
             }
