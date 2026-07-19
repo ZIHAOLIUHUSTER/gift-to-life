@@ -53,6 +53,7 @@ class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                 is AiResult.RetryableFailure -> return Result.retry()
                 is AiResult.PermanentFailure -> {
                     if (content.isBlank()) return Result.failure()
+                    imageDescription = entry.imageDescription
                 }
             }
         }

@@ -23,7 +23,7 @@ import java.io.File
 fun EntryPreviewSheet(
     entry: Entry,
     tags: List<TagType>,
-    onEdit: () -> Unit,
+    onEdit: (() -> Unit)? = null,
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
     onImageClick: (() -> Unit)? = null
@@ -109,17 +109,19 @@ fun EntryPreviewSheet(
                     Text("移至回收站")
                 }
 
-                Button(
-                    onClick = {
-                        onDismiss()
-                        onEdit()
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("编辑")
+                if (onEdit != null) {
+                    Button(
+                        onClick = {
+                            onDismiss()
+                            onEdit()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Text("编辑")
+                    }
                 }
             }
         }

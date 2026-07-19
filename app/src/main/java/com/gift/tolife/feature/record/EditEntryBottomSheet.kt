@@ -28,7 +28,6 @@ fun EditEntryBottomSheet(
     originalTags: Set<TagType>,
     onSave: (EntryEditDraft) -> Unit,
     onDismiss: () -> Unit,
-    onPickImage: () -> Unit,
     onImageClick: (() -> Unit)? = null
 ) {
     var draft by remember(originalEntry.id, originalTags) {
@@ -142,7 +141,6 @@ fun EditEntryBottomSheet(
                             Text("删除图片", color = MaterialTheme.colorScheme.error)
                         }
                         TextButton(onClick = {
-                            onPickImage()
                             imagePicker.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
@@ -154,7 +152,6 @@ fun EditEntryBottomSheet(
                     Spacer(modifier = Modifier.height(8.dp))
                 } else {
                     TextButton(onClick = {
-                        onPickImage()
                         imagePicker.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )

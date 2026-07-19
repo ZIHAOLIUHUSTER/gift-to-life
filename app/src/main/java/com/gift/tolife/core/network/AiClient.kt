@@ -89,6 +89,7 @@ class AiClient @Inject constructor(
         } catch (e: com.google.gson.JsonParseException) {
             AiResult.PermanentFailure("响应解析错误: ${e.message}")
         } catch (t: Throwable) {
+            if (t is Error) throw t
             AiResult.RetryableFailure(t)
         }
     }
@@ -138,6 +139,7 @@ class AiClient @Inject constructor(
         } catch (e: com.google.gson.JsonParseException) {
             AiResult.PermanentFailure("响应解析错误: ${e.message}")
         } catch (t: Throwable) {
+            if (t is Error) throw t
             AiResult.RetryableFailure(t)
         }
     }

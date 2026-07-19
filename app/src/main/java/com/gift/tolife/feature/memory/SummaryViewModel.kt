@@ -70,38 +70,14 @@ class SummaryViewModel @Inject constructor(
             viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在周一总结上周")) }
             return
         }
-        viewModelScope.launch {
-            _state.update { it.copy(isGenerating = true) }
-            try {
-                val settings = settingsDataStore.settings.first()
-                if (settings.apiKey.isBlank()) {
-                    _events.emit(SummaryEvent.ShowMessage("请先在设置中配置 API Key"))
-                    _state.update { it.copy(isGenerating = false) }
-                    return@launch
-                }
-                val (start, end) = TimeUtil.previousWeekRange()
-                val entries = entryDao.getNormalEntriesInRange(start, end)
-                val prompt = SummaryPrompt.buildUserPrompt(entries)
-                if (prompt == null) {
-                    _events.emit(SummaryEvent.ShowMessage("上周记录不足 3 条，无法生成总结"))
-                    _state.update { it.copy(isGenerating = false) }
-                    return@launch
-                }
-                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.pickRandomWeekPrompt(), prompt)
-                if (result is AiResult.Success && result.value.isNotBlank()) {
-                    val existing = _state.value.currentWeekSummary
-                    if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
-                    else repository.save(Entry(content = result.value, type = EntryType.SUMMARY, summaryStart = start, summaryEnd = end, summaryModel = settings.summaryModel))
-                    _events.emit(SummaryEvent.ShowMessage("上周总结已生成"))
-                } else {
-                    _events.emit(SummaryEvent.ShowMessage("生成失败"))
-                }
-            } catch (t: Throwable) {
-                _events.emit(SummaryEvent.ShowMessage("生成失败: ${t.message ?: ""}"))
-            } finally {
-                _state.update { it.copy(isGenerating = false) }
-            }
-        }
+        val (start, end) = TimeUtil.previousWeekRange()
+        generateSummary(
+            start = start, end = end,
+            systemPrompt = SummaryPrompt.pickRandomWeekPrompt(),
+            existing = _state.value.currentWeekSummary,
+            insufficientMsg = "上周记录不足 3 条，无法生成总结",
+            successMsg = "上周总结已生成"
+        )
     }
 
     fun generateMonthSummary() {
@@ -109,29 +85,42 @@ class SummaryViewModel @Inject constructor(
             viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在每月1号总结上月")) }
             return
         }
+        val (start, end) = TimeUtil.previousMonthRange()
+        generateSummary(
+            start = start, end = end,
+            systemPrompt = SummaryPrompt.MONTH_LETTER,
+            existing = _state.value.currentMonthSummary,
+            insufficientMsg = "上月记录不足 3 条，无法生成总结",
+            successMsg = "上月总结已生成"
+        )
+    }
+
+    private fun generateSummary(
+        start: Long, end: Long,
+        systemPrompt: String,
+        existing: Entry?,
+        insufficientMsg: String,
+        successMsg: String
+    ) {
         viewModelScope.launch {
             _state.update { it.copy(isGenerating = true) }
             try {
                 val settings = settingsDataStore.settings.first()
                 if (settings.apiKey.isBlank()) {
                     _events.emit(SummaryEvent.ShowMessage("请先在设置中配置 API Key"))
-                    _state.update { it.copy(isGenerating = false) }
                     return@launch
                 }
-                val (start, end) = TimeUtil.previousMonthRange()
                 val entries = entryDao.getNormalEntriesInRange(start, end)
                 val prompt = SummaryPrompt.buildUserPrompt(entries)
                 if (prompt == null) {
-                    _events.emit(SummaryEvent.ShowMessage("上月记录不足 3 条，无法生成总结"))
-                    _state.update { it.copy(isGenerating = false) }
+                    _events.emit(SummaryEvent.ShowMessage(insufficientMsg))
                     return@launch
                 }
-                val result = aiClient.chat(settings.summaryModel, SummaryPrompt.MONTH_LETTER, prompt)
+                val result = aiClient.chat(settings.summaryModel, systemPrompt, prompt)
                 if (result is AiResult.Success && result.value.isNotBlank()) {
-                    val existing = _state.value.currentMonthSummary
                     if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
                     else repository.save(Entry(content = result.value, type = EntryType.SUMMARY, summaryStart = start, summaryEnd = end, summaryModel = settings.summaryModel))
-                    _events.emit(SummaryEvent.ShowMessage("上月总结已生成"))
+                    _events.emit(SummaryEvent.ShowMessage(successMsg))
                 } else {
                     _events.emit(SummaryEvent.ShowMessage("生成失败"))
                 }

@@ -27,8 +27,7 @@ object SummaryPrompt {
         val statsLine = "本周期共 ${sorted.size} 条记录，覆盖 $days 天，其中 $withImages 条含图片。\n"
 
         val formatted = sorted.map { entry ->
-            val time = java.text.SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
-                .format(java.util.Date(entry.createdAt))
+            val time = com.gift.tolife.core.common.DateFormats.formatShortDateTime(entry.createdAt)
             val text = entry.content.ifBlank { "[图片: ${entry.imageDescription ?: "无描述"}]" }
             "[$time] ${text.take(MAX_ENTRY_CHARS)}"
         }

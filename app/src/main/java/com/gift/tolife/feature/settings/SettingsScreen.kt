@@ -151,7 +151,8 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
     var summaryModel by remember { mutableStateOf(uiState.settings.summaryModel) }
     var visionModel by remember { mutableStateOf(uiState.settings.visionModel) }
 
-    LaunchedEffect(uiState.settings) {
+    // 仅在首次进入页面时同步设置值，避免覆盖用户正在编辑的内容
+    LaunchedEffect(Unit) {
         apiKey = uiState.settings.apiKey
         baseUrl = uiState.settings.baseUrl
         tagModel = uiState.settings.tagModel
@@ -545,10 +546,10 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
                                             .background(
                                                 when {
                                                     count == 0 -> MaterialTheme.colorScheme.surface
-                                                    count == 1 -> Color(0xFFC8E6C9)
-                                                    count in 2..3 -> Color(0xFF81C784)
-                                                    count in 4..6 -> Color(0xFF4CAF50)
-                                                    else -> Color(0xFF2E7D32)
+                                                    count == 1 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                                    count in 2..3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                                                    count in 4..6 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)
+                                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)
                                                 }
                                             )
                                     )

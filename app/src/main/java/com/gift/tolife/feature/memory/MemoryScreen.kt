@@ -199,7 +199,6 @@ fun MemoryScreen(
         EntryPreviewSheet(
             entry = previewEntry!!,
             tags = previewTags,
-            onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
             onDelete = {
                 randomVM.deleteEntry(previewEntry!!.id)

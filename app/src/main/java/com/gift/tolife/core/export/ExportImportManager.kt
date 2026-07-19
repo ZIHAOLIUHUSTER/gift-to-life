@@ -108,11 +108,13 @@ class ExportImportManager @Inject constructor(
     private fun copyToTempFile(uri: Uri): File {
         val target = File.createTempFile("gift-import-", ".bin", context.cacheDir)
         var total = 0L
-        context.contentResolver.openInputStream(uri)!!.use { input ->
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw IOException("无法打开文件")
+        input.use { stream ->
             target.outputStream().buffered().use { output ->
                 val buffer = ByteArray(8192)
                 while (true) {
-                    val read = input.read(buffer)
+                    val read = stream.read(buffer)
                     if (read < 0) break
                     total += read
                     check(total <= BackupV2Config.MAX_BACKUP_FILE_BYTES) { "备份文件超过 2 GiB" }

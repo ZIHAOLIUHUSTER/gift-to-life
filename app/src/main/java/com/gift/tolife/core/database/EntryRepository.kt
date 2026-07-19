@@ -4,7 +4,6 @@ import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryTag
-import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.common.ImageStore
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -32,12 +31,6 @@ class EntryRepository @Inject constructor(
         entryDao.update(entry.copy(updatedAt = System.currentTimeMillis()))
     }
 
-    suspend fun delete(entry: Entry) {
-        entry.imagePath?.let { imageStore.delete(it) }
-        entryTagDao.deleteByEntryId(entry.id)
-        entryDao.delete(entry)
-    }
-
     suspend fun softDelete(entryId: Long): Boolean {
         return entryTransactions.softDelete(entryId)
     }
@@ -58,13 +51,6 @@ class EntryRepository @Inject constructor(
     }
 
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
-
-
-    suspend fun getAllTags(): List<EntryTag> {
-        // Not directly available from DAO, but for now return empty
-        // Will be expanded in phase 3 for filtering
-        return emptyList()
-    }
 
     fun observeSummaries(): Flow<List<Entry>> = entryDao.observeSummaries()
 }

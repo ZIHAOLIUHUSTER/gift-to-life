@@ -212,60 +212,34 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun testTagModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        if (_uiState.value.testingTag) return
-        _uiState.update { it.copy(testingTag = true, testResultTag = null) }
-        viewModelScope.launch {
-            try {
-                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
-                    val s = _uiState.value.settings
-                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
-                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
-                } else {
-                    chatClient.chat(model, "你是一个助手。", "回复：ok")
-                }
-                _uiState.update {
-                    it.copy(testingTag = false, testResultTag = when (result) {
-                        is AiResult.Success -> "✓ 连接成功"
-                        is AiResult.PermanentFailure -> "✗ ${result.message}"
-                        is AiResult.RetryableFailure -> "✗ 连接失败"
-                    })
-                }
-            } catch (t: Throwable) {
-                _uiState.update { it.copy(testingTag = false, testResultTag = "✗ ${t.message ?: "连接失败"}") }
-            }
-        }
+        testModel(model, apiKey, baseUrl, "tag")
     }
 
     fun testSummaryModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        if (_uiState.value.testingSummary) return
-        _uiState.update { it.copy(testingSummary = true, testResultSummary = null) }
-        viewModelScope.launch {
-            try {
-                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
-                    val s = _uiState.value.settings
-                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
-                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
-                } else {
-                    chatClient.chat(model, "你是一个助手。", "回复：ok")
-                }
-                _uiState.update {
-                    it.copy(testingSummary = false, testResultSummary = when (result) {
-                        is AiResult.Success -> "✓ 连接成功"
-                        is AiResult.PermanentFailure -> "✗ ${result.message}"
-                        is AiResult.RetryableFailure -> "✗ 连接失败"
-                    })
-                }
-            } catch (t: Throwable) {
-                _uiState.update { it.copy(testingSummary = false, testResultSummary = "✗ ${t.message ?: "连接失败"}") }
-            }
-        }
+        testModel(model, apiKey, baseUrl, "summary")
     }
 
     fun testVisionModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        if (_uiState.value.testingVision) return
-        _uiState.update { it.copy(testingVision = true, testResultVision = null) }
+        testModel(model, apiKey, baseUrl, "vision")
+    }
+
+    private fun testModel(model: String, apiKey: String, baseUrl: String, target: String) {
+        val isTesting = when (target) {
+            "tag" -> _uiState.value.testingTag
+            "summary" -> _uiState.value.testingSummary
+            else -> _uiState.value.testingVision
+        }
+        if (isTesting) return
+
+        _uiState.update {
+            when (target) {
+                "tag" -> it.copy(testingTag = true, testResultTag = null)
+                "summary" -> it.copy(testingSummary = true, testResultSummary = null)
+                else -> it.copy(testingVision = true, testResultVision = null)
+            }
+        }
         viewModelScope.launch {
-            try {
+            val resultMsg = try {
                 val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
                     val s = _uiState.value.settings
                     chatClient.chatWith(model, "你是一个助手。", "回复：ok",
@@ -273,15 +247,20 @@ class SettingsViewModel @Inject constructor(
                 } else {
                     chatClient.chat(model, "你是一个助手。", "回复：ok")
                 }
-                _uiState.update {
-                    it.copy(testingVision = false, testResultVision = when (result) {
-                        is AiResult.Success -> "✓ 连接成功"
-                        is AiResult.PermanentFailure -> "✗ ${result.message}"
-                        is AiResult.RetryableFailure -> "✗ 连接失败"
-                    })
+                when (result) {
+                    is AiResult.Success -> "✓ 连接成功"
+                    is AiResult.PermanentFailure -> "✗ ${result.message}"
+                    is AiResult.RetryableFailure -> "✗ 连接失败"
                 }
             } catch (t: Throwable) {
-                _uiState.update { it.copy(testingVision = false, testResultVision = "✗ ${t.message ?: "连接失败"}") }
+                "✗ ${t.message ?: "连接失败"}"
+            }
+            _uiState.update {
+                when (target) {
+                    "tag" -> it.copy(testingTag = false, testResultTag = resultMsg)
+                    "summary" -> it.copy(testingSummary = false, testResultSummary = resultMsg)
+                    else -> it.copy(testingVision = false, testResultVision = resultMsg)
+                }
             }
         }
     }
@@ -331,9 +310,8 @@ class SettingsViewModel @Inject constructor(
                     settingsDataStore.updateSummaryModel(newConfig.summaryModel)
                     settingsDataStore.updateVisionModel(newConfig.visionModel)
                 } else {
-                    // 回退到旧 AppSettings 格式
+                    // 回退到旧 AppSettings 格式（不导入 API Key）
                     val oldConfig = Gson().fromJson(json, AppSettings::class.java) ?: return@launch
-                    settingsDataStore.updateApiKey(oldConfig.apiKey)
                     settingsDataStore.updateBaseUrl(oldConfig.baseUrl)
                     settingsDataStore.updateTagModel(oldConfig.tagModel)
                     settingsDataStore.updateSummaryModel(oldConfig.summaryModel)

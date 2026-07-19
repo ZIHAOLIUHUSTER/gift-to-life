@@ -203,9 +203,6 @@ fun RecordScreen(
                 originalTags = editTags.toSet(),
                 onSave = { draft -> viewModel.saveEdit(draft) },
                 onDismiss = viewModel::clearSelection,
-                onPickImage = {
-                    viewModel.setEditingImage(uiState.selectedEntry!!)
-                },
                 onImageClick = { previewImagePath = uiState.selectedEntry!!.imagePath }
             )
         }

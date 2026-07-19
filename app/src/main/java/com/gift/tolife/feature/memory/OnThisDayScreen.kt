@@ -88,7 +88,6 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
         EntryPreviewSheet(
             entry = previewEntry!!,
             tags = emptyList(),
-            onEdit = { previewEntry = null },
             onDismiss = { previewEntry = null },
             onDelete = {
                 viewModel.deleteEntry(previewEntry!!.id)

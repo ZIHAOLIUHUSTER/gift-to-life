@@ -99,9 +99,6 @@ interface EntryDao {
     @RawQuery(observedEntities = [Entry::class, EntryTag::class])
     fun pagingSource(query: SupportSQLiteQuery): PagingSource<Int, EntryListRow>
 
-    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
-    suspend fun getEntriesByDateRange(start: Long, end: Long): List<Entry>
-
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end")
     suspend fun getMonthlyCount(start: Long, end: Long): Int
 
