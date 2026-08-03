@@ -13,8 +13,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.ui.component.AppEmptyState
-import java.text.SimpleDateFormat
-import java.util.*
+import com.gift.tolife.feature.record.EntryPreviewSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,6 +23,7 @@ fun MonthSummaryScreen(
 ) {
     val state by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var previewEntry by remember { mutableStateOf<Entry?>(null) }
 
     LaunchedEffect(Unit) {
         summaryVM.events.collect { event ->
@@ -60,21 +60,19 @@ fun MonthSummaryScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (state.canGenerateMonth) {
-                item(key = "generate") {
-                    Button(
-                        onClick = summaryVM::generateMonthSummary,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.isGenerating,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        if (state.isGenerating) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text("总结上月")
+            item(key = "generate") {
+                Button(
+                    onClick = summaryVM::generateMonthSummary,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isGenerating,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    if (state.isGenerating) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
+                    Text("总结上月")
                 }
             }
 
@@ -82,14 +80,26 @@ fun MonthSummaryScreen(
                 item(key = "empty") {
                     AppEmptyState(
                         title = "暂无月总结",
-                        description = if (state.canGenerateMonth) "点击上方按钮生成上月总结" else "请在月初生成上月总结"
+                        description = "点击上方按钮生成上月总结"
                     )
                 }
             }
 
             items(monthSummaries, key = { it.id }) { entry ->
-                SummaryCard(entry = entry)
+                SummaryCard(entry = entry, onClick = { previewEntry = entry })
             }
         }
+    }
+
+    if (previewEntry != null) {
+        EntryPreviewSheet(
+            entry = previewEntry!!,
+            tags = emptyList(),
+            onDismiss = { previewEntry = null },
+            onDelete = {
+                summaryVM.deleteSummary(previewEntry!!.id)
+                previewEntry = null
+            }
+        )
     }
 }

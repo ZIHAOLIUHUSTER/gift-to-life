@@ -128,24 +128,6 @@ fun MemoryScreen(
                 }
 
                 // 总结与归档预览
-                val summaryEntries = summaryState.weekSummaries + summaryState.monthSummaries
-                val latestSummary = summaryEntries.maxByOrNull { it.createdAt }
-                if (latestSummary != null) {
-                    item(key = "summary_preview") {
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text("最近总结", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.height(8.dp))
-                                Text(latestSummary.content.take(80) + "…", style = MaterialTheme.typography.bodySmall, maxLines = 2)
-                            }
-                        }
-                    }
-                }
-
                 // 总结入口（独立于随机卡片）
                 item(key = "summary_actions") {
                     Row(
@@ -170,25 +152,6 @@ fun MemoryScreen(
                 // 那年今日
                 item(key = "on_this_day") {
                     OnThisDaySection(onViewAll = onNavigateToOnThisDay)
-                }
-
-                // 历史总结列表
-                val allSummaries = summaryState.weekSummaries + summaryState.monthSummaries
-                if (allSummaries.isNotEmpty()) {
-                    item(key = "summary_header") {
-                        Text(
-                            "历史总结",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-
-                    items(allSummaries, key = { it.id }) { entry ->
-                        SummaryCard(entry = entry, onClick = {
-                            previewEntry = entry
-                            previewTags = emptyList()
-                        })
-                    }
                 }
             }
         }
@@ -389,21 +352,33 @@ internal fun SummaryCard(entry: Entry, onClick: () -> Unit = {}) {
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                if (timeLabel != null) {
-                    Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
-                        Text(timeLabel, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    if (timeLabel != null) {
+                        Surface(shape = RoundedCornerShape(4.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)) {
+                            Text(timeLabel, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    if (!entry.summaryModel.isNullOrBlank()) {
+                        Text(entry.summaryModel!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                     }
                 }
-                if (!entry.summaryModel.isNullOrBlank()) {
-                    Text(entry.summaryModel!!, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(entry.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(DateFormats.formatDateTime(entry.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(entry.content, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface, maxLines = 3)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(DateFormats.formatDateTime(entry.createdAt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                painterResource(R.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

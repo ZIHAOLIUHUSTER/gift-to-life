@@ -11,7 +11,9 @@
       "Bash(\"c:\\users\\lzh\\appdata\\local\\android\\sdk\\build-tools\\34.0.0\\aapt2.exe\" *)",
       "Bash(mkdir *)",
       "Bash(del *)",
-      "Agent(general-purpose)"
+      "Agent(general-purpose)",
+      "Skill(brainstorming)",
+      "Bash(.\\gradlew.bat *)"
     ]
   },
   "$version": 4,

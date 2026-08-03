@@ -21,9 +21,7 @@ data class SummaryState(
     val monthSummaries: List<Entry> = emptyList(),
     val currentWeekSummary: Entry? = null,
     val currentMonthSummary: Entry? = null,
-    val isGenerating: Boolean = false,
-    val canGenerateWeek: Boolean = false,
-    val canGenerateMonth: Boolean = false
+    val isGenerating: Boolean = false
 )
 
 sealed class SummaryEvent {
@@ -56,9 +54,7 @@ class SummaryViewModel @Inject constructor(
                         weekSummaries = weeks,
                         monthSummaries = months,
                         currentWeekSummary = summaries.find { s -> s.summaryStart == wStart && s.summaryEnd == wEnd },
-                        currentMonthSummary = summaries.find { s -> s.summaryStart == mStart && s.summaryEnd == mEnd },
-                        canGenerateWeek = TimeUtil.isMonday(),
-                        canGenerateMonth = TimeUtil.isFirstDayOfMonth()
+                        currentMonthSummary = summaries.find { s -> s.summaryStart == mStart && s.summaryEnd == mEnd }
                     )
                 }
             }
@@ -66,10 +62,6 @@ class SummaryViewModel @Inject constructor(
     }
 
     fun generateWeekSummary() {
-        if (!TimeUtil.isMonday()) {
-            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在周一总结上周")) }
-            return
-        }
         val (start, end) = TimeUtil.previousWeekRange()
         generateSummary(
             start = start, end = end,
@@ -81,10 +73,6 @@ class SummaryViewModel @Inject constructor(
     }
 
     fun generateMonthSummary() {
-        if (!TimeUtil.isFirstDayOfMonth()) {
-            viewModelScope.launch { _events.emit(SummaryEvent.ShowMessage("请在每月1号总结上月")) }
-            return
-        }
         val (start, end) = TimeUtil.previousMonthRange()
         generateSummary(
             start = start, end = end,
@@ -129,6 +117,12 @@ class SummaryViewModel @Inject constructor(
             } finally {
                 _state.update { it.copy(isGenerating = false) }
             }
+        }
+    }
+
+    fun deleteSummary(entryId: Long) {
+        viewModelScope.launch {
+            repository.softDelete(entryId)
         }
     }
 }
