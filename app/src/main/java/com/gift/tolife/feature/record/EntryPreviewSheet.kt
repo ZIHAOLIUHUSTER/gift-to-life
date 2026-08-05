@@ -1,5 +1,7 @@
 package com.gift.tolife.feature.record
 
+import android.content.Intent
+import android.graphics.Bitmap
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,13 +20,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.GallerySaver
+import com.gift.tolife.core.common.ShareCardRenderer
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -64,6 +73,35 @@ fun EntryPreviewSheet(
         }
     }
 
+    val scope = rememberCoroutineScope()
+
+    fun shareEntry() {
+        scope.launch {
+            val bitmap = withContext(Dispatchers.IO) {
+                ShareCardRenderer.render(entry.content, entry.createdAt, entry.imagePath)
+            }
+            if (bitmap == null) {
+                Toast.makeText(context, "生成分享卡片失败", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val file = withContext(Dispatchers.IO) {
+                val dir = File(context.cacheDir, "share").apply { mkdirs() }
+                val f = File(dir, "gift_share_${System.currentTimeMillis()}.png")
+                f.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+                f
+            }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            runCatching { context.startActivity(Intent.createChooser(intent, "分享闪念")) }
+                .onFailure { Toast.makeText(context, "没有可用的分享应用", Toast.LENGTH_SHORT).show() }
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -76,12 +114,26 @@ fun EntryPreviewSheet(
                 .padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // 时间
-            Text(
-                text = DateFormats.formatDateTime(entry.createdAt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // 时间 + 分享
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = DateFormats.formatDateTime(entry.createdAt),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = { shareEntry() }) {
+                    Icon(
+                        painterResource(R.drawable.ic_share),
+                        contentDescription = "分享",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
