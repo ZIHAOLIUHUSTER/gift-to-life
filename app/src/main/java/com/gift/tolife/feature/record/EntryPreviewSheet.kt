@@ -1,6 +1,11 @@
 package com.gift.tolife.feature.record
 
-import androidx.compose.foundation.clickable
+import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,14 +16,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.common.DateFormats
+import com.gift.tolife.core.common.GallerySaver
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun EntryPreviewSheet(
     entry: Entry,
@@ -29,6 +38,31 @@ fun EntryPreviewSheet(
     onImageClick: (() -> Unit)? = null
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val saved = GallerySaver.saveImage(context, entry.imagePath!!, entry.createdAt)
+            if (saved) Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
+            else Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "需要存储权限才能保存图片", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun saveImage() {
+        val path = entry.imagePath ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val saved = GallerySaver.saveImage(context, path, entry.createdAt)
+            if (saved) Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
+            else Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show()
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -51,14 +85,21 @@ fun EntryPreviewSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 全文
+            // 全文（长按复制）
             Text(
                 text = entry.content,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.combinedClickable(
+                    onClick = {},
+                    onLongClick = {
+                        clipboardManager.setText(AnnotatedString(entry.content))
+                        Toast.makeText(context, "已复制全文", Toast.LENGTH_SHORT).show()
+                    }
+                )
             )
 
-            // 图片
+            // 图片（长按保存到相册）
             if (!entry.imagePath.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 AsyncImage(
@@ -68,7 +109,10 @@ fun EntryPreviewSheet(
                         .fillMaxWidth()
                         .heightIn(max = 300.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { onImageClick?.invoke() },
+                        .combinedClickable(
+                            onClick = { onImageClick?.invoke() },
+                            onLongClick = { saveImage() }
+                        ),
                     contentScale = ContentScale.Crop
                 )
             }
