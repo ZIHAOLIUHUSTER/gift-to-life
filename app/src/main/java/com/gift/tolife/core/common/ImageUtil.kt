@@ -90,19 +90,29 @@ object ImageUtil {
     }
 
     /**
-     * 解码本地图片为桌面小组件缩略图：降采样（最长边 ≤ maxDimension）+ RGB_565，
-     * 控制内存与 RemoteViews 传输体积，解码失败返回 null。
+     * 解码本地图片为桌面小组件方形缩略图：中心裁剪为正方形 + 降采样 + RGB_565。
+     * 先在代码里裁成正方形，任何宽高比图片渲染都不变形；解码失败返回 null。
      */
-    fun decodeThumbnail(path: String, maxDimension: Int = 288): Bitmap? {
+    fun decodeThumbnail(path: String, side: Int = 320): Bitmap? {
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeFile(path, bounds)
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            val minSide = minOf(bounds.outWidth, bounds.outHeight)
+            var sampleSize = 1
+            while (minSide / sampleSize > side) {
+                sampleSize *= 2
+            }
             val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, maxDimension)
+                inSampleSize = sampleSize
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
-            BitmapFactory.decodeFile(path, decodeOptions)
+            val bitmap = BitmapFactory.decodeFile(path, decodeOptions) ?: return null
+            val crop = minOf(bitmap.width, bitmap.height)
+            val x = (bitmap.width - crop) / 2
+            val y = (bitmap.height - crop) / 2
+            if (crop == bitmap.width && crop == bitmap.height) bitmap
+            else Bitmap.createBitmap(bitmap, x, y, crop, crop)
         } catch (e: Exception) {
             null
         }

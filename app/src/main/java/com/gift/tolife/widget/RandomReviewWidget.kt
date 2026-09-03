@@ -131,6 +131,6 @@ class RandomReviewWidget : AppWidgetProvider() {
         const val ACTION_REFRESH = "com.gift.tolife.action.RANDOM_REVIEW_REFRESH"
         private const val REQUEST_OPEN = 3001
         private const val REQUEST_REFRESH = 3002
-        private const val MAX_CONTENT_CHARS = 500
+        private const val MAX_CONTENT_CHARS = 160
     }
 }
