@@ -53,6 +53,8 @@ fun MemoryScreen(
         summaryVM.events.collect { event ->
             when (event) {
                 is SummaryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                // ConfirmRegenerate 只会由周/月总结页各自的 VM 实例发出，此处不处理
+                is SummaryEvent.ConfirmRegenerate -> {}
             }
         }
     }

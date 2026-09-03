@@ -24,11 +24,13 @@ fun MonthSummaryScreen(
     val state by summaryVM.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var previewEntry by remember { mutableStateOf<Entry?>(null) }
+    var confirmRegenerate by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         summaryVM.events.collect { event ->
             when (event) {
                 is SummaryEvent.ShowMessage -> snackbarHostState.showSnackbar(event.message)
+                is SummaryEvent.ConfirmRegenerate -> confirmRegenerate = event.generatedAt
             }
         }
     }
@@ -89,6 +91,23 @@ fun MonthSummaryScreen(
                 SummaryCard(entry = entry, onClick = { previewEntry = entry })
             }
         }
+    }
+
+    if (confirmRegenerate != null) {
+        AlertDialog(
+            onDismissRequest = { confirmRegenerate = null },
+            title = { Text("重新生成总结？") },
+            text = { Text("该周期已生成过总结（${confirmRegenerate}）。重新生成将覆盖旧内容，并消耗一次 API 调用。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRegenerate = null
+                    summaryVM.generateMonthSummary(force = true)
+                }) { Text("重新生成") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRegenerate = null }) { Text("取消") }
+            }
+        )
     }
 
     if (previewEntry != null) {

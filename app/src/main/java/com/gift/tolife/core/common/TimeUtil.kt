@@ -3,10 +3,6 @@ package com.gift.tolife.core.common
 import java.util.*
 
 object TimeUtil {
-    fun isMonday(): Boolean = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.MONDAY
-
-    fun isFirstDayOfMonth(): Boolean = Calendar.getInstance().get(Calendar.DAY_OF_MONTH) == 1
-
     fun currentWeekRange(): Pair<Long, Long> {
         val cal = Calendar.getInstance()
         cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)

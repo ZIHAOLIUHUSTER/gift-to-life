@@ -3,6 +3,7 @@ package com.gift.tolife.feature.memory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.ai.SummaryPrompt
+import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.dao.EntryDao
@@ -26,6 +27,7 @@ data class SummaryState(
 
 sealed class SummaryEvent {
     data class ShowMessage(val message: String) : SummaryEvent()
+    data class ConfirmRegenerate(val generatedAt: String) : SummaryEvent()
 }
 
 @HiltViewModel
@@ -61,23 +63,25 @@ class SummaryViewModel @Inject constructor(
         }
     }
 
-    fun generateWeekSummary() {
+    fun generateWeekSummary(force: Boolean = false) {
         val (start, end) = TimeUtil.previousWeekRange()
         generateSummary(
             start = start, end = end,
             systemPrompt = SummaryPrompt.pickRandomWeekPrompt(),
             existing = _state.value.currentWeekSummary,
+            force = force,
             insufficientMsg = "上周记录不足 3 条，无法生成总结",
             successMsg = "上周总结已生成"
         )
     }
 
-    fun generateMonthSummary() {
+    fun generateMonthSummary(force: Boolean = false) {
         val (start, end) = TimeUtil.previousMonthRange()
         generateSummary(
             start = start, end = end,
             systemPrompt = SummaryPrompt.MONTH_LETTER,
             existing = _state.value.currentMonthSummary,
+            force = force,
             insufficientMsg = "上月记录不足 3 条，无法生成总结",
             successMsg = "上月总结已生成"
         )
@@ -87,10 +91,16 @@ class SummaryViewModel @Inject constructor(
         start: Long, end: Long,
         systemPrompt: String,
         existing: Entry?,
+        force: Boolean,
         insufficientMsg: String,
         successMsg: String
     ) {
         viewModelScope.launch {
+            // 同周期已有总结：AI 调用前先本地拦截，经用户确认后才重新生成覆盖（不浪费 token）
+            if (existing != null && !force) {
+                _events.emit(SummaryEvent.ConfirmRegenerate(DateFormats.formatDateTime(existing.createdAt)))
+                return@launch
+            }
             _state.update { it.copy(isGenerating = true) }
             try {
                 val settings = settingsDataStore.settings.first()
