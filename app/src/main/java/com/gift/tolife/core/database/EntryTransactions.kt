@@ -69,7 +69,8 @@ class EntryTransactions @Inject constructor(
             return@withTransaction false
         }
         entryDao.updateImageDescription(id = entryId, expectedRevision = expectedRevision, description = imageDescription)
-        entryTagDao.deleteByEntryId(entryId)
+        // 只替换 AI 管辖的标签，保留用户手动维护的标签（如文摘），防止 AI 结果冲掉手动标签
+        entryTagDao.deleteByEntryIdAndTags(entryId, TagType.AI_MANAGED)
         entryTagDao.insertAll(tags.map { EntryTag(entryId, it) })
         true
     }
