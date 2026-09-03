@@ -4,8 +4,10 @@ import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryTag
+import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.common.ImageStore
 import kotlinx.coroutines.flow.Flow
+import kotlin.random.Random
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -53,4 +55,12 @@ class EntryRepository @Inject constructor(
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
 
     fun observeSummaries(): Flow<List<Entry>> = entryDao.observeSummaries()
+
+    /** 随机取一条活跃记录（含标签），随机回顾页与桌面小组件共用 */
+    suspend fun getRandomEntryWithTags(): Pair<Entry, List<TagType>>? {
+        val ids = entryDao.getAllActiveIds()
+        if (ids.isEmpty()) return null
+        val entry = entryDao.getById(ids[Random.nextInt(ids.size)]) ?: return null
+        return entry to getTags(entry.id).map { it.tag }
+    }
 }

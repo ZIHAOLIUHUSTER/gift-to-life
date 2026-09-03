@@ -3,7 +3,6 @@ package com.gift.tolife.feature.memory
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.database.EntryRepository
-import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,8 +20,7 @@ data class RandomReviewState(
 
 @HiltViewModel
 class RandomReviewViewModel @Inject constructor(
-    private val repository: EntryRepository,
-    private val entryDao: EntryDao
+    private val repository: EntryRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(RandomReviewState())
@@ -34,14 +32,8 @@ class RandomReviewViewModel @Inject constructor(
 
     fun fetchRandom() {
         viewModelScope.launch {
-            val ids = entryDao.getAllActiveIds()
-            if (ids.isEmpty()) return@launch
-            val randomId = ids[kotlin.random.Random.nextInt(ids.size)]
-            val entry = entryDao.getById(randomId)
-            if (entry != null) {
-                val tags = repository.getTags(entry.id).map { it.tag }
-                _state.update { RandomReviewState(entry, tags) }
-            }
+            val random = repository.getRandomEntryWithTags() ?: return@launch
+            _state.update { RandomReviewState(random.first, random.second) }
         }
     }
 

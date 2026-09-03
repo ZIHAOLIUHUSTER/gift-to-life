@@ -88,4 +88,23 @@ object ImageUtil {
         }
         return sampleSize
     }
+
+    /**
+     * 解码本地图片为桌面小组件缩略图：降采样（最长边 ≤ maxDimension）+ RGB_565，
+     * 控制内存与 RemoteViews 传输体积，解码失败返回 null。
+     */
+    fun decodeThumbnail(path: String, maxDimension: Int = 288): Bitmap? {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = calculateSampleSize(bounds.outWidth, bounds.outHeight, maxDimension)
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+            BitmapFactory.decodeFile(path, decodeOptions)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }
