@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.gift.tolife.core.common.ReviewDeepLink
 import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.common.SharedContent
 import com.gift.tolife.core.datastore.SettingsDataStore
@@ -56,6 +57,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleWidgetIntent(intent: Intent) {
+        val reviewEntryId = intent.getLongExtra(ReviewDeepLink.EXTRA_ENTRY_ID, -1L)
+        if (reviewEntryId >= 0) {
+            ReviewDeepLink.open(reviewEntryId)
+        }
         if (intent.getBooleanExtra("request_composer_focus", false)) {
             ShareReceiver.publish(SharedContent(text = null, imageUri = null))
         }

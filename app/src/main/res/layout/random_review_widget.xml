@@ -54,11 +54,13 @@
 
         <ImageButton
             android:id="@+id/widget_refresh"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:background="@null"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/widget_dice_button"
+            android:padding="11dp"
             android:src="@drawable/ic_casino"
-            android:tint="#5B7B6F"
+            android:tint="#FFFFFF"
             android:contentDescription="换一条" />
     </LinearLayout>
 </LinearLayout>

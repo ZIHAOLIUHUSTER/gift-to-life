@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.EntryType
 import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 data class RandomReviewState(
     val entry: Entry? = null,
-    val tags: List<TagType> = emptyList()
+    val tags: List<TagType> = emptyList(),
+    val pendingPreview: Pair<Entry, List<TagType>>? = null
 )
 
 @HiltViewModel
@@ -41,5 +43,19 @@ class RandomReviewViewModel @Inject constructor(
         viewModelScope.launch {
             repository.softDelete(entryId)
         }
+    }
+
+    /** 小组件深链：按 ID 加载条目，请求展示详情预览（已删除/不存在则忽略） */
+    fun showEntry(entryId: Long) {
+        viewModelScope.launch {
+            val entry = repository.getById(entryId) ?: return@launch
+            if (entry.isDeleted || entry.type != EntryType.NORMAL) return@launch
+            val tags = repository.getTags(entryId).map { it.tag }
+            _state.update { it.copy(pendingPreview = entry to tags) }
+        }
+    }
+
+    fun consumePendingPreview() {
+        _state.update { it.copy(pendingPreview = null) }
     }
 }

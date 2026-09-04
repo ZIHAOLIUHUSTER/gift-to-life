@@ -15,3 +15,7 @@ local.properties
 *.jks
 *.keystore
 /test
+
+# agent 本地记忆与测试截图不入库
+.pi/
+/Screenshot_*.jpg

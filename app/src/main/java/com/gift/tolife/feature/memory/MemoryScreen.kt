@@ -26,6 +26,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
+import com.gift.tolife.core.common.ReviewDeepLink
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
@@ -57,6 +58,24 @@ fun MemoryScreen(
                 is SummaryEvent.ConfirmRegenerate -> {}
             }
         }
+    }
+
+    // 随机回顾小组件深链：收到条目 ID → 加载并弹出详情预览
+    LaunchedEffect(Unit) {
+        ReviewDeepLink.entryId.collect { id ->
+            if (id != null) {
+                randomVM.showEntry(id)
+                ReviewDeepLink.consume()
+            }
+        }
+    }
+
+    // 深链/预览请求加载完成后弹出详情
+    LaunchedEffect(randomState.pendingPreview) {
+        val pending = randomState.pendingPreview ?: return@LaunchedEffect
+        previewEntry = pending.first
+        previewTags = pending.second
+        randomVM.consumePendingPreview()
     }
 
     Scaffold(

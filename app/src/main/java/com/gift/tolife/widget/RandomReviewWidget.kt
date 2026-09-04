@@ -11,6 +11,7 @@ import android.widget.RemoteViews
 import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.ImageUtil
+import com.gift.tolife.core.common.ReviewDeepLink
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
@@ -79,9 +80,10 @@ class RandomReviewWidget : AppWidgetProvider() {
     private fun buildViews(context: Context, random: Pair<Entry, List<TagType>>?): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.random_review_widget)
 
-        // 点卡片打开 App
+        // 点卡片打开 App（携带条目 ID，深链到该条目的详情预览）
         context.packageManager.getLaunchIntentForPackage(context.packageName)?.let { openApp ->
             openApp.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            random?.let { openApp.putExtra(ReviewDeepLink.EXTRA_ENTRY_ID, it.first.id) }
             views.setOnClickPendingIntent(
                 R.id.widget_container,
                 PendingIntent.getActivity(

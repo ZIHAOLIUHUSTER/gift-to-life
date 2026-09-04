@@ -3,6 +3,7 @@ package com.gift.tolife.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -12,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.gift.tolife.core.common.ReviewDeepLink
 import com.gift.tolife.feature.memory.MemoryScreen
 import com.gift.tolife.feature.memory.MonthSummaryScreen
 import com.gift.tolife.feature.memory.OnThisDayScreen
@@ -25,6 +27,19 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+
+    // 随机回顾小组件深链：点击卡片 → 切到回忆页（详情预览由 MemoryScreen 消费）
+    LaunchedEffect(Unit) {
+        ReviewDeepLink.entryId.collect { id ->
+            if (id != null) {
+                navController.navigate(Screen.Memory.route) {
+                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
