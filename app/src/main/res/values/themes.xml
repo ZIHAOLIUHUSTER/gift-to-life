@@ -4,12 +4,13 @@
 
     <!--
       启动屏（2026-09-17，androidx.core:core-splashscreen）：
-      品牌墨绿底 + 暖白星形，消除冷启动时先闪一下白屏的问题。
+      纸底 + 图标本身（白卡 + 星形），与桌面图标同源，消除冷启动白屏。
+      深色模式的底色在 values-night 里覆盖（墨底），避免暗色下闪光。
       Android 12+ 走系统 SplashScreen API，更低版本由 compat 库托管。
     -->
     <style name="Theme.GiftToLife.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.GiftToLife</item>
     </style>
 </resources>

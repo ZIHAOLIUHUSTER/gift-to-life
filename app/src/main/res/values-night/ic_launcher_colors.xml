@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式的启动屏底色：墨底，避免暗色下先闪一下亮屏 -->
+    <color name="splash_background">#15181A</color>
+</resources>

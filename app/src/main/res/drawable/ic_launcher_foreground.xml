@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  To Life 系列图标母题 · A 纸页卡（2026-09-17 用户定稿）
+  结构：纸底（背景层）+ 白卡 + 主色记号。
+  几何与预览图完全同源（108 视口，内容落在 66 安全区内）。
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 简单的星形占位图标（To Life 系列：墨黑底 + 奶油色块） -->
+    <!-- 白卡 -->
     <path
-        android:fillColor="#F5E9D4"
-        android:pathData="M54,30 L58,44 L73,44 L61,52 L66,66 L54,57 L42,66 L47,52 L35,44 L50,44 Z" />
+        android:fillColor="@color/ic_launcher_card"
+        android:pathData="M37.26,25.38 H70.74 A11.88,11.88 0 0 1 82.62,37.26 V70.74 A11.88,11.88 0 0 1 70.74,82.62 H37.26 A11.88,11.88 0 0 1 25.38,70.74 V37.26 A11.88,11.88 0 0 1 37.26,25.38 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_accent"
+        android:pathData="M54.00,36.18 L58.19,48.23 L70.95,48.49 L60.78,56.20 L64.47,68.42 L54.00,61.13 L43.53,68.42 L47.22,56.20 L37.05,48.49 L49.81,48.23 Z" />
 </vector>

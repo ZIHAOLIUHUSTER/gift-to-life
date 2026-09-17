@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      To Life 系列图标母题（2026-09-17 统一）：
-      墨黑底 + 系列色圆角几何块。Gift 的隐喻是星形（闪念），用系列奶油色。
+      To Life 系列图标母题 · A 纸页卡（2026-09-17 用户定稿）：
+      纸底 + 白卡 + 主色记号。用户的反馈是"不喜欢黑底、图标要统一"，
+      改为与 App 内一致的"纸 + 白卡 + 点睛"，Gift 的记号是星形（闪念）。
     -->
-    <color name="ic_launcher_background">#181D26</color>
-    <color name="ic_launcher_foreground">#F5E9D4</color>
+    <color name="ic_launcher_background">#F5F7EF</color>
+    <color name="ic_launcher_card">#FDFEFA</color>
+    <color name="ic_launcher_accent">#5B7B6F</color>
+    <!-- 启动屏底色：浅色=纸；深色见 values-night -->
+    <color name="splash_background">#F5F7EF</color>
 </resources>
