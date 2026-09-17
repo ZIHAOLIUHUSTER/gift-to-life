@@ -17,8 +17,8 @@ android {
         applicationId = "com.gift.tolife"
         minSdk = 26
         targetSdk = 34
-        versionCode = 40
-        versionName = "4.3.3"
+        versionCode = 41
+        versionName = "4.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

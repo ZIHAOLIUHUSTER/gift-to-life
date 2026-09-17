@@ -66,7 +66,7 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
                         Card(
                             modifier = Modifier.fillMaxWidth().clickable { previewEntry = entry },
                             shape = MaterialTheme.shapes.medium,
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(entry.content, style = MaterialTheme.typography.bodyMedium, maxLines = 4, overflow = TextOverflow.Ellipsis)

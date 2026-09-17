@@ -37,6 +37,7 @@ import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.core.ui.theme.ThemeExtended
 import com.gift.tolife.core.common.SiblingApp
+import com.gift.tolife.core.ui.theme.MorandiPalette
 import com.gift.tolife.core.ui.theme.ThemeVariant
 import com.gift.tolife.core.ui.theme.toPalette
 import java.util.Calendar
@@ -154,7 +155,7 @@ private fun SettingsSectionCard(title: String, description: String, icon: ImageV
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
@@ -340,7 +341,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text("使用统计", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
@@ -542,7 +543,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         } else {
             LazyColumn(Modifier.fillMaxSize().padding(innerPadding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(deletedEntries, key = { it.id }) { entry ->
-                    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+                    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(entry.content.take(40) + if (entry.content.length > 40) "..." else "", style = MaterialTheme.typography.bodySmall)
@@ -559,7 +560,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun SettingsCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)) {
         Column(Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
@@ -630,12 +631,7 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        Modifier
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(palette.primary)
-                    )
+                    SkinSwatch(palette = palette)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(variant.displayName, style = MaterialTheme.typography.bodyLarge)
@@ -656,7 +652,37 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 }
 
 // ===== 关于子页 =====
-@OptIn(ExperimentalMaterial3Api::class)
+
+/**
+ * 皮肤色卡（P39 纸张感修订）：纸底 + 白卡 + 一小段主色点睛。
+ *
+ * 旧版是一个 28dp 实心主色方块 —— 大面积纯色在列表里很刺眼，也看不出“纸”是什么颜色。
+ */
+@Composable
+private fun SkinSwatch(palette: MorandiPalette) {
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(palette.background)
+            .padding(5.dp),
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(5.dp))
+                .background(palette.surfaceContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier
+                    .size(11.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(palette.primary),
+            )
+        }
+    }
+}@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AboutPage(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -766,7 +792,7 @@ private fun StatsCard(stats: SettingsViewModel.StatsData, onRefresh: () -> Unit)
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(monthLabel, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)

@@ -46,7 +46,7 @@ fun AppNavigation() {
             val route = currentDestination?.route
             if (route != "week_summary" && route != "month_summary" && route != "on_this_day") {
                 NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = MaterialTheme.colorScheme.onSurface
             ) {
                 bottomNavItems.forEach { screen ->
