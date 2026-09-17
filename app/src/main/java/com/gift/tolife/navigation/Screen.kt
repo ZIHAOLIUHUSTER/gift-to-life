@@ -1,54 +1,59 @@
 package com.gift.tolife.navigation
 
-import androidx.annotation.DrawableRes
-import com.gift.tolife.R
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.EventNote
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.EditNote
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Today
+import androidx.compose.ui.graphics.vector.ImageVector
 
+/**
+ * 页面路由与底栏图标。
+ *
+ * 2026-09-17：图标从"自制 vector drawable（方角）"统一为 **Material 圆角图标**
+ * （`Icons.Rounded.*`，material-icons-extended），与系列设计语言的"圆角亲和"一致。
+ */
 sealed class Screen(
     val route: String,
     val label: String,
-    @DrawableRes val selectedIconRes: Int,
-    @DrawableRes val unselectedIconRes: Int
+    val icon: ImageVector,
 ) {
     data object Memory : Screen(
         route = "memory",
         label = "回忆",
-        selectedIconRes = R.drawable.ic_auto_awesome,
-        unselectedIconRes = R.drawable.ic_auto_awesome
+        icon = Icons.Rounded.History,
     )
 
     data object Record : Screen(
         route = "record",
         label = "记录",
-        selectedIconRes = R.drawable.ic_edit_note,
-        unselectedIconRes = R.drawable.ic_edit_note
+        icon = Icons.Rounded.EditNote,
     )
 
     data object Settings : Screen(
         route = "settings",
         label = "设置",
-        selectedIconRes = R.drawable.ic_settings,
-        unselectedIconRes = R.drawable.ic_settings
+        icon = Icons.Rounded.Settings,
     )
 
     data object WeekSummary : Screen(
         route = "week_summary",
         label = "周总结",
-        selectedIconRes = R.drawable.ic_auto_awesome,
-        unselectedIconRes = R.drawable.ic_auto_awesome
+        icon = Icons.AutoMirrored.Rounded.EventNote,
     )
 
     data object MonthSummary : Screen(
         route = "month_summary",
         label = "月总结",
-        selectedIconRes = R.drawable.ic_auto_awesome,
-        unselectedIconRes = R.drawable.ic_auto_awesome
+        icon = Icons.Rounded.CalendarMonth,
     )
 
     data object OnThisDay : Screen(
         route = "on_this_day",
         label = "那年今日",
-        selectedIconRes = R.drawable.ic_auto_awesome,
-        unselectedIconRes = R.drawable.ic_auto_awesome
+        icon = Icons.Rounded.Today,
     )
 }
 

@@ -18,6 +18,8 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.gift.tolife.R
 import java.io.File
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 
 @Composable
 fun ImagePreviewDialog(imagePath: String, onDismiss: () -> Unit) {
@@ -50,7 +52,7 @@ fun ImagePreviewDialog(imagePath: String, onDismiss: () -> Unit) {
                     .statusBarsPadding()
             ) {
                 Icon(
-                    painterResource(R.drawable.ic_close),
+                    Icons.Rounded.Close,
                     contentDescription = "关闭",
                     tint = Color.White
                 )

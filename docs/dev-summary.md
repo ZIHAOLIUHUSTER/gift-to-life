@@ -126,6 +126,14 @@
 
 > 挂账：`MemoryScreen` 有 7 条历史遗留 `!!` 警告（HEAD 就存在，与本次改动无关）。
 
+### v4.3.2 圆角图标统一（2026-09-17）
+
+- 图标从「自制方角 vector drawable」统一为 **Material 圆角图标**（`Icons.Rounded.*` / `Icons.AutoMirrored.Rounded.*`），引入 `material-icons-extended`；
+- 顺手修掉设置页图标语义错配：**备份与恢复 → `Backup`、回收站 → `Delete`**（原来是“编辑”与“刷新”）、外观 → `Palette`、AI 配置 → `Settings`；
+- 底栏图标模型从 `@DrawableRes Int` 改为 `ImageVector`；回忆/记录/设置/周总结/月总结/那年今日 六个页面各配语义图标（之前底栏全是同一个 sparkle）；
+- 删除 **15 个**不再引用的 `ic_*.xml`；`ic_casino`（小组件布局用）与启动图标保留；
+- **实测体积**：debug 11.50 → **17.48 MB**（全量图标库未缩减，仅影响开发包）；release 2.34 → **2.22 MB**（R8 把删掉的资源也一并清了）。
+
 ## 关键文件
 
 - `app/src/main/java/com/gift/tolife/feature/record/` — 记录页（含 EntryEditDraft 草稿模式）

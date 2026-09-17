@@ -17,8 +17,8 @@ android {
         applicationId = "com.gift.tolife"
         minSdk = 26
         targetSdk = 34
-        versionCode = 38
-        versionName = "4.3.1"
+        versionCode = 39
+        versionName = "4.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -75,6 +75,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    // 2026-09-17：统一圆角图标（Icons.Rounded.*）。全量图标库只影响 debug 包大小（未缩减），
+    // release 经 R8 后仅保留实际引用的图标；实测体积见 docs/dev-summary.md。
+    implementation("androidx.compose.material:material-icons-extended")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // Core

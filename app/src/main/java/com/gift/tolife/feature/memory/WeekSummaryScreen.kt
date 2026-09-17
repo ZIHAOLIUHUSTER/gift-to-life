@@ -14,6 +14,8 @@ import com.gift.tolife.R
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.ui.component.AppEmptyState
 import com.gift.tolife.feature.record.EntryPreviewSheet
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +49,7 @@ fun WeekSummaryScreen(
                 title = { Text("周总结") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

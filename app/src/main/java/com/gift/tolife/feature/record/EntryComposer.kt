@@ -4,7 +4,8 @@ import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,7 +70,7 @@ fun EntryComposer(
                         contentScale = ContentScale.Crop
                     )
                     IconButton(onClick = onClearImage, modifier = Modifier.align(Alignment.TopEnd)) {
-                        Icon(Icons.Filled.Close, contentDescription = "移除图片", tint = MaterialTheme.colorScheme.surface)
+                        Icon(Icons.Rounded.Close, contentDescription = "移除图片", tint = MaterialTheme.colorScheme.surface)
                     }
                 }
             }
@@ -84,7 +85,7 @@ fun EntryComposer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onPickImage) {
-                    Icon(painterResource(R.drawable.ic_add_photo), contentDescription = null)
+                    Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(if (pendingImageUri == null) "添加图片" else "更换图片")
                 }

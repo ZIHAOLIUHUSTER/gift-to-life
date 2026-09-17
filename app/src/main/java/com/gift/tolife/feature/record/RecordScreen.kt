@@ -29,6 +29,9 @@ import com.gift.tolife.core.ui.component.AppEmptyState
 import com.gift.tolife.core.model.EntryQuery
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.feature.record.EntryWithTags
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Close
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,7 +110,7 @@ fun RecordScreen(
                     title = { Text("记录") },
                     actions = {
                         IconButton(onClick = viewModel::openSearch) {
-                            Icon(painterResource(R.drawable.ic_search), contentDescription = "搜索")
+                            Icon(Icons.Rounded.Search, contentDescription = "搜索")
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -246,7 +249,7 @@ private fun SearchTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onClose) {
-                Icon(painterResource(R.drawable.ic_close), contentDescription = "关闭搜索")
+                Icon(Icons.Rounded.Close, contentDescription = "关闭搜索")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

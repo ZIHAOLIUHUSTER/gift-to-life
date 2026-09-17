@@ -33,6 +33,9 @@ import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.ChevronRight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -337,7 +340,7 @@ private fun RandomReviewCard(
                         enabled = refreshEnabled,
                         modifier = Modifier.testTag(UiTestTags.MEMORY_REFRESH)
                     ) {
-                        Icon(painterResource(R.drawable.ic_refresh), contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("再抽一条", style = MaterialTheme.typography.bodySmall)
                     }
@@ -395,7 +398,7 @@ internal fun SummaryCard(entry: Entry, onClick: () -> Unit = {}) {
             }
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                painterResource(R.drawable.ic_chevron_right),
+                Icons.Rounded.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
@@ -451,7 +454,7 @@ private fun OnThisDaySection(onViewAll: () -> Unit) {
                 }
             }
             Icon(
-                painterResource(R.drawable.ic_chevron_right),
+                Icons.Rounded.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)

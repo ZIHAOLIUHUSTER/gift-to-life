@@ -35,6 +35,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Share
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -127,7 +129,7 @@ fun EntryPreviewSheet(
                 )
                 IconButton(onClick = { shareEntry() }) {
                     Icon(
-                        painterResource(R.drawable.ic_share),
+                        Icons.Rounded.Share,
                         contentDescription = "分享",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)

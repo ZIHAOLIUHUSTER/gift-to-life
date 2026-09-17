@@ -57,7 +57,7 @@ fun AppNavigation() {
                     NavigationBarItem(
                         icon = {
                             Icon(
-                                painter = painterResource(id = if (selected) screen.selectedIconRes else screen.unselectedIconRes),
+                                imageVector = screen.icon,
                                 contentDescription = screen.label
                             )
                         },

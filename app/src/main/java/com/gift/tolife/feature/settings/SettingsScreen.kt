@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -34,6 +35,15 @@ import com.gift.tolife.core.ui.theme.ThemeExtended
 import com.gift.tolife.core.ui.theme.ThemeVariant
 import com.gift.tolife.core.ui.theme.toPalette
 import java.util.Calendar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Backup
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 
 private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE }
 
@@ -93,7 +103,7 @@ private fun SettingsMainPage(
                 SettingsSectionCard(
                     title = "AI 配置",
                     description = "API Key、模型选择与连通性测试",
-                    painter = painterResource(R.drawable.ic_settings),
+                    icon = Icons.Rounded.Settings,
                     onClick = { onNavigate(SettingsPage.MODEL_CONFIG) }
                 )
             }
@@ -101,7 +111,7 @@ private fun SettingsMainPage(
                 SettingsSectionCard(
                     title = "备份与恢复",
                     description = "备份恢复、导入导出",
-                    painter = painterResource(R.drawable.ic_edit_note),
+                    icon = Icons.Rounded.Backup,
                     onClick = { onNavigate(SettingsPage.DATA_MANAGE) }
                 )
             }
@@ -109,7 +119,7 @@ private fun SettingsMainPage(
                 SettingsSectionCard(
                     title = "回收站",
                     description = "恢复或彻底删除已移除的记录",
-                    painter = painterResource(R.drawable.ic_refresh),
+                    icon = Icons.Rounded.Delete,
                     onClick = { onNavigate(SettingsPage.RECYCLE_BIN) }
                 )
             }
@@ -117,7 +127,7 @@ private fun SettingsMainPage(
                 SettingsSectionCard(
                     title = "外观",
                     description = "浅色、深色或跟随系统",
-                    painter = painterResource(R.drawable.ic_auto_awesome),
+                    icon = Icons.Rounded.Palette,
                     onClick = { onNavigate(SettingsPage.APPEARANCE) }
                 )
             }
@@ -126,20 +136,20 @@ private fun SettingsMainPage(
 }
 
 @Composable
-private fun SettingsSectionCard(title: String, description: String, painter: Painter, onClick: () -> Unit) {
+private fun SettingsSectionCard(title: String, description: String, icon: ImageVector, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(painter = painter, contentDescription = null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                 Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Rounded.ChevronRight, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -187,7 +197,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("AI 配置") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
                     titleContentColor = MaterialTheme.colorScheme.onBackground
@@ -211,7 +221,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     label = { Text("API Key") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(painterResource(if (showKey) R.drawable.ic_visibility_off else R.drawable.ic_visibility), "切换") } },
+                    trailingIcon = { IconButton(onClick = { showKey = !showKey }) { Icon(if (showKey) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility, "切换") } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -307,7 +317,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(title = { Text("备份与恢复") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground))
         }
     ) { innerPadding ->
@@ -477,7 +487,7 @@ private fun RecycleBinPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(title = { Text("回收站") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") } },
                 actions = {
                     if (deletedEntries.isNotEmpty()) {
                         TextButton(
@@ -555,7 +565,7 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         topBar = {
             TopAppBar(
                 title = { Text("外观") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
