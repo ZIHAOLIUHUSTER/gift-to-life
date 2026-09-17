@@ -1,6 +1,7 @@
 package com.gift.tolife.core.export
 
 import com.gift.tolife.core.model.Entry
+import com.gift.tolife.core.model.TagType
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import java.io.BufferedOutputStream
@@ -35,7 +36,7 @@ class V2ArchiveWriter(
      *
      * @param imageFile 条目引用的图片文件；null 表示无图；文件不存在时以无图写入并计入缺失统计。
      */
-    fun addEntry(entry: Entry, tags: List<String>, imageFile: File?) {
+    fun addEntry(entry: Entry, tags: List<TagType>, imageFile: File?) {
         var imageEntry: String? = null
         var imageSha256: String? = null
         if (imageFile != null) {
@@ -49,6 +50,7 @@ class V2ArchiveWriter(
             }
         }
         if (entry.isDeleted) deletedCount++
+        val tagPayload = TagCodec.encode(tags)
         manifestEntries.add(
             BackupV2Entry(
                 id = entry.id,
@@ -61,7 +63,8 @@ class V2ArchiveWriter(
                 imageDescription = entry.imageDescription,
                 isDeleted = entry.isDeleted,
                 summaryModel = entry.summaryModel,
-                tags = tags,
+                tags = tagPayload.labels,
+                tagIds = tagPayload.ids,
                 imageEntry = imageEntry,
                 imageSha256 = imageSha256
             )

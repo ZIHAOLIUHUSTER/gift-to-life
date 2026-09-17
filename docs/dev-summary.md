@@ -33,7 +33,7 @@
 5. 回忆页（内容驱动高度，Crossfade）
 6. 那年今日（单次查询不限年份，详情页）
 7. 记录统计（热力图 + 连续天数 + 使用统计）
-8. 导出/导入（v2 ZIP 批量导入 + 流式实际解压校验 + SHA-256 + staging + 原子事务）
+8. 导出/导入（v2 ZIP；导出临时归档+自检后落盘、含回收站；导入只读预检+导入前快照+可撤销；流式实际解压校验 + SHA-256 + staging + 原子事务）
 9. 回收站（软删除 + 标签恢复）
 10. 深浅色主题（system/light/dark 响应式切换）
 11. Widget + 分享接入
@@ -87,7 +87,21 @@
 - 删除: `pendingContentText`（`RecordUiState`）, `SummaryRange.kt`（整个文件）, `UiTestTags.SEARCH_IMAGE_FILTER`
 - 删除 45 个过期文档/审查文件/截图（-6197 行）
 
+## v4.2.1–4.2.2 备份链路加固（2026-09-17）
+
+- 导出：临时归档 → 结构自检 → 复制到目标（失败不截断旧备份）；NonCancellable + 进度提示；默认文件名带时间戳
+- 回收站条目及图片纳入导出；回执显示总条数/回收站数/图片数/缺图数
+- 导入：只读预检弹窗（条数/图片/版本/时间）、空备份二次确认、导入前自动快照（cacheDir，最近 3 份）、一键「撤销上次导入」
+- 一条目一份图片文件（导入时逐条复制），避免共享图片被互相删除；导出重名图片自动加后缀
+- 配额按解压后实际字节累计；manifest 128 MiB、V1 JSON 256 MiB 读取上限
+- 启动孤儿图片清扫加 10 分钟年龄保护，消除与导入（先落盘后提交）的竞态
+- 标签双写 `tagIds`（枚举名）+ `tags`（文案），导入优先枚举名、旧备份回退文案，未知标签计数提示
+- 模型配置导入全字段校验后统一应用（不再半生效），64 KiB 上限
+- 备份 manifest 写入真实 App 版本；系统备份/迁移规则排除数据库与图片目录
+- JVM 单测 39 个全绿（备份链路新增 24 个：归档写入/校验、标签编解码、模型配置）
+
 ## 关键文件
+
 - `app/src/main/java/com/gift/tolife/feature/record/` — 记录页（含 EntryEditDraft 草稿模式）
 - `app/src/main/java/com/gift/tolife/feature/memory/` — 回忆页
 - `app/src/main/java/com/gift/tolife/feature/settings/` — 设置页

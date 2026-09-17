@@ -20,6 +20,7 @@ data class BackupV2Entry(
     val isDeleted: Boolean = false,
     val summaryModel: String? = null,
     val tags: List<String> = emptyList(),
+    val tagIds: List<String> = emptyList(),
     val imageEntry: String? = null,
     val imageSha256: String? = null
 )
@@ -48,7 +49,8 @@ data class ImportResult(
     val totalCount: Int,
     val deletedCount: Int,
     val imageCount: Int,
-    val snapshotCreated: Boolean
+    val snapshotCreated: Boolean,
+    val droppedTagCount: Int = 0
 )
 
 /** 导入前自动快照信息（供 UI 展示撤销入口）。 */

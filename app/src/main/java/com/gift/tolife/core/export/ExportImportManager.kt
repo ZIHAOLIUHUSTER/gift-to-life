@@ -2,6 +2,7 @@ package com.gift.tolife.core.export
 
 import android.content.Context
 import android.net.Uri
+import com.gift.tolife.core.common.LimitedInput
 import com.gift.tolife.core.database.AppDatabase
 import com.gift.tolife.core.database.StagedImportEntry
 import com.gift.tolife.core.database.dao.EntryDao
@@ -16,10 +17,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -76,10 +75,10 @@ class ExportImportManager @Inject constructor(
 
                     // 批量获取标签
                     val batchIds = batch.map { it.id }
-                    val tagMap = mutableMapOf<Long, MutableList<String>>()
+                    val tagMap = mutableMapOf<Long, MutableList<TagType>>()
                     batchIds.chunked(500).forEach { chunk ->
                         entryTagDao.getByEntryIds(chunk).forEach { tag ->
-                            tagMap.getOrPut(tag.entryId) { mutableListOf() }.add(tag.tag.label)
+                            tagMap.getOrPut(tag.entryId) { mutableListOf() }.add(tag.tag)
                         }
                     }
 
@@ -159,7 +158,8 @@ class ExportImportManager @Inject constructor(
                 totalCount = counts.total,
                 deletedCount = counts.deleted,
                 imageCount = counts.images,
-                snapshotCreated = snapshotCreated
+                snapshotCreated = snapshotCreated,
+                droppedTagCount = counts.droppedTags
             )
         } finally {
             tempFile.delete()
@@ -190,7 +190,8 @@ class ExportImportManager @Inject constructor(
             totalCount = counts.total,
             deletedCount = counts.deleted,
             imageCount = counts.images,
-            snapshotCreated = snapshotCreated
+            snapshotCreated = snapshotCreated,
+            droppedTagCount = counts.droppedTags
         )
     }
 
@@ -272,26 +273,9 @@ class ExportImportManager @Inject constructor(
         return buf
     }
 
-    /** 有上限地读入内存，避免超大 manifest / 旧版 JSON 直接 OOM。 */
-    private fun readLimitedBytes(stream: InputStream, limit: Long, what: String): ByteArray {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(8192)
-        var total = 0L
-        while (true) {
-            val read = stream.read(buffer)
-            if (read < 0) break
-            total += read
-            if (total > limit) {
-                throw IOException("$what 过大（上限 ${limit / (1024 * 1024)} MiB）")
-            }
-            output.write(buffer, 0, read)
-        }
-        return output.toByteArray()
-    }
-
     private fun parseLegacyJson(file: File): ExportData {
         val json = file.inputStream().buffered().use { stream ->
-            String(readLimitedBytes(stream, BackupV2Config.MAX_LEGACY_JSON_BYTES, "旧版备份"), Charsets.UTF_8)
+            String(LimitedInput.readBytes(stream, BackupV2Config.MAX_LEGACY_JSON_BYTES, "旧版备份"), Charsets.UTF_8)
         }
         val data = gson.fromJson(json, ExportData::class.java)
             ?: throw IOException("JSON 解析失败")
@@ -323,7 +307,7 @@ class ExportImportManager @Inject constructor(
                     ?: throw IOException("备份缺少 manifest.json")
                 val manifest = zip.getInputStream(manifestEntry).use { stream ->
                     val json = String(
-                        readLimitedBytes(stream, BackupV2Config.MAX_MANIFEST_BYTES, "manifest.json"),
+                        LimitedInput.readBytes(stream, BackupV2Config.MAX_MANIFEST_BYTES, "manifest.json"),
                         Charsets.UTF_8
                     )
                     gson.fromJson(json, BackupV2Manifest::class.java)
@@ -395,7 +379,10 @@ class ExportImportManager @Inject constructor(
                 }
 
                 // Phase 4: Build staged entries with final paths
+                var droppedTags = 0
                 val stagedEntries = manifest.entries.mapIndexed { index, e ->
+                    val decoded = TagCodec.decode(e.tagIds, e.tags)
+                    droppedTags += decoded.dropped
                     StagedImportEntry(
                         entry = Entry(
                             content = e.content,
@@ -409,7 +396,7 @@ class ExportImportManager @Inject constructor(
                             summaryEnd = e.summaryEnd,
                             summaryModel = e.summaryModel
                         ),
-                        tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
+                        tags = decoded.tags
                     )
                 }
 
@@ -429,7 +416,8 @@ class ExportImportManager @Inject constructor(
                 return ImportCounts(
                     total = stagedEntries.size,
                     deleted = stagedEntries.count { it.entry.isDeleted },
-                    images = stagedEntries.count { it.entry.imagePath != null }
+                    images = stagedEntries.count { it.entry.imagePath != null },
+                    droppedTags = droppedTags
                 )
             }
         } catch (e: Exception) {
@@ -449,6 +437,7 @@ class ExportImportManager @Inject constructor(
         val stagedEntries = mutableListOf<StagedImportEntry>()
         val imagesDir = File(context.filesDir, "images").apply { mkdirs() }
         var totalImageBytes = 0L
+        var droppedTags = 0
         val writtenImages = mutableListOf<String>()
 
         try {
@@ -464,6 +453,8 @@ class ExportImportManager @Inject constructor(
                     writtenImages.add(file.absolutePath)
                     imagePath = file.absolutePath
                 }
+                val decoded = TagCodec.decode(null, e.tags)
+                droppedTags += decoded.dropped
                 stagedEntries.add(StagedImportEntry(
                     entry = Entry(
                         content = e.content,
@@ -472,7 +463,7 @@ class ExportImportManager @Inject constructor(
                         imagePath = imagePath,
                         imageDescription = e.imageDescription
                     ),
-                    tags = e.tags.mapNotNull { tag -> TagType.entries.find { it.label == tag } }
+                    tags = decoded.tags
                 ))
             }
         } catch (t: Throwable) {
@@ -494,7 +485,8 @@ class ExportImportManager @Inject constructor(
         ImportCounts(
             total = stagedEntries.size,
             deleted = 0,
-            images = writtenImages.size
+            images = writtenImages.size,
+            droppedTags = droppedTags
         )
     }
 
@@ -521,7 +513,7 @@ class ExportImportManager @Inject constructor(
 
     private data class StagedImage(val file: File, val hash: String)
 
-    private data class ImportCounts(val total: Int, val deleted: Int, val images: Int)
+    private data class ImportCounts(val total: Int, val deleted: Int, val images: Int, val droppedTags: Int)
 
     companion object {
         private val ZIP_MAGIC = byteArrayOf('P'.code.toByte(), 'K'.code.toByte())

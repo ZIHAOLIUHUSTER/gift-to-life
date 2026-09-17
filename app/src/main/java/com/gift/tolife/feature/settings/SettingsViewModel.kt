@@ -4,9 +4,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import dagger.hilt.android.qualifiers.ApplicationContext
 import com.gift.tolife.core.ai.AiResult
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
@@ -20,7 +17,9 @@ import com.gift.tolife.core.export.SnapshotInfo
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import com.gift.tolife.core.network.BaseUrlValidator
+import com.google.gson.GsonBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -271,6 +270,7 @@ class SettingsViewModel @Inject constructor(
         val builder = StringBuilder("已导入 ${result.totalCount} 条记录")
         if (result.deletedCount > 0) builder.append("（含回收站 ${result.deletedCount} 条）")
         if (result.imageCount > 0) builder.append("，${result.imageCount} 张图片")
+        if (result.droppedTagCount > 0) builder.append("；有 ${result.droppedTagCount} 个无法识别的标签已忽略")
         builder.append(
             if (result.snapshotCreated) "；导入前快照已保存，如有问题可在本页撤销"
             else "；注意：快照创建失败，本次导入无法撤销"
@@ -395,26 +395,23 @@ class SettingsViewModel @Inject constructor(
     fun importModelConfig(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
-                val json = context.contentResolver.openInputStream(uri)?.use { String(it.readBytes()) }
-                    ?: return@launch
-                // 尝试新格式 ModelConfigExport
-                val newConfig = try { Gson().fromJson(json, ModelConfigExport::class.java) } catch (_: Exception) { null }
-                if (newConfig != null) {
-                    settingsDataStore.updateBaseUrl(newConfig.baseUrl)
-                    settingsDataStore.updateTagModel(newConfig.tagModel)
-                    settingsDataStore.updateSummaryModel(newConfig.summaryModel)
-                    settingsDataStore.updateVisionModel(newConfig.visionModel)
-                } else {
-                    // 回退到旧 AppSettings 格式（不导入 API Key）
-                    val oldConfig = Gson().fromJson(json, AppSettings::class.java) ?: return@launch
-                    settingsDataStore.updateBaseUrl(oldConfig.baseUrl)
-                    settingsDataStore.updateTagModel(oldConfig.tagModel)
-                    settingsDataStore.updateSummaryModel(oldConfig.summaryModel)
-                    settingsDataStore.updateVisionModel(oldConfig.visionModel)
-                }
-                _events.emit(SettingsEvent.ShowMessage("模型配置已导入"))
+                val json = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    String(
+                        com.gift.tolife.core.common.LimitedInput.readBytes(
+                            stream, ModelConfigCodec.MAX_CONFIG_BYTES, "模型配置"
+                        ),
+                        Charsets.UTF_8
+                    )
+                } ?: return@launch
+                // 全部字段校验通过才统一应用，避免"部分生效"
+                val config = ModelConfigCodec.parse(json)
+                settingsDataStore.updateBaseUrl(config.baseUrl)
+                settingsDataStore.updateTagModel(config.tagModel)
+                settingsDataStore.updateSummaryModel(config.summaryModel)
+                settingsDataStore.updateVisionModel(config.visionModel)
+                _events.emit(SettingsEvent.ShowMessage("模型配置已导入（不含 API Key）"))
             } catch (t: Throwable) {
-                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: ""}"))
+                _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
             }
         }
     }

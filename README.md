@@ -27,8 +27,8 @@
 - 🖼️ **图片筛选** — 全部 / 有图 / 无图三态切换
 
 ### 数据
-- 📦 **导出 v2 ZIP** — `.gtlbackup` 格式，manifest.json + images/，流式读写
-- 📥 **导入校验** — 先校验再写入，损坏备份不破坏现有数据
+- 📦 **导出 v2 ZIP** — `.gtlbackup` 格式（manifest.json + images/），含回收站；先写临时归档并自检，通过后才落盘
+- 📥 **导入预检** — 选完文件先展示条数/图片/版本，空备份二次确认；导入前自动快照，可一键撤销
 - ♻️ **回收站** — 软删除，标签完整恢复，图片文件同步清理
 - 🔄 **兼容 v1** — 旧 JSON 格式只读导入，提示缺少元数据
 
@@ -49,7 +49,7 @@
 | 后台 | WorkManager（标签/视觉异步，唯一任务防重复） |
 | 列表 | Paging 3 + SQL 下推（LEFT JOIN 一次查带标签） |
 | AI | Retrofit + OkHttp，OpenAI 兼容 Chat Completions API |
-| 备份 | ZIP（JsonReader/Writer 流式处理） |
+| 备份 | v2 ZIP：临时归档 → 结构校验 → 复制到目标；导入前自动快照（可撤销） |
 
 ## 构建
 

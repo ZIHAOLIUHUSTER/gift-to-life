@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  allowBackup=false 已禁用云备份；这里额外把设备间迁移（D2D）的数据也全部排除，
+  避免出现「数据库迁移了、图片没迁移」的半残状态。
+  换机迁移请使用 App 内「导出备份 / 导入恢复」。
+-->
 <full-backup-content>
-    <exclude domain="sharedpref" path="gift_settings.xml"/>
-    <exclude domain="root" path="files/"/>
+    <exclude domain="sharedpref" path="."/>
+    <exclude domain="database" path="."/>
+    <exclude domain="file" path="."/>
+    <exclude domain="external" path="."/>
 </full-backup-content>

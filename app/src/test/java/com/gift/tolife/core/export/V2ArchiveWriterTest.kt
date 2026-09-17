@@ -2,6 +2,7 @@ package com.gift.tolife.core.export
 
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryType
+import com.gift.tolife.core.model.TagType
 import com.google.gson.Gson
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -42,8 +43,8 @@ class V2ArchiveWriterTest {
 
         val result = backup.outputStream().use { out ->
             V2ArchiveWriter(out).use { writer ->
-                writer.addEntry(entries[0], listOf("闪念", "文摘"), imageA)
-                writer.addEntry(entries[1], listOf("事记"), imageB)
+                writer.addEntry(entries[0], listOf(TagType.FLASH_THOUGHT, TagType.EXCERPT), imageA)
+                writer.addEntry(entries[1], listOf(TagType.EVENT), imageB)
                 writer.addEntry(entries[2], emptyList(), null)
                 writer.addEntry(entries[3], emptyList(), missing)
                 writer.finish()
@@ -63,6 +64,7 @@ class V2ArchiveWriterTest {
         assertEquals(2, manifest.formatVersion)
         assertEquals(4, manifest.entryCount)
         assertEquals(listOf("闪念", "文摘"), manifest.entries[0].tags)
+        assertEquals(listOf("FLASH_THOUGHT", "EXCERPT"), manifest.entries[0].tagIds)
         assertFalse(manifest.entries[0].isDeleted)
         assertTrue(manifest.entries[1].isDeleted)
         assertEquals(EntryType.NORMAL.name, manifest.entries[0].type)
@@ -184,7 +186,7 @@ class V2ArchiveWriterTest {
         val backup = temp.newFile("read-manifest.gtlbackup")
         backup.outputStream().use { out ->
             V2ArchiveWriter(out, appVersion = "4.2.2").use { writer ->
-                writer.addEntry(Entry(id = 1, content = "x", isDeleted = true), listOf("文摘"), null)
+                writer.addEntry(Entry(id = 1, content = "x", isDeleted = true), listOf(TagType.EXCERPT), null)
                 writer.finish()
             }
         }
@@ -193,6 +195,7 @@ class V2ArchiveWriterTest {
         assertEquals(1, manifest.entryCount)
         assertTrue(manifest.entries[0].isDeleted)
         assertEquals(listOf("文摘"), manifest.entries[0].tags)
+        assertEquals(listOf("EXCERPT"), manifest.entries[0].tagIds)
     }
 
     @Test
