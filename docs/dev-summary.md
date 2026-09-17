@@ -134,6 +134,15 @@
 - 删除 **15 个**不再引用的 `ic_*.xml`；`ic_casino`（小组件布局用）与启动图标保留；
 - **实测体积**：debug 11.50 → **17.48 MB**（全量图标库未缩减，仅影响开发包）；release 2.34 → **2.22 MB**（R8 把删掉的资源也一并清了）。
 
+### v4.3.3 体验与品牌收尾（2026-09-17）
+
+- **搜索命中高亮**：新增纯函数 `TextMatch.ranges`（忽略大小写、不重叠）+ `EntryCard` 用 `AnnotatedString` 把命中字符标主题色底色；6 例单测；
+- **启动屏**（core-splashscreen）：墨黑底 + 奶油星形，消除冷启动白屏；`installSplashScreen()` 在 `super.onCreate` 之前；
+- **动效规范**：新增 `LifeMotion`（FAST 150 / BASE 200 / SLOW 250 / LIST 200）；随机回顾卡 Crossfade 300 → **200**；
+- **大字体 1.3x**：主按钮（周/月总结）从固定 `height(48)` 改为 `heightIn(min = 48)`，字体放大时不再裁字；
+- **图标母题统一**（两个 App 一起）：墨黑底 `#181D26` + 系列色圆角几何块（Gift = 奶油星形；Date = 青松/雾蓝/赤陶三色条）；
+- **关于页**：版本号（BuildConfig）+ 同系列入口（点一下打开 Date To Life，未安装给 Toast）+ MIT 许可；新增 `core/common/SiblingApp` 互推工具。
+
 ## 关键文件
 
 - `app/src/main/java/com/gift/tolife/feature/record/` — 记录页（含 EntryEditDraft 草稿模式）

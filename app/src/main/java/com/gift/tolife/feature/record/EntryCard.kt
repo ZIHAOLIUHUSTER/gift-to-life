@@ -5,19 +5,63 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.common.DateFormats
+import com.gift.tolife.core.common.TextMatch
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import java.io.File
 
+/** 记录正文；搜索模式下把命中字符标上主题色底色（2026-09-17）。 */
 @Composable
-fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Unit, onImageClick: () -> Unit = {}) {
+private fun HighlightedContent(text: String, query: String, maxLines: Int) {
+    val ranges = remember(text, query) { TextMatch.ranges(text, query) }
+    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+    val annotated = remember(text, ranges, highlight) {
+        if (ranges.isEmpty()) {
+            null
+        } else {
+            buildAnnotatedString {
+                var cursor = 0
+                ranges.forEach { range ->
+                    if (range.first > cursor) append(text.substring(cursor, range.first))
+                    withStyle(SpanStyle(background = highlight, fontWeight = FontWeight.Medium)) {
+                        append(text.substring(range.first, range.last + 1))
+                    }
+                    cursor = range.last + 1
+                }
+                if (cursor < text.length) append(text.substring(cursor))
+            }
+        }
+    }
+    Text(
+        text = annotated ?: AnnotatedString(text),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface,
+        maxLines = maxLines,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+@Composable
+fun EntryCard(
+    entry: Entry,
+    tags: List<TagType> = emptyList(),
+    query: String = "",
+    onClick: () -> Unit,
+    onImageClick: () -> Unit = {},
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -49,12 +93,10 @@ fun EntryCard(entry: Entry, tags: List<TagType> = emptyList(), onClick: () -> Un
                     .clickable(onClick = onClick)
                     .padding(12.dp)
             ) {
-                Text(
+                HighlightedContent(
                     text = entry.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    query = query,
                     maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))

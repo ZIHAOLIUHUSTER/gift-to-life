@@ -17,8 +17,8 @@ android {
         applicationId = "com.gift.tolife"
         minSdk = 26
         targetSdk = 34
-        versionCode = 39
-        versionName = "4.3.2"
+        versionCode = 40
+        versionName = "4.3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -53,6 +53,8 @@ android {
 
     buildFeatures {
         compose = true
+        // 2026-09-17：关于页要展示版本号（BuildConfig.VERSION_NAME）
+        buildConfig = true
     }
 
     composeOptions {
@@ -82,6 +84,8 @@ dependencies {
 
     // Core
     implementation("androidx.core:core-ktx:1.13.1")
+    // 启动屏（2026-09-17）：Android 12+ 走系统 API，低版本由 compat 库补齐
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("androidx.activity:activity-compose:1.9.0")

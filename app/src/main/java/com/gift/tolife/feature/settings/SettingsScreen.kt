@@ -1,6 +1,10 @@
 package com.gift.tolife.feature.settings
 
 import androidx.activity.compose.BackHandler
+import android.widget.Toast
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.ui.platform.LocalContext
+import com.gift.tolife.BuildConfig
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,6 +36,7 @@ import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.core.ui.theme.ThemeExtended
+import com.gift.tolife.core.common.SiblingApp
 import com.gift.tolife.core.ui.theme.ThemeVariant
 import com.gift.tolife.core.ui.theme.toPalette
 import java.util.Calendar
@@ -45,7 +50,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 
-private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE }
+private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE, ABOUT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,6 +75,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         }
         SettingsPage.RECYCLE_BIN -> RecycleBinPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.APPEARANCE -> AppearancePage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
+        SettingsPage.ABOUT -> AboutPage(onBack = { currentPage = SettingsPage.MAIN })
     }
 }
 
@@ -129,6 +135,14 @@ private fun SettingsMainPage(
                     description = "浅色、深色或跟随系统",
                     icon = Icons.Rounded.Palette,
                     onClick = { onNavigate(SettingsPage.APPEARANCE) }
+                )
+            }
+            item {
+                SettingsSectionCard(
+                    title = "关于",
+                    description = "版本、To Life 系列与开源许可",
+                    icon = Icons.Rounded.Info,
+                    onClick = { onNavigate(SettingsPage.ABOUT) }
                 )
             }
         }
@@ -637,6 +651,107 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+// ===== 关于子页 =====
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AboutPage(onBack: () -> Unit) {
+    val context = LocalContext.current
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("关于") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "返回") } },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 品牌块：用主题色带 + 圆角色块，与两个 App 的图标母题一致
+            Card(
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = ThemeExtended.current.zone)
+            ) {
+                Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("✦", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimary)
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text("Gift To Life", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "To Life 系列 · 闪念日记",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            SettingsCard(title = "版本") {
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("当前版本", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(
+                        BuildConfig.VERSION_NAME,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            SettingsCard(title = "同系列") {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            if (!SiblingApp.launch(context, SiblingApp.DATE_PACKAGE)) {
+                                Toast.makeText(context, "未安装 Date To Life", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Date To Life", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "课表日程 · 课程与日程同构",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Text(
+                "MIT License · 全部数据保存在本机，不上传云端",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
     }
 }

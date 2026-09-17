@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#5B7B6F</color>
-    <color name="ic_launcher_foreground">#FAF8F5</color>
+    <!--
+      To Life 系列图标母题（2026-09-17 统一）：
+      墨黑底 + 系列色圆角几何块。Gift 的隐喻是星形（闪念），用系列奶油色。
+    -->
+    <color name="ic_launcher_background">#181D26</color>
+    <color name="ic_launcher_foreground">#F5E9D4</color>
 </resources>

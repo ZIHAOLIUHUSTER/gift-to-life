@@ -159,6 +159,7 @@ fun RecordScreen(
                         EntryCard(
                             entry = item.entry,
                             tags = item.tags,
+                            query = uiState.searchQuery,
                             onClick = {
                                 previewEntry = item.entry to item.tags
                             },

@@ -31,6 +31,7 @@ import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
 import com.gift.tolife.core.ui.UiTestTags
+import com.gift.tolife.core.ui.theme.LifeMotion
 import com.gift.tolife.feature.record.EntryPreviewSheet
 import java.io.File
 import androidx.compose.material.icons.Icons
@@ -226,7 +227,7 @@ private fun RandomReviewCard(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Crossfade(targetState = entry.id, animationSpec = tween(300)) { targetId ->
+        Crossfade(targetState = entry.id, animationSpec = tween(LifeMotion.BASE)) { targetId ->
             key(targetId) {
             Column(modifier = Modifier.padding(28.dp)) {
                 // 标题
