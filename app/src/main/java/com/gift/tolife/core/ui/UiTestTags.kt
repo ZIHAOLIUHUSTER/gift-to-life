@@ -8,4 +8,6 @@ object UiTestTags {
     const val MEMORY_REFRESH = "memory_refresh"
     const val SETTINGS_SAVE = "settings_save"
     const val RECYCLE_CLEAR = "recycle_clear"
+    const val EXPORT_BACKUP = "export_backup"
+    const val IMPORT_BACKUP = "import_backup"
 }

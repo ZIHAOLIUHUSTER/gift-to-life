@@ -21,7 +21,7 @@ class GiftApp : Application() {
         super.onCreate()
 
         val entryPoint = EntryPointAccessors.fromApplication(this, CleanupEntryPoint::class.java)
-        entryPoint.imageStore().cleanupStagingDirs()
+        entryPoint.imageStore().cleanupTempFiles()
 
         applicationScope.launch {
             val referencedPaths = entryPoint.entryDao().getAllImagePaths().toSet()

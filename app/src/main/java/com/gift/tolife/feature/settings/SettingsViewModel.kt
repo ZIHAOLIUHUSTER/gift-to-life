@@ -13,6 +13,7 @@ import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.export.ExportImportManager
+import com.gift.tolife.core.export.ExportResult
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import com.gift.tolife.core.network.BaseUrlValidator
@@ -31,7 +32,9 @@ data class SettingsUiState(
     val testingVision: Boolean = false,
     val testResultTag: String? = null,
     val testResultSummary: String? = null,
-    val testResultVision: String? = null
+    val testResultVision: String? = null,
+    val isExporting: Boolean = false,
+    val isImporting: Boolean = false
 )
 
 @HiltViewModel
@@ -190,23 +193,41 @@ class SettingsViewModel @Inject constructor(
     val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
 
     fun exportData(uri: Uri) {
+        if (_uiState.value.isExporting) return
         viewModelScope.launch {
+            _uiState.update { it.copy(isExporting = true) }
             try {
-                val count = exportManager.exportToUri(uri)
-                _events.emit(SettingsEvent.ShowMessage("已导出 $count 条记录"))
+                val result = exportManager.exportToUri(uri)
+                _events.emit(SettingsEvent.ShowMessage(buildExportMessage(result)))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: "未知错误"}"))
+            } finally {
+                _uiState.update { it.copy(isExporting = false) }
             }
         }
     }
 
+    private fun buildExportMessage(result: ExportResult): String {
+        val builder = StringBuilder("已导出 ${result.totalCount} 条记录")
+        if (result.deletedCount > 0) builder.append("（含回收站 ${result.deletedCount} 条）")
+        if (result.imageCount > 0) builder.append("，${result.imageCount} 张图片")
+        if (result.missingImageCount > 0) {
+            builder.append("；另有 ${result.missingImageCount} 张图片文件缺失，未包含在备份中")
+        }
+        return builder.toString()
+    }
+
     fun importData(uri: Uri) {
+        if (_uiState.value.isImporting) return
         viewModelScope.launch {
+            _uiState.update { it.copy(isImporting = true) }
             try {
                 val count = exportManager.replaceImportFromUri(uri)
                 _events.emit(SettingsEvent.ShowMessage("已导入 $count 条记录"))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
+            } finally {
+                _uiState.update { it.copy(isImporting = false) }
             }
         }
     }

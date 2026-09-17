@@ -90,8 +90,12 @@ interface EntryDao {
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0")
     suspend fun getSummaryCount(): Int
 
-    @Query("SELECT * FROM entries WHERE id > :lastId AND isDeleted = 0 ORDER BY id ASC LIMIT :limit")
-    suspend fun getEntriesAfterId(lastId: Long, limit: Int): List<Entry>
+    /**
+     * 导出专用分页查询：包含回收站条目（isDeleted = 1），
+     * 使导出的 [BackupV2Entry.isDeleted] 字段真正生效。
+     */
+    @Query("SELECT * FROM entries WHERE id > :lastId ORDER BY id ASC LIMIT :limit")
+    suspend fun getEntriesForExportAfterId(lastId: Long, limit: Int): List<Entry>
 
     @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
     fun observeSummaries(): Flow<List<Entry>>

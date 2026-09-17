@@ -40,12 +40,15 @@ class ImageStore @Inject constructor(
     }
 
     /**
-     * Clean up stale import-staging directories left by crashes during import.
+     * 清理上次异常退出遗留的临时文件：导入 staging 目录、导入临时文件、导出临时备份。
      */
-    fun cleanupStagingDirs() {
-        context.cacheDir.listFiles()?.forEach { dir ->
-            if (dir.isDirectory && dir.name.startsWith("import-staging-")) {
-                dir.deleteRecursively()
+    fun cleanupTempFiles() {
+        context.cacheDir.listFiles()?.forEach { file ->
+            val name = file.name
+            when {
+                file.isDirectory && name.startsWith("import-staging-") -> file.deleteRecursively()
+                file.isFile && name.startsWith("gift-import-") -> file.delete()
+                file.isFile && name.startsWith("gift-export-") -> file.delete()
             }
         }
     }

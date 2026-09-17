@@ -14,14 +14,11 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import java.io.BufferedOutputStream
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
 import java.util.UUID
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,18 +34,34 @@ class ExportImportManager @Inject constructor(
 
     // ---- Public API ----
 
-    suspend fun exportToUri(uri: Uri): Int = withContext(Dispatchers.IO) {
+    /**
+     * 导出到目标 URI。
+     *
+     * 安全设计：先写 cacheDir 临时文件 → 结构校验 → 再复制到目标 URI。
+     * 任何失败都发生在打开目标文件之前，不会把用户上一份备份截断成半截文件；
+     * 整个流程 NonCancellable，用户中途离开页面也能写完。
+     */
+    suspend fun exportToUri(uri: Uri): ExportResult = withContext(Dispatchers.IO + NonCancellable) {
+        val tempFile = File.createTempFile(TEMP_EXPORT_PREFIX, TEMP_EXPORT_SUFFIX, context.cacheDir)
+        try {
+            val result = writeArchive(tempFile)
+            BackupArchiveVerifier.verify(tempFile)
+            copyToUri(tempFile, uri)
+            result
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    private suspend fun writeArchive(target: File): ExportResult {
         val pageSize = 100
         var lastId = 0L
-        var totalCount = 0
-        val manifestEntries = mutableListOf<BackupV2Entry>()
-
-        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            ZipOutputStream(BufferedOutputStream(outputStream)).use { zip ->
+        return target.outputStream().use { outputStream ->
+            V2ArchiveWriter(outputStream).use { writer ->
                 while (true) {
-                    val batch = entryDao.getEntriesAfterId(lastId, pageSize)
+                    // 导出含回收站：这个查询不带 isDeleted = 0 过滤
+                    val batch = entryDao.getEntriesForExportAfterId(lastId, pageSize)
                     if (batch.isEmpty()) break
-                    totalCount += batch.size
                     lastId = batch.last().id
 
                     // 批量获取标签
@@ -61,43 +74,21 @@ class ExportImportManager @Inject constructor(
                     }
 
                     batch.forEach { entry ->
-                        val tags = tagMap[entry.id] ?: emptyList()
-                        var imageEntry: String? = null
-                        var imageSha256: String? = null
-                        if (!entry.imagePath.isNullOrBlank()) {
-                            val file = File(entry.imagePath)
-                            if (file.exists()) {
-                                imageEntry = "images/${file.name}"
-                                imageSha256 = sha256(file)
-                                zip.putNextEntry(ZipEntry(imageEntry))
-                                file.inputStream().use { it.copyTo(zip) }
-                                zip.closeEntry()
-                            }
-                        }
-                        manifestEntries.add(BackupV2Entry(
-                            id = entry.id, content = entry.content, type = entry.type.name,
-                            createdAt = entry.createdAt, updatedAt = entry.updatedAt,
-                            summaryStart = entry.summaryStart, summaryEnd = entry.summaryEnd,
-                            imageDescription = entry.imageDescription, isDeleted = entry.isDeleted,
-                            summaryModel = entry.summaryModel, tags = tags,
-                            imageEntry = imageEntry, imageSha256 = imageSha256
-                        ))
+                        val imageFile = entry.imagePath?.takeIf { it.isNotBlank() }?.let(::File)
+                        writer.addEntry(entry, tagMap[entry.id] ?: emptyList(), imageFile)
                     }
                 }
-
-                // 最后写 manifest
-                val manifest = BackupV2Manifest(
-                    exportedAt = System.currentTimeMillis(),
-                    entryCount = manifestEntries.size,
-                    entries = manifestEntries
-                )
-                zip.putNextEntry(ZipEntry(BackupV2Config.MANIFEST_ENTRY_NAME))
-                zip.write(gson.toJson(manifest).toByteArray())
-                zip.closeEntry()
+                writer.finish()
             }
-        } ?: throw IOException("Cannot open output stream")
+        }
+    }
 
-        totalCount
+    private fun copyToUri(source: File, uri: Uri) {
+        val output = context.contentResolver.openOutputStream(uri)
+            ?: throw IOException("无法写入目标文件")
+        output.use { out ->
+            source.inputStream().use { it.copyTo(out) }
+        }
     }
 
     // ---- Safe Import ----
@@ -107,22 +98,28 @@ class ExportImportManager @Inject constructor(
      */
     private fun copyToTempFile(uri: Uri): File {
         val target = File.createTempFile("gift-import-", ".bin", context.cacheDir)
-        var total = 0L
-        val input = context.contentResolver.openInputStream(uri)
-            ?: throw IOException("无法打开文件")
-        input.use { stream ->
-            target.outputStream().buffered().use { output ->
-                val buffer = ByteArray(8192)
-                while (true) {
-                    val read = stream.read(buffer)
-                    if (read < 0) break
-                    total += read
-                    check(total <= BackupV2Config.MAX_BACKUP_FILE_BYTES) { "备份文件超过 2 GiB" }
-                    output.write(buffer, 0, read)
+        try {
+            var total = 0L
+            val input = context.contentResolver.openInputStream(uri)
+                ?: throw IOException("无法打开文件")
+            input.use { stream ->
+                target.outputStream().buffered().use { output ->
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val read = stream.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        check(total <= BackupV2Config.MAX_BACKUP_FILE_BYTES) { "备份文件超过 2 GiB" }
+                        output.write(buffer, 0, read)
+                    }
                 }
             }
+            return target
+        } catch (t: Throwable) {
+            // 失败时不留半截临时文件在 cacheDir
+            target.delete()
+            throw t
         }
-        return target
     }
 
     /**
@@ -344,24 +341,11 @@ class ExportImportManager @Inject constructor(
         imagePaths.forEach { runCatching { File(it).delete() } }
     }
 
-    // ---- Utilities ----
-
-    private fun sha256(file: File): String {
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(8192)
-            var bytes = input.read(buffer)
-            while (bytes > 0) {
-                digest.update(buffer, 0, bytes)
-                bytes = input.read(buffer)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
     private data class StagedImage(val file: File, val hash: String)
 
     companion object {
         private val ZIP_MAGIC = byteArrayOf('P'.code.toByte(), 'K'.code.toByte())
+        private const val TEMP_EXPORT_PREFIX = "gift-export-"
+        private const val TEMP_EXPORT_SUFFIX = ".gtlbackup"
     }
 }

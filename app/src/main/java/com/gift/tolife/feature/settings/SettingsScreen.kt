@@ -269,12 +269,20 @@ private fun ModelRow(value: String, onValueChange: (String) -> Unit, label: Stri
     }
 }
 
+/** 默认备份文件名带时间戳，避免重复导出时误覆盖上一份备份。 */
+private fun defaultExportFileName(): String {
+    val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmm", java.util.Locale.US).format(java.util.Date())
+    return "gift_backup_$stamp.gtlbackup"
+}
+
 // ===== 数据管理子页 =====
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsViewModel.DataStats, onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
     var showImportConfirm by remember { mutableStateOf(false) }
+    val uiState by viewModel.uiState.collectAsState()
+    val isDataBusy = uiState.isExporting || uiState.isImporting
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -338,8 +346,26 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
 
             SettingsCard(title = "备份与恢复") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { exportLauncher.launch("gift_backup.gtlbackup") }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导出备份") }
-                    OutlinedButton(onClick = { showImportConfirm = true }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp)) { Text("导入恢复") }
+                    OutlinedButton(
+                        onClick = { exportLauncher.launch(defaultExportFileName()) },
+                        enabled = !isDataBusy,
+                        modifier = Modifier.weight(1f).testTag(UiTestTags.EXPORT_BACKUP),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("导出备份") }
+                    OutlinedButton(
+                        onClick = { showImportConfirm = true },
+                        enabled = !isDataBusy,
+                        modifier = Modifier.weight(1f).testTag(UiTestTags.IMPORT_BACKUP),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("导入恢复") }
+                }
+                if (isDataBusy) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        if (uiState.isExporting) "正在导出，请稍候…" else "正在导入，请稍候…",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 

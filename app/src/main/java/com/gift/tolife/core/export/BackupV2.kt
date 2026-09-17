@@ -24,6 +24,14 @@ data class BackupV2Entry(
     val imageSha256: String? = null
 )
 
+/** 导出结果：用于给用户可核对的导出回执。 */
+data class ExportResult(
+    val totalCount: Int,
+    val deletedCount: Int,
+    val imageCount: Int,
+    val missingImageCount: Int
+)
+
 object BackupV2Config {
     const val MAX_BACKUP_FILE_BYTES = 2L * 1024 * 1024 * 1024 // 2 GiB
     const val MAX_ENTRY_COUNT = 100_000
