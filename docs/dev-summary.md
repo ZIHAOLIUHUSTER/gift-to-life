@@ -20,8 +20,8 @@
 - 图片: `filesDir/images/`, WebP 压缩 1920px 85%, EXIF 方向修正, WEBP_LOSSY(API 30+)
 
 ## 当前版本
-- versionCode: 30, versionName: 3.5.0
-- APK: release ~1.67 MB（R8 full mode 已开启）
+- versionCode: 37, versionName: 4.3.0
+- APK: release ~2.24 MB（R8 full mode 已开启）
 - 数据库: Migration 1→3→4, `fallbackToDestructiveMigration` 已移除
 - 代码: 死代码已清理，净减约 80 行
 
@@ -35,7 +35,7 @@
 7. 记录统计（热力图 + 连续天数 + 使用统计）
 8. 导出/导入（v2 ZIP；导出临时归档+自检后落盘、含回收站；导入只读预检+导入前快照+可撤销；流式实际解压校验 + SHA-256 + staging + 原子事务）
 9. 回收站（软删除 + 标签恢复）
-10. 深浅色主题（system/light/dark 响应式切换）
+10. 六套系列皮肤（青松/暖纸·赤陶/冷雾/烟粉·酒红/石墨蓝/藕荷紫）+ 深浅色主题（system/light/dark）
 11. Widget + 分享接入
 
 ## v3.5.0 质量保障与优化（2026-07-16）
@@ -99,6 +99,22 @@
 - 模型配置导入全字段校验后统一应用（不再半生效），64 KiB 上限
 - 备份 manifest 写入真实 App 版本；系统备份/迁移规则排除数据库与图片目录
 - JVM 单测 39 个全绿（备份链路新增 24 个：归档写入/校验、标签编解码、模型配置）
+
+## v4.3.0 系列设计 token 落地（2026-09-17）
+
+与 Date To Life 0.18.0 同源，共用一套 To Life 系列设计 token。
+
+- **皮肤 6 套**：暖纸·赤陶 / 冷雾(雾蓝) / 烟粉·酒红 / **青松**（Gift 默认，即原来的墨绿 `#5B7B6F`）/ 石墨蓝 / 藕荷紫
+  - 设置 → 外观 新增「皮肤」选择（色卡 + 单选）；存 SharedPreferences `theme_variant`，老用户默认青松
+  - 深色变体由 `MorandiPalette.toDark()` 从浅色派生，不手写 6×19 个色号
+- **主题色带 `zone`**：大面积分区/空状态用，色相跟主题、饱和锁绝对值、明度 87%；首个消费者：`AppEmptyState`（空状态加色带圆环，随皮肤）
+- **形状**：`GiftShapes` 改为系列 token 6/8/10/12/16（原 4/6/8/12/16，`Shape.kt` 并入 `Theme.kt`）
+- **字号**：`headlineLarge` 24 → 26sp（对齐系列 6 档；该档当前无调用点，先把阶梯对齐）
+- **状态色**：新增 `LifeStatus`（success/danger/warning/info），AI 连通测试的 ✓/✗ 不再硬编码 `#4CAF50/#E53935`
+- **术语（系列术语表 v1）**：「模型配置」→「AI 配置」、「数据管理」→「备份与恢复」、「API 地址」→「服务地址」、「测试」→「测试连接」
+- **测试**：新增 `LifeThemeTest`（6 套皮肤 WCAG 验收：正文 ≥7、按钮/次级 ≥4.5、深色点睛 ≥4.5、色带 ≥4.5、皮肤互不相同、未知皮肤名回退默认），JVM 单测 39 → **45 个全绿**
+
+> 与 Date 的差异：Gift 的标签（闪念/事记/情绪/知识）按系列决定不使用彩色，保持中性 chip，因此**未引入** 10 色分类板；Gift 也没有小组件卡片底的烘焙 drawable 需要同步。
 
 ## 关键文件
 

@@ -32,7 +32,10 @@ class MainActivity : ComponentActivity() {
             val settings by settingsDataStore.settings.collectAsState(
                 initial = com.gift.tolife.core.datastore.AppSettings()
             )
-            GiftTheme(themeMode = settings.themeMode) {
+            GiftTheme(
+                variant = com.gift.tolife.core.ui.theme.ThemeVariant.fromName(settings.themeVariant),
+                themeMode = settings.themeMode,
+            ) {
                 AppNavigation()
             }
         }

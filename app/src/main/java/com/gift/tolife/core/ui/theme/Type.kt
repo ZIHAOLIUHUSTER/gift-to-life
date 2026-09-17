@@ -10,8 +10,8 @@ val GiftTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
-        lineHeight = 32.sp,
+        fontSize = 26.sp,
+        lineHeight = 34.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(

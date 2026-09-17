@@ -197,6 +197,11 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(isSaved = true) }
     }
 
+    fun updateThemeVariant(variant: String) {
+        settingsDataStore.updateThemeVariant(variant)
+        _uiState.update { it.copy(isSaved = true) }
+    }
+
     private val _events = MutableSharedFlow<SettingsEvent>()
     val events: SharedFlow<SettingsEvent> = _events.asSharedFlow()
 
@@ -398,7 +403,7 @@ class SettingsViewModel @Inject constructor(
                 val json = context.contentResolver.openInputStream(uri)?.use { stream ->
                     String(
                         com.gift.tolife.core.common.LimitedInput.readBytes(
-                            stream, ModelConfigCodec.MAX_CONFIG_BYTES, "模型配置"
+                            stream, ModelConfigCodec.MAX_CONFIG_BYTES, "AI 配置"
                         ),
                         Charsets.UTF_8
                     )

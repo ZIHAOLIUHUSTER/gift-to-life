@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,7 +19,6 @@ import androidx.compose.ui.Alignment
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,6 +30,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.ui.UiTestTags
+import com.gift.tolife.core.ui.theme.ThemeExtended
+import com.gift.tolife.core.ui.theme.ThemeVariant
+import com.gift.tolife.core.ui.theme.toPalette
 import java.util.Calendar
 
 private enum class SettingsPage { MAIN, MODEL_CONFIG, DATA_MANAGE, RECYCLE_BIN, APPEARANCE }
@@ -88,7 +91,7 @@ private fun SettingsMainPage(
             }
             item {
                 SettingsSectionCard(
-                    title = "模型配置",
+                    title = "AI 配置",
                     description = "API Key、模型选择与连通性测试",
                     painter = painterResource(R.drawable.ic_settings),
                     onClick = { onNavigate(SettingsPage.MODEL_CONFIG) }
@@ -96,7 +99,7 @@ private fun SettingsMainPage(
             }
             item {
                 SettingsSectionCard(
-                    title = "数据管理",
+                    title = "备份与恢复",
                     description = "备份恢复、导入导出",
                     painter = painterResource(R.drawable.ic_edit_note),
                     onClick = { onNavigate(SettingsPage.DATA_MANAGE) }
@@ -183,7 +186,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("模型配置") },
+                title = { Text("AI 配置") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -214,7 +217,7 @@ private fun ModelConfigPage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = baseUrl, onValueChange = { baseUrl = it },
-                    label = { Text("API 地址") },
+                    label = { Text("服务地址") },
                     placeholder = { Text("https://api.deepseek.com") },
                     supportingText = { Text("只需填基础地址，程序自动补全 /v1/chat/completions") },
                     modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri)
@@ -262,11 +265,11 @@ private fun ModelRow(value: String, onValueChange: (String) -> Unit, label: Stri
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onTest, enabled = !testing, modifier = Modifier.padding(top = 4.dp)) {
                 if (testing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                else Text("测试", style = MaterialTheme.typography.labelSmall)
+                else Text("测试连接", style = MaterialTheme.typography.labelSmall)
             }
             if (testResult != null) {
                 Text(testResult, style = MaterialTheme.typography.labelSmall,
-                    color = if (testResult.startsWith("✓")) Color(0xFF4CAF50) else Color(0xFFE53935))
+                    color = if (testResult.startsWith("✓")) ThemeExtended.current.success else ThemeExtended.current.danger)
             }
         }
     }
@@ -303,7 +306,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(title = { Text("数据管理") },
+            TopAppBar(title = { Text("备份与恢复") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), "返回") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background, titleContentColor = MaterialTheme.colorScheme.onBackground))
         }
@@ -579,6 +582,49 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(label, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "皮肤",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            val currentVariant = uiState.settings.themeVariant
+            val dark = when (currentTheme) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+            ThemeVariant.values().forEach { variant ->
+                val palette = variant.toPalette(dark)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.updateThemeVariant(variant.name) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(palette.primary)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(variant.displayName, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            variant.description,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    RadioButton(
+                        selected = currentVariant == variant.name,
+                        onClick = { viewModel.updateThemeVariant(variant.name) },
+                    )
                 }
             }
         }

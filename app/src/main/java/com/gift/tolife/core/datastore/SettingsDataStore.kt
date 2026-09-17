@@ -31,7 +31,8 @@ class SettingsDataStore @Inject constructor(
             summaryModel = prefs.getString("summary_model", "deepseek-chat") ?: "deepseek-chat",
             visionModel = prefs.getString("vision_model", "deepseek-chat") ?: "deepseek-chat",
             biometricEnabled = prefs.getBoolean("biometric_enabled", false),
-            themeMode = prefs.getString("theme_mode", "system") ?: "system"
+            themeMode = prefs.getString("theme_mode", "system") ?: "system",
+            themeVariant = prefs.getString("theme_variant", "GREEN") ?: "GREEN"
         )
     }
 
@@ -67,6 +68,11 @@ class SettingsDataStore @Inject constructor(
 
     fun updateThemeMode(mode: String) {
         prefs.edit().putString("theme_mode", mode).apply()
+        _settings.tryEmit(readAll())
+    }
+
+    fun updateThemeVariant(variant: String) {
+        prefs.edit().putString("theme_variant", variant).apply()
         _settings.tryEmit(readAll())
     }
 
