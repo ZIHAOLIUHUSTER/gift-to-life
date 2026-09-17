@@ -18,15 +18,7 @@ object BackupArchiveVerifier {
     fun verify(file: File): Report {
         if (!file.isFile) throw IOException("备份文件不存在")
         return ZipFile(file).use { zip ->
-            val manifestEntry = zip.getEntry(BackupV2Config.MANIFEST_ENTRY_NAME)
-                ?: throw IOException("备份缺少 manifest.json")
-            val json = zip.getInputStream(manifestEntry).use { String(it.readBytes()) }
-            val parsed: BackupV2Manifest? = try {
-                Gson().fromJson(json, BackupV2Manifest::class.java)
-            } catch (t: Throwable) {
-                null
-            }
-            val manifest = parsed ?: throw IOException("manifest.json 解析失败")
+            val manifest = readManifest(zip)
             if (manifest.formatVersion != 2) {
                 throw IOException("不支持的备份版本: ${manifest.formatVersion}")
             }
@@ -48,5 +40,23 @@ object BackupArchiveVerifier {
             }
             Report(entryCount = manifest.entries.size, imageCount = imageCount)
         }
+    }
+
+    /** 只读取 manifest（用于导入预检、快照信息），失败抛 [IOException]。 */
+    fun readManifest(file: File): BackupV2Manifest {
+        if (!file.isFile) throw IOException("备份文件不存在")
+        return ZipFile(file).use { readManifest(it) }
+    }
+
+    private fun readManifest(zip: ZipFile): BackupV2Manifest {
+        val manifestEntry = zip.getEntry(BackupV2Config.MANIFEST_ENTRY_NAME)
+            ?: throw IOException("备份缺少 manifest.json")
+        val json = zip.getInputStream(manifestEntry).use { String(it.readBytes()) }
+        val parsed: BackupV2Manifest? = try {
+            Gson().fromJson(json, BackupV2Manifest::class.java)
+        } catch (t: Throwable) {
+            null
+        }
+        return parsed ?: throw IOException("manifest.json 解析失败")
     }
 }

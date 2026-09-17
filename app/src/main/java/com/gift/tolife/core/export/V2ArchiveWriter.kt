@@ -19,6 +19,7 @@ import java.util.zip.ZipOutputStream
  */
 class V2ArchiveWriter(
     output: OutputStream,
+    private val appVersion: String = "unknown",
     private val gson: Gson = GsonBuilder().setPrettyPrinting().create()
 ) : Closeable {
 
@@ -71,6 +72,7 @@ class V2ArchiveWriter(
     fun finish(): ExportResult {
         val manifest = BackupV2Manifest(
             exportedAt = System.currentTimeMillis(),
+            appVersion = appVersion,
             entryCount = manifestEntries.size,
             entries = manifestEntries
         )

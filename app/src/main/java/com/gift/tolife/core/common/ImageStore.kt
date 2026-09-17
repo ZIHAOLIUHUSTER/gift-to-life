@@ -28,13 +28,20 @@ class ImageStore @Inject constructor(
         return imagesDir.listFiles()?.map { it.absolutePath }?.toSet() ?: emptySet()
     }
 
-    fun removeOrphans(referencedPaths: Set<String>): Int {
+    /**
+     * 删除未被数据库引用的图片。
+     *
+     * 只删 [minFileAgeMs] 之前写入的文件：导入时图片先落盘（phase 3）再提交数据库（phase 5），
+     * 启动清扫与导入交迭时年轻的文件不应当作孤儿删除。
+     */
+    fun removeOrphans(referencedPaths: Set<String>, minFileAgeMs: Long = ORPHAN_MIN_AGE_MS): Int {
         val managed = listManagedPaths()
+        val now = System.currentTimeMillis()
         var removed = 0
         managed.forEach { path ->
-            if (path !in referencedPaths) {
-                if (delete(path)) removed++
-            }
+            if (path in referencedPaths) return@forEach
+            if (now - File(path).lastModified() < minFileAgeMs) return@forEach
+            if (delete(path)) removed++
         }
         return removed
     }
@@ -51,5 +58,10 @@ class ImageStore @Inject constructor(
                 file.isFile && name.startsWith("gift-export-") -> file.delete()
             }
         }
+    }
+
+    companion object {
+        /** 孤儿图片最小存活时间（10 分钟）。 */
+        const val ORPHAN_MIN_AGE_MS = 10 * 60 * 1000L
     }
 }

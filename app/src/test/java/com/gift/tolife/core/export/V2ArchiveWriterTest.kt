@@ -179,6 +179,33 @@ class V2ArchiveWriterTest {
         assertThrows(IOException::class.java) { BackupArchiveVerifier.verify(truncated) }
     }
 
+    @Test
+    fun `readManifest returns manifest without modifying data`() {
+        val backup = temp.newFile("read-manifest.gtlbackup")
+        backup.outputStream().use { out ->
+            V2ArchiveWriter(out, appVersion = "4.2.2").use { writer ->
+                writer.addEntry(Entry(id = 1, content = "x", isDeleted = true), listOf("文摘"), null)
+                writer.finish()
+            }
+        }
+        val manifest = BackupArchiveVerifier.readManifest(backup)
+        assertEquals("4.2.2", manifest.appVersion)
+        assertEquals(1, manifest.entryCount)
+        assertTrue(manifest.entries[0].isDeleted)
+        assertEquals(listOf("文摘"), manifest.entries[0].tags)
+    }
+
+    @Test
+    fun `readManifest fails when manifest is missing`() {
+        val file = temp.newFile("no-manifest-2.gtlbackup")
+        ZipOutputStream(file.outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry("images/x.webp"))
+            zip.write(byteArrayOf(1))
+            zip.closeEntry()
+        }
+        assertThrows(IOException::class.java) { BackupArchiveVerifier.readManifest(file) }
+    }
+
     // ---- helpers ----
 
     private fun readManifest(file: File): BackupV2Manifest {

@@ -14,6 +14,9 @@ import com.gift.tolife.core.database.EntryRepository
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.export.ExportImportManager
 import com.gift.tolife.core.export.ExportResult
+import com.gift.tolife.core.export.ImportPreview
+import com.gift.tolife.core.export.ImportResult
+import com.gift.tolife.core.export.SnapshotInfo
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
 import com.gift.tolife.core.network.BaseUrlValidator
@@ -34,7 +37,10 @@ data class SettingsUiState(
     val testResultSummary: String? = null,
     val testResultVision: String? = null,
     val isExporting: Boolean = false,
-    val isImporting: Boolean = false
+    val isInspecting: Boolean = false,
+    val isImporting: Boolean = false,
+    val pendingImportPreview: ImportPreview? = null,
+    val snapshot: SnapshotInfo? = null
 )
 
 @HiltViewModel
@@ -49,6 +55,9 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /** 已预检、等待用户确认的备份 URI（确认后才真正替换数据）。 */
+    private var pendingImportUri: Uri? = null
 
     data class StatsData(
         val monthlyCount: Int = 0,
@@ -217,19 +226,84 @@ class SettingsViewModel @Inject constructor(
         return builder.toString()
     }
 
-    fun importData(uri: Uri) {
+    fun previewImport(uri: Uri) {
+        if (_uiState.value.isInspecting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isInspecting = true) }
+            try {
+                // 先只读预检：读取备份条数等信息，让用户确认后再替换（空备份要看到强提示）
+                val preview = exportManager.inspect(uri)
+                pendingImportUri = uri
+                _uiState.update { it.copy(pendingImportPreview = preview) }
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("无法读取备份: ${t.message ?: "未知错误"}"))
+            } finally {
+                _uiState.update { it.copy(isInspecting = false) }
+            }
+        }
+    }
+
+    fun cancelPendingImport() {
+        pendingImportUri = null
+        _uiState.update { it.copy(pendingImportPreview = null) }
+    }
+
+    fun confirmImport() {
+        val uri = pendingImportUri ?: return
+        pendingImportUri = null
+        _uiState.update { it.copy(pendingImportPreview = null) }
         if (_uiState.value.isImporting) return
         viewModelScope.launch {
             _uiState.update { it.copy(isImporting = true) }
             try {
-                val count = exportManager.replaceImportFromUri(uri)
-                _events.emit(SettingsEvent.ShowMessage("已导入 $count 条记录"))
+                val result = exportManager.importWithSnapshot(uri)
+                refreshSnapshotInternal()
+                _events.emit(SettingsEvent.ShowMessage(buildImportMessage(result)))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
             } finally {
                 _uiState.update { it.copy(isImporting = false) }
             }
         }
+    }
+
+    private fun buildImportMessage(result: ImportResult): String {
+        val builder = StringBuilder("已导入 ${result.totalCount} 条记录")
+        if (result.deletedCount > 0) builder.append("（含回收站 ${result.deletedCount} 条）")
+        if (result.imageCount > 0) builder.append("，${result.imageCount} 张图片")
+        builder.append(
+            if (result.snapshotCreated) "；导入前快照已保存，如有问题可在本页撤销"
+            else "；注意：快照创建失败，本次导入无法撤销"
+        )
+        return builder.toString()
+    }
+
+    fun undoImport() {
+        if (_uiState.value.isImporting) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isImporting = true) }
+            try {
+                val result = exportManager.undoLastImport()
+                refreshSnapshotInternal()
+                _events.emit(SettingsEvent.ShowMessage(
+                    "已撤销上次导入，恢复 ${result.totalCount} 条记录" +
+                        if (result.snapshotCreated) "（撤销前数据已再次快照）" else ""
+                ))
+            } catch (t: Throwable) {
+                _events.emit(SettingsEvent.ShowMessage("撤销失败: ${t.message ?: "未知错误"}"))
+            } finally {
+                _uiState.update { it.copy(isImporting = false) }
+            }
+        }
+    }
+
+    fun refreshSnapshot() {
+        viewModelScope.launch { refreshSnapshotInternal() }
+    }
+
+    private suspend fun refreshSnapshotInternal() {
+        val snapshot = runCatching { exportManager.latestSnapshot() }.getOrNull()
+        _uiState.update { it.copy(snapshot = snapshot) }
     }
 
     fun testTagModel(model: String, apiKey: String = "", baseUrl: String = "") {

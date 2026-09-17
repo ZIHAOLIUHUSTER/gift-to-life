@@ -49,7 +49,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         SettingsPage.MAIN -> SettingsMainPage(stats = stats, onRefreshStats = viewModel::refreshStats, onNavigate = { currentPage = it })
         SettingsPage.MODEL_CONFIG -> ModelConfigPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
         SettingsPage.DATA_MANAGE -> {
-            LaunchedEffect(Unit) { viewModel.refreshDataStats() }
+            LaunchedEffect(Unit) {
+                viewModel.refreshDataStats()
+                viewModel.refreshSnapshot()
+            }
             DataManagePage(viewModel, dataStats = dataStats, onBack = { currentPage = SettingsPage.MAIN })
         }
         SettingsPage.RECYCLE_BIN -> RecycleBinPage(viewModel, onBack = { currentPage = SettingsPage.MAIN })
@@ -280,9 +283,9 @@ private fun defaultExportFileName(): String {
 @Composable
 private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsViewModel.DataStats, onBack: () -> Unit) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var showImportConfirm by remember { mutableStateOf(false) }
+    var showUndoConfirm by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
-    val isDataBusy = uiState.isExporting || uiState.isImporting
+    val isDataBusy = uiState.isExporting || uiState.isImporting || uiState.isInspecting
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -294,7 +297,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
         uri -> uri?.let { viewModel.exportData(it) }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) {
-        uri -> uri?.let { viewModel.importData(it) }
+        uri -> uri?.let { viewModel.previewImport(it) }
     }
 
     Scaffold(
@@ -353,7 +356,7 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
                         shape = RoundedCornerShape(8.dp)
                     ) { Text("导出备份") }
                     OutlinedButton(
-                        onClick = { showImportConfirm = true },
+                        onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) },
                         enabled = !isDataBusy,
                         modifier = Modifier.weight(1f).testTag(UiTestTags.IMPORT_BACKUP),
                         shape = RoundedCornerShape(8.dp)
@@ -362,18 +365,85 @@ private fun DataManagePage(viewModel: SettingsViewModel, dataStats: SettingsView
                 if (isDataBusy) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (uiState.isExporting) "正在导出，请稍候…" else "正在导入，请稍候…",
+                        when {
+                            uiState.isExporting -> "正在导出，请稍候…"
+                            uiState.isInspecting -> "正在读取备份，请稍候…"
+                            else -> "正在导入，请稍候…"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                val snapshot = uiState.snapshot
+                if (snapshot != null) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showUndoConfirm = true },
+                        enabled = !isDataBusy,
+                        modifier = Modifier.fillMaxWidth().testTag(UiTestTags.UNDO_IMPORT),
+                        shape = RoundedCornerShape(8.dp)
+                    ) { Text("撤销上次导入") }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "导入前快照：${DateFormats.formatShortDateTime(snapshot.createdAt)}，含 ${snapshot.entryCount} 条记录",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            if (showImportConfirm) {
-                AlertDialog(onDismissRequest = { showImportConfirm = false },
-                    title = { Text("导入数据") }, text = { Text("导入将清空并替换所有现有记录，确定继续？") },
-                    confirmButton = { TextButton(onClick = { showImportConfirm = false; importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) { Text("确定", color = MaterialTheme.colorScheme.error) } },
-                    dismissButton = { TextButton(onClick = { showImportConfirm = false }) { Text("取消") } })
+            // 导入预检结果确认（空备份二次强提示）
+            uiState.pendingImportPreview?.let { preview ->
+                val emptyBackup = preview.entryCount == 0
+                val exportedAt = preview.exportedAt
+                AlertDialog(
+                    onDismissRequest = { viewModel.cancelPendingImport() },
+                    title = { Text(if (emptyBackup) "⚠ 这是空备份" else "确认导入") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                "备份内容：${preview.entryCount} 条记录" +
+                                    (if (preview.deletedCount > 0) "（含回收站 ${preview.deletedCount} 条）" else "") +
+                                    "，${preview.imageCount} 张图片"
+                            )
+                            Text(
+                                "备份版本：" + (if (preview.isLegacy) "旧版 JSON（v1）" else "v2") +
+                                    (preview.appVersion?.let { "，App $it" } ?: "")
+                            )
+                            if (exportedAt != null && exportedAt > 0) {
+                                Text("导出时间：${DateFormats.formatDateTime(exportedAt)}")
+                            }
+                            Text("导入会清空并替换当前所有记录。导入前会自动保存一份当前数据快照，可在本页撤销。")
+                            if (emptyBackup) {
+                                Text(
+                                    "这个备份里没有任何记录，继续导入会清空你现在的全部数据！",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.confirmImport() }) {
+                            Text(if (emptyBackup) "仍然清空导入" else "开始导入", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = { TextButton(onClick = { viewModel.cancelPendingImport() }) { Text("取消") } }
+                )
+            }
+
+            if (showUndoConfirm) {
+                AlertDialog(
+                    onDismissRequest = { showUndoConfirm = false },
+                    title = { Text("撤销上次导入") },
+                    text = { Text("将用导入前的快照恢复数据，当前数据会先自动保存一份快照。确定撤销？") },
+                    confirmButton = {
+                        TextButton(onClick = { showUndoConfirm = false; viewModel.undoImport() }) {
+                            Text("撤销", color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = { TextButton(onClick = { showUndoConfirm = false }) { Text("取消") } }
+                )
             }
         }
     }

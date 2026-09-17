@@ -10,4 +10,5 @@ object UiTestTags {
     const val RECYCLE_CLEAR = "recycle_clear"
     const val EXPORT_BACKUP = "export_backup"
     const val IMPORT_BACKUP = "import_backup"
+    const val UNDO_IMPORT = "undo_import"
 }
