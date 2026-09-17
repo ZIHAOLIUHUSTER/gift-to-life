@@ -101,7 +101,7 @@ fun MemoryScreen(
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
+                    shape = MaterialTheme.shapes.medium,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
@@ -217,7 +217,7 @@ private fun RandomReviewCard(
             .height(460.dp)
             .clickable(onClick = onClick)
             .testTag(UiTestTags.MEMORY_CARD),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
         ),

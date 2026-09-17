@@ -174,7 +174,7 @@ fun EditEntryBottomSheet(
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(6.dp)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -195,7 +195,7 @@ fun EditEntryBottomSheet(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     ),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = MaterialTheme.shapes.large
                 ) {
                     Text("保存")
                 }

@@ -65,9 +65,11 @@ fun MonthSummaryScreen(
             item(key = "generate") {
                 Button(
                     onClick = summaryVM::generateMonthSummary,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
                     enabled = !state.isGenerating,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = MaterialTheme.shapes.large,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     if (state.isGenerating) {

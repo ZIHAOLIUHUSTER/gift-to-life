@@ -65,7 +65,7 @@ fun OnThisDayScreen(onBack: () -> Unit, viewModel: OnThisDayViewModel = hiltView
                     items(entries, key = { it.id }) { entry ->
                         Card(
                             modifier = Modifier.fillMaxWidth().clickable { previewEntry = entry },
-                            shape = RoundedCornerShape(8.dp),
+                            shape = MaterialTheme.shapes.medium,
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {

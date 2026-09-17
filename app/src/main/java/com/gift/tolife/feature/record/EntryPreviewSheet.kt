@@ -211,7 +211,7 @@ fun EntryPreviewSheet(
                             onDismiss()
                             onEdit()
                         },
-                        shape = RoundedCornerShape(8.dp),
+                        shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )
