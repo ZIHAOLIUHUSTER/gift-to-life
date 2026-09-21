@@ -37,9 +37,7 @@ import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.ui.UiTestTags
 import com.gift.tolife.core.ui.theme.ThemeExtended
 import com.gift.tolife.core.common.SiblingApp
-import com.gift.tolife.core.ui.theme.MorandiPalette
 import com.gift.tolife.core.ui.theme.ThemeVariant
-import com.gift.tolife.core.ui.theme.toPalette
 import java.util.Calendar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Settings
@@ -570,11 +568,27 @@ private fun SettingsCard(title: String, content: @Composable ColumnScope.() -> U
 }
 
 // ===== 外观子页 =====
+
+/**
+ * 外观（P42 2026-09-21 重做，版式对齐 Date To Life 的设置页）。
+ *
+ * 旧版问题（用户截图反馈）：深浅模式是三个全宽 Radio 行、皮肤是六行全宽列表，
+ * 排下来比一屏还高，而且整页不可滚动 —— 末几项被底栏裁掉（截图里最后只剩半个圆圈）。
+ * 现在：皮肤 = 3×2 迷你纸张预览网格（选中描主色边、名字转主色），
+ * 深浅模式 = 一排 FilterChip，整页可滚动。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsState()
     val currentTheme = uiState.settings.themeMode
+    val currentVariant = uiState.settings.themeVariant
+    // 预览必须展示用户实际会看到的配色（深色模式下给深色变体）
+    val dark = when (currentTheme) {
+        "light" -> false
+        "dark" -> true
+        else -> isSystemInDarkTheme()
+    }
 
     Scaffold(
         topBar = {
@@ -586,65 +600,49 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
         }
     ) { innerPadding ->
         Column(
-            Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            listOf(
-                "system" to "跟随系统",
-                "light" to "浅色",
-                "dark" to "深色"
-            ).forEach { (value, label) ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.updateThemeMode(value) }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = currentTheme == value,
-                        onClick = { viewModel.updateThemeMode(value) }
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(label, style = MaterialTheme.typography.bodyLarge)
+            SettingsCard(title = "皮肤") {
+                // 3×2 网格：旧版是六行全宽列表，比一屏还高，末两套被底栏裁掉
+                ThemeVariant.values().toList().chunked(3).forEachIndexed { index, rowItems ->
+                    if (index > 0) Spacer(Modifier.height(14.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        rowItems.forEach { variant ->
+                            SkinOptionCard(
+                                variant = variant,
+                                selected = currentVariant == variant.name,
+                                darkTheme = dark,
+                                onClick = { viewModel.updateThemeVariant(variant.name) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+                    }
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "皮肤",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            val currentVariant = uiState.settings.themeVariant
-            val dark = when (currentTheme) {
-                "light" -> false
-                "dark" -> true
-                else -> isSystemInDarkTheme()
-            }
-            ThemeVariant.values().forEach { variant ->
-                val palette = variant.toPalette(dark)
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.updateThemeVariant(variant.name) }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SkinSwatch(palette = palette)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(variant.displayName, style = MaterialTheme.typography.bodyLarge)
-                        Text(
-                            variant.description,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            // 深浅模式：一排 FilterChip（旧版三个全宽 Radio 行占掉大半屏）
+            SettingsCard(title = "深浅模式") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        "system" to "跟随系统",
+                        "light" to "浅色",
+                        "dark" to "深色"
+                    ).forEach { (value, label) ->
+                        FilterChip(
+                            selected = currentTheme == value,
+                            onClick = { viewModel.updateThemeMode(value) },
+                            label = { Text(label) },
                         )
                     }
-                    RadioButton(
-                        selected = currentVariant == variant.name,
-                        onClick = { viewModel.updateThemeVariant(variant.name) },
-                    )
                 }
             }
         }
@@ -653,36 +651,7 @@ private fun AppearancePage(viewModel: SettingsViewModel, onBack: () -> Unit) {
 
 // ===== 关于子页 =====
 
-/**
- * 皮肤色卡（P39 纸张感修订）：纸底 + 白卡 + 一小段主色点睛。
- *
- * 旧版是一个 28dp 实心主色方块 —— 大面积纯色在列表里很刺眼，也看不出“纸”是什么颜色。
- */
-@Composable
-private fun SkinSwatch(palette: MorandiPalette) {
-    Box(
-        Modifier
-            .size(32.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(palette.background)
-            .padding(5.dp),
-    ) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(5.dp))
-                .background(palette.surfaceContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                Modifier
-                    .size(11.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(palette.primary),
-            )
-        }
-    }
-}@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AboutPage(onBack: () -> Unit) {
     val context = LocalContext.current
