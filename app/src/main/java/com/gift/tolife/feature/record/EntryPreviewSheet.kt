@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,28 +18,29 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
-import com.gift.tolife.R
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.GallerySaver
 import com.gift.tolife.core.common.ShareCardRenderer
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
+import com.gift.tolife.core.ui.theme.LifeType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.MoreVert
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun EntryPreviewSheet(
     entry: Entry,
@@ -48,7 +50,7 @@ fun EntryPreviewSheet(
     onDelete: () -> Unit,
     onImageClick: (() -> Unit)? = null
 ) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showMore by remember(entry.id) { mutableStateOf(false) }
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
@@ -56,7 +58,8 @@ fun EntryPreviewSheet(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            val saved = GallerySaver.saveImage(context, entry.imagePath!!, entry.createdAt)
+            val path = entry.imagePath ?: return@rememberLauncherForActivityResult
+            val saved = GallerySaver.saveImage(context, path, entry.createdAt)
             if (saved) Toast.makeText(context, "已保存到相册", Toast.LENGTH_SHORT).show()
             else Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show()
         } else {
@@ -106,100 +109,145 @@ fun EntryPreviewSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                width = 36.dp,
+                height = 4.dp,
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+        },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 22.dp)
+                .padding(bottom = 20.dp)
         ) {
-            // 时间 + 分享
+            // 时间与按需操作固定在顶部，正文再长也不把编辑挤出屏幕。
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = DateFormats.formatDateTime(entry.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LifeType.meta,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                IconButton(onClick = { shareEntry() }) {
-                    Icon(
-                        Icons.Rounded.Share,
-                        contentDescription = "分享",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 全文（长按复制）
-            Text(
-                text = entry.content,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.combinedClickable(
-                    onClick = {},
-                    onLongClick = {
-                        clipboardManager.setText(AnnotatedString(entry.content))
-                        Toast.makeText(context, "已复制全文", Toast.LENGTH_SHORT).show()
+                Box {
+                    IconButton(onClick = { showMore = true }) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "更多操作")
                     }
-                )
-            )
-
-            // 图片（长按保存到相册）
-            if (!entry.imagePath.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                AsyncImage(
-                    model = File(entry.imagePath),
-                    contentDescription = "预览图片",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .combinedClickable(
-                            onClick = { onImageClick?.invoke() },
-                            onLongClick = { saveImage() }
-                        ),
-                    contentScale = ContentScale.Crop
-                )
-            }
-
-            // 标签
-            if (tags.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tags.forEach { tag ->
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        ) {
-                            Text(
-                                tag.label,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
+                    DropdownMenu(expanded = showMore, onDismissRequest = { showMore = false }) {
+                        DropdownMenuItem(
+                            text = { Text("复制全文") },
+                            onClick = {
+                                showMore = false
+                                clipboardManager.setText(AnnotatedString(entry.content))
+                                Toast.makeText(context, "已复制全文", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("分享卡片") },
+                            onClick = { showMore = false; shareEntry() }
+                        )
+                        if (!entry.imagePath.isNullOrBlank()) {
+                            DropdownMenuItem(
+                                text = { Text("保存原图") },
+                                onClick = { showMore = false; saveImage() }
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // 按钮行
+                // 全文（长按复制）
+                Text(
+                    text = entry.content,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 28.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = {
+                            clipboardManager.setText(AnnotatedString(entry.content))
+                            Toast.makeText(context, "已复制全文", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                )
+
+                // 图片（长按保存到相册）
+                if (!entry.imagePath.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    AsyncImage(
+                        model = File(entry.imagePath),
+                        contentDescription = "预览图片",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .combinedClickable(
+                                onClick = { onImageClick?.invoke() },
+                                onLongClick = { saveImage() }
+                            ),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // 标签
+                if (tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        tags.forEach { tag ->
+                            // 标签中性表达：不再用主色底小胶囊
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = Color.Transparent,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Text(
+                                    tag.label,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            HorizontalDivider(
+                thickness = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            )
+
+            // 固定操作：软删除可撤销，不再二次确认。
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 TextButton(
-                    onClick = { showDeleteConfirm = true },
+                    onClick = {
+                        onDelete()
+                        onDismiss()
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp),
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
@@ -210,9 +258,10 @@ fun EntryPreviewSheet(
                 if (onEdit != null) {
                     Button(
                         onClick = {
-                            onDismiss()
                             onEdit()
+                            onDismiss()
                         },
+                        modifier = Modifier.heightIn(min = 48.dp),
                         shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
@@ -222,25 +271,6 @@ fun EntryPreviewSheet(
                     }
                 }
             }
-        }
-
-        // 移至回收站确认对话框
-        if (showDeleteConfirm) {
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirm = false },
-                title = { Text("移至回收站？") },
-                text = { Text("这条记录可以稍后在设置 → 回收站中恢复。") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        onDismiss()
-                        onDelete()
-                        showDeleteConfirm = false
-                    }) { Text("移至回收站") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteConfirm = false }) { Text("取消") }
-                }
-            )
         }
     }
 }

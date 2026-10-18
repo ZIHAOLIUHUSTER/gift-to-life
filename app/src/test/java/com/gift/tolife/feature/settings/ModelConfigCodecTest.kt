@@ -57,7 +57,35 @@ class ModelConfigCodecTest {
     fun `rejects future version`() {
         assertThrows(IllegalArgumentException::class.java) {
             ModelConfigCodec.parse(
-                """{"version":3,"baseUrl":"https://api.example.com","tagModel":"a","summaryModel":"b","visionModel":"c"}"""
+                """{"version":4,"baseUrl":"https://api.example.com","tagModel":"a","summaryModel":"b","visionModel":"c"}"""
+            )
+        }
+    }
+
+    @Test
+    fun `v3 解析独立总结地址并规范化`() {
+        val v = ModelConfigCodec.parse(
+            """{"version":3,"baseUrl":"https://a.example.com","tagModel":"t","summaryModel":"s","visionModel":"v",
+               "summaryBaseUrl":"https://api.siliconflow.cn/v1/chat/completions"}"""
+        )
+        assertEquals("https://a.example.com/", v.baseUrl)
+        assertEquals("https://api.siliconflow.cn/", v.summaryBaseUrl)
+    }
+
+    @Test
+    fun `v2 老配置仍然接受 且总结跟随默认供应商`() {
+        val v = ModelConfigCodec.parse(
+            """{"version":2,"baseUrl":"https://api.example.com","tagModel":"t","summaryModel":"s","visionModel":"v"}"""
+        )
+        assertEquals("", v.summaryBaseUrl)
+    }
+
+    @Test
+    fun `总结地址非法时报错`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ModelConfigCodec.parse(
+                """{"version":3,"baseUrl":"https://api.example.com","tagModel":"t","summaryModel":"s","visionModel":"v",
+                   "summaryBaseUrl":"http://insecure.example.com"}"""
             )
         }
     }

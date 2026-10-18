@@ -2,17 +2,20 @@ package com.gift.tolife.feature.memory
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.gift.tolife.core.ai.SummaryPrompt
+import com.gift.tolife.core.ai.ManualSummaryScheduler
+import com.gift.tolife.core.ai.ManualSummaryStatus
+import com.gift.tolife.core.ai.ManualSummaryTask
+import com.gift.tolife.core.ai.SummaryGenerationPolicy
+import com.gift.tolife.core.ai.SummaryGenerationTarget
+import com.gift.tolife.core.ai.SummaryGenerator
+import com.gift.tolife.core.ai.SummaryPeriod
+import com.gift.tolife.core.ai.SummaryStatsBuilder
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.TimeUtil
 import com.gift.tolife.core.database.EntryRepository
-import com.gift.tolife.core.database.dao.EntryDao
-import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.model.Entry
-import com.gift.tolife.core.model.EntryType
-import com.gift.tolife.core.network.AiClient
-import com.gift.tolife.core.ai.AiResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -22,117 +25,170 @@ data class SummaryState(
     val monthSummaries: List<Entry> = emptyList(),
     val currentWeekSummary: Entry? = null,
     val currentMonthSummary: Entry? = null,
-    val isGenerating: Boolean = false
+    val isGenerating: Boolean = false,
+    val generatingPeriod: SummaryPeriod? = null,
+    val retryablePeriod: SummaryPeriod? = null,
+    val recentWeekCount: Int = 0,
+    val recentMonthCount: Int = 0,
+    /** 跨离页/进程的任务状态；旧任务只展示状态，不自动导航。 */
+    val manualTasks: List<ManualSummaryTask> = emptyList(),
 )
 
 sealed class SummaryEvent {
     data class ShowMessage(val message: String) : SummaryEvent()
     data class ConfirmRegenerate(val generatedAt: String) : SummaryEvent()
+    data class OpenDeck(val entryId: Long) : SummaryEvent()
+    data class OfferRetry(val message: String, val period: SummaryPeriod) : SummaryEvent()
 }
 
 @HiltViewModel
 class SummaryViewModel @Inject constructor(
     private val repository: EntryRepository,
-    private val entryDao: EntryDao,
-    private val settingsDataStore: SettingsDataStore,
-    private val aiClient: AiClient
+    private val generator: SummaryGenerator,
+    private val scheduler: ManualSummaryScheduler,
 ) : ViewModel() {
-
     private val _state = MutableStateFlow(SummaryState())
     val state: StateFlow<SummaryState> = _state.asStateFlow()
-
     private val _events = MutableSharedFlow<SummaryEvent>()
     val events: SharedFlow<SummaryEvent> = _events.asSharedFlow()
+
+    // 不持久化“自动打开”意图：只有本页面主动加入的请求完成才导航。
+    private var requestedId: String? = null
+    private var enqueueing = false
+    private var pendingRetry: Pair<SummaryGenerationTarget, Boolean>? = null
+    private var pendingConfirmation: SummaryGenerationTarget? = null
 
     init {
         viewModelScope.launch {
             repository.observeSummaries().collect { summaries ->
-                val weeks = summaries.filter { it.summaryStart != null && it.summaryEnd != null && it.summaryEnd!! - it.summaryStart!! < 8L * 24 * 60 * 60 * 1000 }
-                val months = summaries.filter { it.summaryStart != null && it.summaryEnd != null && it.summaryEnd!! - it.summaryStart!! > 25L * 24 * 60 * 60 * 1000 }
                 val (wStart, wEnd) = TimeUtil.previousWeekRange()
                 val (mStart, mEnd) = TimeUtil.previousMonthRange()
                 _state.update {
                     it.copy(
-                        weekSummaries = weeks,
-                        monthSummaries = months,
+                        weekSummaries = summaries.filter { entry -> isWeek(entry) },
+                        monthSummaries = summaries.filter { entry -> !isWeek(entry) },
                         currentWeekSummary = summaries.find { s -> s.summaryStart == wStart && s.summaryEnd == wEnd },
-                        currentMonthSummary = summaries.find { s -> s.summaryStart == mStart && s.summaryEnd == mEnd }
+                        currentMonthSummary = summaries.find { s -> s.summaryStart == mStart && s.summaryEnd == mEnd },
                     )
                 }
             }
         }
-    }
-
-    fun generateWeekSummary(force: Boolean = false) {
-        val (start, end) = TimeUtil.previousWeekRange()
-        generateSummary(
-            start = start, end = end,
-            systemPrompt = SummaryPrompt.pickRandomWeekPrompt(),
-            existing = _state.value.currentWeekSummary,
-            force = force,
-            insufficientMsg = "上周记录不足 3 条，无法生成总结",
-            successMsg = "上周总结已生成"
-        )
-    }
-
-    fun generateMonthSummary(force: Boolean = false) {
-        val (start, end) = TimeUtil.previousMonthRange()
-        generateSummary(
-            start = start, end = end,
-            systemPrompt = SummaryPrompt.MONTH_LETTER,
-            existing = _state.value.currentMonthSummary,
-            force = force,
-            insufficientMsg = "上月记录不足 3 条，无法生成总结",
-            successMsg = "上月总结已生成"
-        )
-    }
-
-    private fun generateSummary(
-        start: Long, end: Long,
-        systemPrompt: String,
-        existing: Entry?,
-        force: Boolean,
-        insufficientMsg: String,
-        successMsg: String
-    ) {
         viewModelScope.launch {
-            // 同周期已有总结：AI 调用前先本地拦截，经用户确认后才重新生成覆盖（不浪费 token）
-            if (existing != null && !force) {
-                _events.emit(SummaryEvent.ConfirmRegenerate(DateFormats.formatDateTime(existing.createdAt)))
-                return@launch
-            }
-            _state.update { it.copy(isGenerating = true) }
-            try {
-                val settings = settingsDataStore.settings.first()
-                if (settings.apiKey.isBlank()) {
-                    _events.emit(SummaryEvent.ShowMessage("请先在设置中配置 API Key"))
-                    return@launch
-                }
-                val entries = entryDao.getNormalEntriesInRange(start, end)
-                val prompt = SummaryPrompt.buildUserPrompt(entries)
-                if (prompt == null) {
-                    _events.emit(SummaryEvent.ShowMessage(insufficientMsg))
-                    return@launch
-                }
-                val result = aiClient.chat(settings.summaryModel, systemPrompt, prompt)
-                if (result is AiResult.Success && result.value.isNotBlank()) {
-                    if (existing != null) repository.update(existing.copy(content = result.value, summaryModel = settings.summaryModel))
-                    else repository.save(Entry(content = result.value, type = EntryType.SUMMARY, summaryStart = start, summaryEnd = end, summaryModel = settings.summaryModel))
-                    _events.emit(SummaryEvent.ShowMessage(successMsg))
-                } else {
-                    _events.emit(SummaryEvent.ShowMessage("生成失败"))
-                }
-            } catch (t: Throwable) {
-                _events.emit(SummaryEvent.ShowMessage("生成失败: ${t.message ?: ""}"))
-            } finally {
-                _state.update { it.copy(isGenerating = false) }
+            scheduler.observe().collect { tasks ->
+                updateTasks(tasks)
+                handleRequestedCompletion(tasks)
             }
         }
+        refreshCounts()
+    }
+
+    private fun isWeek(entry: Entry): Boolean {
+        val start = entry.summaryStart ?: return false
+        val end = entry.summaryEnd ?: return false
+        return end - start < 8L * 24 * 60 * 60 * 1000
+    }
+
+    fun refreshCounts() {
+        viewModelScope.launch {
+            val (wStart, wEnd) = TimeUtil.previousWeekRange()
+            val (mStart, mEnd) = TimeUtil.previousMonthRange()
+            try {
+                val weeks = repository.countInRange(wStart, wEnd)
+                val months = repository.countInRange(mStart, mEnd)
+                _state.update { it.copy(recentWeekCount = weeks, recentMonthCount = months) }
+            } catch (t: Exception) {
+                if (t is CancellationException) throw t
+            }
+        }
+    }
+
+    fun generate(period: SummaryPeriod, force: Boolean = false) {
+        // 确认弹窗期间跨日也不改变用户刚才选中的范围。
+        val confirmed = pendingConfirmation?.takeIf { force && it.period == period }
+        pendingConfirmation = null
+        generate(confirmed ?: generator.targetOf(period), force)
+    }
+
+    fun generate(target: SummaryGenerationTarget, force: Boolean = false) {
+        if (enqueueing || requestedId != null) return
+        enqueueing = true
+        _state.update { it.copy(isGenerating = true, generatingPeriod = target.period, retryablePeriod = null) }
+        viewModelScope.launch {
+            try {
+                if (!target.isValid()) {
+                    _events.emit(SummaryEvent.ShowMessage("总结时间范围无效或尚未结束"))
+                    return@launch
+                }
+                val existing = if (target.expectedEntryId != null) repository.getById(target.expectedEntryId)
+                    else generator.existingSummary(target.start, target.end)
+                if (existing != null && !existing.isDeleted && !force) {
+                    pendingConfirmation = target.copy(expectedEntryId = existing.id, expectedUpdatedAt = existing.updatedAt)
+                    _events.emit(SummaryEvent.ConfirmRegenerate(DateFormats.formatDateTime(existing.createdAt)))
+                    return@launch
+                }
+                val frozen = if (force && existing != null) target.copy(
+                    expectedEntryId = target.expectedEntryId ?: existing.id,
+                    expectedUpdatedAt = target.expectedUpdatedAt ?: existing.updatedAt,
+                ) else target
+                pendingRetry = frozen to force
+                requestedId = scheduler.enqueue(frozen, force)
+                // 极快的本地跳过/失败可能先于 enqueue 返回，补消费一次最新快照。
+                handleRequestedCompletion(_state.value.manualTasks)
+            } catch (t: Exception) {
+                if (t is CancellationException) throw t
+                requestedId = null
+                _events.emit(SummaryEvent.OfferRetry("任务未能入队，请再试一次", target.period))
+            } finally {
+                enqueueing = false
+                updateTasks(_state.value.manualTasks)
+            }
+        }
+    }
+
+    private fun updateTasks(tasks: List<ManualSummaryTask>) {
+        val active = tasks.firstOrNull { it.running && it.id == requestedId } ?: tasks.firstOrNull { it.running }
+        _state.update {
+            it.copy(manualTasks = tasks, isGenerating = enqueueing || active != null,
+                generatingPeriod = if (enqueueing) it.generatingPeriod else active?.target?.period)
+        }
+    }
+
+    private suspend fun handleRequestedCompletion(tasks: List<ManualSummaryTask>) {
+        val task = tasks.find { it.id == requestedId && !it.running } ?: return
+        val shouldOpen = SummaryGenerationPolicy.shouldOpen(task, requestedId)
+        requestedId = null // 先消费再 suspend，观察器重复发射不能二次导航。
+        when {
+            shouldOpen -> {
+                pendingRetry = null
+                val entry = repository.getById(task.entryId!!)
+                if (entry != null && !entry.isDeleted && entry.summaryStart == task.target.start && entry.summaryEnd == task.target.end) {
+                    // 不先发成功 Snackbar，避免它阻塞 OpenDeck。
+                    _events.emit(SummaryEvent.OpenDeck(entry.id))
+                }
+            }
+            task.status == ManualSummaryStatus.FAILED -> {
+                _state.update { it.copy(retryablePeriod = task.target.period) }
+                _events.emit(SummaryEvent.OfferRetry(task.message, task.target.period))
+            }
+            else -> {
+                pendingRetry = null
+                _events.emit(SummaryEvent.ShowMessage(task.message))
+            }
+        }
+    }
+
+    /** 重试沿用上次冻结范围，不能跨周/月后悄悄换成新周期。 */
+    fun retry() {
+        val retry = pendingRetry ?: _state.value.manualTasks.lastOrNull {
+            it.status == ManualSummaryStatus.FAILED
+        }?.let { it.target to (it.target.expectedEntryId != null) } ?: return
+        pendingRetry = null
+        generate(retry.first, retry.second)
     }
 
     fun deleteSummary(entryId: Long) {
-        viewModelScope.launch {
-            repository.softDelete(entryId)
-        }
+        viewModelScope.launch { repository.softDelete(entryId) }
     }
+
+    fun bandOf(timestamp: Long): String = SummaryStatsBuilder.bandOf(timestamp)
 }

@@ -24,16 +24,14 @@ import com.gift.tolife.core.model.TagType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.util.UUID
 import javax.inject.Inject
 
 data class EntryWithTags(val entry: Entry, val tags: List<TagType>)
@@ -77,16 +75,22 @@ class RecordViewModel @Inject constructor(
     private val _events = MutableSharedFlow<RecordEvent>()
     val events: SharedFlow<RecordEvent> = _events.asSharedFlow()
 
-    @OptIn(FlowPreview::class)
-    private val searchText = MutableStateFlow("")
+    private var searchGeneration = 0L
+    private val searchText = MutableStateFlow(RecordInputPolicy.SearchInput("", searchGeneration))
+    private var nextShareId = 0L
+    private var nextFocusId = 0L
 
     init {
         consumeSharedContent()
         // 搜索防抖：250ms 后更新 entryQuery
         @OptIn(FlowPreview::class)
         viewModelScope.launch {
-            searchText.debounce(250).collect { text ->
-                _uiState.update { it.copy(entryQuery = it.entryQuery.copy(searchText = text)) }
+            searchText.debounce(250).collect { input ->
+                _uiState.update { state ->
+                    if (RecordInputPolicy.applySearch(input, searchGeneration, state.isSearchMode, state.searchQuery)) {
+                        state.copy(entryQuery = state.entryQuery.copy(searchText = input.text))
+                    } else state
+                }
             }
         }
     }
@@ -94,47 +98,82 @@ class RecordViewModel @Inject constructor(
     private fun consumeSharedContent() {
         viewModelScope.launch {
             ShareReceiver.events.collect { shared ->
-                _uiState.update {
-                    when {
-                        shared.text != null && shared.imageUri != null -> {
-                            it.copy(
-                                draftText = shared.text,
-                                pendingImageUri = shared.imageUri,
-                                draftVersion = it.draftVersion + 1
-                            )
-                        }
-                        shared.text != null -> {
-                            it.copy(
-                                draftText = shared.text,
-                                pendingImageUri = null,
-                                draftVersion = it.draftVersion + 1
-                            )
-                        }
-                        shared.imageUri != null -> {
-                            it.copy(
-                                pendingImageUri = shared.imageUri,
-                                draftVersion = it.draftVersion + 1
-                            )
-                        }
-                        else -> it
+                val state = _uiState.value
+                when (RecordInputPolicy.incomingShare(
+                    shared.text, shared.imageUri != null,
+                    state.draftText, state.pendingImageUri != null, state.isSaving, state.pendingShares.isNotEmpty()
+                )) {
+                    RecordInputPolicy.ShareAction.FOCUS_ONLY -> requestComposerFocus()
+                    RecordInputPolicy.ShareAction.RECEIVE -> acceptShare(PendingShare(++nextShareId, shared))
+                    RecordInputPolicy.ShareAction.QUEUE -> {
+                        val pending = PendingShare(++nextShareId, shared)
+                        _uiState.update { it.copy(pendingShares = it.pendingShares + pending) }
+                        requestComposerFocus()
                     }
                 }
-                _events.emit(RecordEvent.RequestComposerFocus)
             }
         }
     }
 
+    private fun requestComposerFocus() {
+        closeSearch()
+        val focusId = ++nextFocusId
+        _uiState.update { it.copy(composerFocusRequest = focusId) }
+    }
+
+    private fun acceptShare(share: PendingShare) {
+        closeSearch()
+        val focusId = ++nextFocusId
+        _uiState.update {
+            it.copy(
+                draftText = share.content.text.orEmpty(),
+                pendingImageUri = share.content.imageUri,
+                draftVersion = it.draftVersion + 1,
+                saveError = null,
+                pendingShares = it.pendingShares.filterNot { pending -> pending.id == share.id },
+                composerFocusRequest = focusId
+            )
+        }
+    }
+
+    fun consumeComposerFocus(requestId: Long) {
+        _uiState.update { if (it.composerFocusRequest == requestId) it.copy(composerFocusRequest = null) else it }
+    }
+
+    fun keepDraft(shareId: Long) {
+        _uiState.update {
+            if (RecordInputPolicy.canResolveShare(shareId, it.pendingShares.firstOrNull()?.id, it.isSaving)) {
+                it.copy(pendingShares = it.pendingShares.drop(1))
+            } else it
+        }
+    }
+
+    fun saveDraftAndReceive(shareId: Long) {
+        val state = _uiState.value
+        if (!RecordInputPolicy.canResolveShare(shareId, state.pendingShares.firstOrNull()?.id, state.isSaving)) return
+        saveDraftInternal(shareId)
+    }
+
     private val saveMutex = Mutex()
 
-    fun saveDraft() {
+    fun saveDraft() = saveDraftInternal()
+
+    private fun saveDraftInternal(receiveShareId: Long? = null) {
         viewModelScope.launch {
             if (!saveMutex.tryLock()) return@launch
+            var copiedImagePath: String? = null
+            var persisted = false
             try {
+                if (receiveShareId != null && _uiState.value.pendingShares.firstOrNull()?.id != receiveShareId) return@launch
                 _uiState.update { it.copy(isSaving = true, saveError = null) }
                 val snapshot = _uiState.value
                 val pendingImage = snapshot.pendingImageUri
-                if (!EntrySavePolicy.canSave(snapshot.draftText, pendingImage != null)) {
+                val parsed = EntryInputParser.parse(snapshot.draftText)
+                if (!parsed.canSave(pendingImage != null)) {
                     _uiState.update { it.copy(isSaving = false) }
+                    if (receiveShareId != null) {
+                        snapshot.pendingShares.firstOrNull()?.let(::acceptShare)
+                    }
                     return@launch
                 }
                 val imagePath = pendingImage?.let { uri ->
@@ -145,16 +184,23 @@ class RecordViewModel @Inject constructor(
                     _events.emit(RecordEvent.ShowSnackbar("图片处理失败，记录尚未保存"))
                     return@launch
                 }
+                copiedImagePath = imagePath
                 val entry = Entry(
-                    content = snapshot.draftText.trim(),
+                    content = parsed.content,
                     imagePath = imagePath,
                     type = EntryType.NORMAL
                 )
-                val entryId = repository.save(entry)
-                tagScheduler.enqueue(entryId, 0L)
+                val entryId = repository.save(entry, parsed.tags)
+                persisted = true
+                val beforeClear = _uiState.value
+                val completion = RecordInputPolicy.completeSave(
+                    true, snapshot.draftVersion, beforeClear.draftVersion, receiveShareId,
+                    beforeClear.pendingShares.firstOrNull()?.id
+                )
+                val shareToAccept = if (completion.receivePendingShare) beforeClear.pendingShares.firstOrNull() else null
 
                 _uiState.update {
-                    if (it.draftVersion == snapshot.draftVersion) {
+                    if (completion.clearDraft && it.draftVersion == snapshot.draftVersion) {
                         it.copy(
                             draftText = "",
                             pendingImageUri = null,
@@ -165,12 +211,22 @@ class RecordViewModel @Inject constructor(
                         it.copy(isSaving = false)
                     }
                 }
-                _events.emit(RecordEvent.EntrySaved)
-                updateStreak()
+                shareToAccept?.let(::acceptShare)
+                // Database success is final; background tagging/streak failure must not resurrect a saved draft.
+                if (parsed.runAi) runCatching { tagScheduler.enqueue(entryId, 0L) }
+                if (receiveShareId != null && shareToAccept == null) {
+                    _events.emit(RecordEvent.ShowSnackbar("原草稿已保存；新修改仍保留，请再次接收分享"))
+                } else {
+                    _events.emit(RecordEvent.EntrySaved)
+                }
+                runCatching { updateStreak() }
             } catch (t: Throwable) {
+                if (!persisted) copiedImagePath?.let { imageStore.delete(it) }
+                if (t is CancellationException) throw t
                 _uiState.update { it.copy(isSaving = false, saveError = t.message) }
-                _events.emit(RecordEvent.ShowSnackbar("保存失败，请重试"))
+                _events.emit(RecordEvent.ShowSnackbar("保存失败，草稿和待接收分享均已保留"))
             } finally {
+                _uiState.update { it.copy(isSaving = false) }
                 saveMutex.unlock()
             }
         }
@@ -229,23 +285,30 @@ class RecordViewModel @Inject constructor(
     }
 
     fun selectEntry(entry: Entry) {
-        _uiState.update { it.copy(selectedEntry = entry) }
+        if (_uiState.value.isSavingEdit) return
+        _uiState.update { it.copy(selectedEntry = entry, editingTagsEntryId = null) }
     }
 
     fun clearSelection() {
-        _uiState.update { it.copy(selectedEntry = null, editingImageEntry = null) }
+        _uiState.update {
+            if (it.isSavingEdit) it else it.copy(selectedEntry = null, editingImageEntry = null, editingTagsEntryId = null)
+        }
     }
 
     fun openSearch() {
-        _uiState.update { it.copy(isSearchMode = true, searchQuery = "") }
+        searchGeneration++
+        searchText.value = RecordInputPolicy.SearchInput("", searchGeneration)
+        _uiState.update { it.copy(isSearchMode = true, searchQuery = "", entryQuery = it.entryQuery.copy(searchText = "")) }
     }
 
     fun closeSearch() {
+        searchGeneration++
+        searchText.value = RecordInputPolicy.SearchInput("", searchGeneration)
         _uiState.update { it.copy(isSearchMode = false, searchQuery = "", entryQuery = EntryQuery()) }
     }
 
     fun setSearchQuery(query: String) {
-        searchText.value = query
+        searchText.value = RecordInputPolicy.SearchInput(query, searchGeneration)
         _uiState.update { it.copy(searchQuery = query) }
     }
 
@@ -270,7 +333,7 @@ class RecordViewModel @Inject constructor(
     }
 
     fun clearFilters() {
-        _uiState.update { it.copy(entryQuery = EntryQuery()) }
+        _uiState.update { it.copy(entryQuery = RecordInputPolicy.clearFilters(it.entryQuery)) }
     }
 
     private val _editTags = MutableStateFlow<List<TagType>>(emptyList())
@@ -281,8 +344,11 @@ class RecordViewModel @Inject constructor(
     fun loadTags(entryId: Long) {
         viewModelScope.launch {
             val tags = repository.getTags(entryId).map { it.tag }
+            // A late response for a previously closed entry must not reset the current edit draft.
+            if (_uiState.value.selectedEntry?.id != entryId) return@launch
             _editTags.value = tags
             _originalEditTags = tags.toSet()
+            _uiState.update { it.copy(editingTagsEntryId = entryId) }
         }
     }
 
@@ -292,7 +358,11 @@ class RecordViewModel @Inject constructor(
 
     fun saveEdit(draft: EntryEditDraft) {
         viewModelScope.launch {
+            val state = _uiState.value
+            if (state.isSavingEdit || state.selectedEntry?.id != draft.entryId || state.editingTagsEntryId != draft.entryId) return@launch
+            _uiState.update { it.copy(isSavingEdit = true) }
             var newImagePath: String? = null
+            var persisted = false
             try {
                 val originalTags = _originalEditTags.toSet()
                 val tagsChanged = draft.tags != originalTags
@@ -322,22 +392,29 @@ class RecordViewModel @Inject constructor(
                         val revision = entryTransactions.updateUserContent(
                             draft.entryId, draft.content, finalPath
                         )
-                        tagScheduler.enqueue(draft.entryId, revision)
+                        // A background scheduling error must not delete a successfully persisted replacement image.
+                        persisted = true
+                        runCatching { tagScheduler.enqueue(draft.entryId, revision) }
                     }
                     else -> { /* 什么都没变 */ }
                 }
 
+                persisted = true
                 // 成功后清理旧图片
                 if (draft.imageChange != ImageChange.Keep && !draft.originalImagePath.isNullOrBlank()) {
                     imageStore.delete(draft.originalImagePath)
                 }
 
-                _uiState.update { it.copy(selectedEntry = null, editingImageEntry = null) }
+                _uiState.update {
+                    it.copy(selectedEntry = null, editingImageEntry = null, editingTagsEntryId = null, isSavingEdit = false)
+                }
                 _events.emit(RecordEvent.ShowSnackbar("修改已保存"))
             } catch (t: Throwable) {
-                // 失败时清理新写入的图片
-                newImagePath?.let { imageStore.delete(it) }
-                _events.emit(RecordEvent.ShowSnackbar("保存失败: ${t.message ?: ""}"))
+                if (!persisted) newImagePath?.let { imageStore.delete(it) }
+                if (t is CancellationException) throw t
+                _events.emit(RecordEvent.ShowSnackbar("保存失败，修改已保留: ${t.message ?: ""}"))
+            } finally {
+                _uiState.update { it.copy(isSavingEdit = false) }
             }
         }
     }

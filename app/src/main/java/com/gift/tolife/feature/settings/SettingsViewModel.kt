@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gift.tolife.core.ai.AiResult
+import com.gift.tolife.core.ai.SummaryWorkScheduler
 import com.gift.tolife.core.datastore.AppSettings
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.database.EntryRepository
@@ -16,7 +17,7 @@ import com.gift.tolife.core.export.ImportResult
 import com.gift.tolife.core.export.SnapshotInfo
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.network.AiClient
-import com.gift.tolife.core.network.BaseUrlValidator
+import kotlinx.coroutines.CancellationException
 import com.google.gson.GsonBuilder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -28,6 +29,9 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val settings: AppSettings = AppSettings(),
+    val aiDraft: AiConfigDraft? = null,
+    val aiErrors: Map<AiConfigField, String> = emptyMap(),
+    val validationAttempt: Int = 0,
     val isSaved: Boolean = false,
     val testingTag: Boolean = false,
     val testingSummary: Boolean = false,
@@ -49,7 +53,8 @@ class SettingsViewModel @Inject constructor(
     private val exportManager: ExportImportManager,
     private val repository: EntryRepository,
     @ApplicationContext private val context: Context,
-    private val entryDao: EntryDao
+    private val entryDao: EntryDao,
+    private val summaryScheduler: SummaryWorkScheduler
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -153,39 +158,42 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             settingsDataStore.settings.collect { settings ->
-                _uiState.update { it.copy(settings = settings) }
+                _uiState.update { it.copy(settings = settings, aiDraft = it.aiDraft ?: AiConfigDraft.from(settings)) }
             }
         }
     }
 
-    fun updateApiKey(key: String) {
-        settingsDataStore.updateApiKey(key)
-        _uiState.update { it.copy(isSaved = true) }
-    }
-
-    fun updateBaseUrl(url: String) {
-        try {
-            val normalized = BaseUrlValidator.normalize(url)
-            settingsDataStore.updateBaseUrl(normalized)
-            _uiState.update { it.copy(isSaved = true) }
-        } catch (e: IllegalArgumentException) {
-            viewModelScope.launch { _events.emit(SettingsEvent.ShowMessage(e.message ?: "API 地址无效")) }
+    fun updateAiDraft(field: AiConfigField, value: String) {
+        _uiState.update {
+            it.copy(
+                aiDraft = it.aiDraft?.withField(field, value),
+                aiErrors = it.aiErrors - field,
+                isSaved = false,
+                testResultTag = null, testResultVision = null, testResultSummary = null
+            )
         }
     }
 
-    fun updateTagModel(model: String) {
-        settingsDataStore.updateTagModel(model)
-        _uiState.update { it.copy(isSaved = true) }
+    fun saveAiConfiguration() {
+        val state = _uiState.value
+        val draft = state.aiDraft ?: return
+        try {
+            val validation = AiConfigValidator.save(draft, state.settings, settingsDataStore::updateAiConfiguration)
+            val normalized = validation.normalized
+            if (normalized == null) {
+                _uiState.update { it.copy(aiErrors = validation.errors, validationAttempt = it.validationAttempt + 1, isSaved = false) }
+                return
+            }
+            _uiState.update { it.copy(aiDraft = normalized, aiErrors = emptyMap(), isSaved = true) }
+            viewModelScope.launch { _events.emit(SettingsEvent.ShowMessage("已保存")) }
+        } catch (e: Exception) {
+            _uiState.update { it.copy(isSaved = false) }
+            viewModelScope.launch { _events.emit(SettingsEvent.ShowMessage("保存失败，请重试")) }
+        }
     }
 
-    fun updateSummaryModel(model: String) {
-        settingsDataStore.updateSummaryModel(model)
-        _uiState.update { it.copy(isSaved = true) }
-    }
-
-    fun updateVisionModel(model: String) {
-        settingsDataStore.updateVisionModel(model)
-        _uiState.update { it.copy(isSaved = true) }
+    fun updateSummaryThinking(value: String) {
+        settingsDataStore.updateSummaryThinking(value)
     }
 
     fun clearSavedFlag() {
@@ -194,12 +202,10 @@ class SettingsViewModel @Inject constructor(
 
     fun updateThemeMode(mode: String) {
         settingsDataStore.updateThemeMode(mode)
-        _uiState.update { it.copy(isSaved = true) }
     }
 
     fun updateThemeVariant(variant: String) {
         settingsDataStore.updateThemeVariant(variant)
-        _uiState.update { it.copy(isSaved = true) }
     }
 
     private val _events = MutableSharedFlow<SettingsEvent>()
@@ -311,56 +317,58 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(snapshot = snapshot) }
     }
 
-    fun testTagModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        testModel(model, apiKey, baseUrl, "tag")
+    fun testTagModel() = testModel(AiModelTarget.TAG)
+
+    fun testSummaryModel() = testModel(AiModelTarget.SUMMARY)
+
+    fun updateAutoSummaryEnabled(enabled: Boolean) {
+        settingsDataStore.updateAutoSummaryEnabled(enabled)
+        if (enabled) summaryScheduler.scheduleAll() else summaryScheduler.cancelAll()
     }
 
-    fun testSummaryModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        testModel(model, apiKey, baseUrl, "summary")
-    }
+    fun testVisionModel() = testModel(AiModelTarget.VISION)
 
-    fun testVisionModel(model: String, apiKey: String = "", baseUrl: String = "") {
-        testModel(model, apiKey, baseUrl, "vision")
-    }
-
-    private fun testModel(model: String, apiKey: String, baseUrl: String, target: String) {
+    private fun testModel(target: AiModelTarget) {
+        val state = _uiState.value
+        val draft = state.aiDraft ?: return
         val isTesting = when (target) {
-            "tag" -> _uiState.value.testingTag
-            "summary" -> _uiState.value.testingSummary
-            else -> _uiState.value.testingVision
+            AiModelTarget.TAG -> state.testingTag
+            AiModelTarget.SUMMARY -> state.testingSummary
+            AiModelTarget.VISION -> state.testingVision
         }
         if (isTesting) return
-
-        _uiState.update {
-            when (target) {
-                "tag" -> it.copy(testingTag = true, testResultTag = null)
-                "summary" -> it.copy(testingSummary = true, testResultSummary = null)
-                else -> it.copy(testingVision = true, testResultVision = null)
-            }
+        val connection = try {
+            AiConfigValidator.connection(draft, target)
+        } catch (e: IllegalArgumentException) {
+            setTestResult(target, false, "✕ ${e.message ?: "配置无效"}")
+            return
         }
+        setTestResult(target, true, null)
         viewModelScope.launch {
             val resultMsg = try {
-                val result = if (apiKey.isNotBlank() || baseUrl.isNotBlank()) {
-                    val s = _uiState.value.settings
-                    chatClient.chatWith(model, "你是一个助手。", "回复：ok",
-                        apiKey.ifBlank { s.apiKey }, baseUrl.ifBlank { s.baseUrl })
-                } else {
-                    chatClient.chat(model, "你是一个助手。", "回复：ok")
-                }
-                when (result) {
+                when (chatClient.chatWith(connection.model, "你是一个助手。", "回复：ok", connection.apiKey, connection.baseUrl)) {
                     is AiResult.Success -> "✓ 连接成功"
-                    is AiResult.PermanentFailure -> "✗ ${result.message}"
-                    is AiResult.RetryableFailure -> "✗ 连接失败"
+                    is AiResult.ReasoningOnly -> "✓ 连接成功（没有正文）"
+                    // 不展示服务端原文或异常信息，避免服务商把 Key 回显到 UI。
+                    is AiResult.PermanentFailure -> "✕ 连接失败，请检查地址、Key 与模型"
+                    is AiResult.RetryableFailure -> "✕ 连接失败，请稍后重试"
                 }
-            } catch (t: Throwable) {
-                "✗ ${t.message ?: "连接失败"}"
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                "✕ 连接失败，请检查配置或网络"
             }
-            _uiState.update {
-                when (target) {
-                    "tag" -> it.copy(testingTag = false, testResultTag = resultMsg)
-                    "summary" -> it.copy(testingSummary = false, testResultSummary = resultMsg)
-                    else -> it.copy(testingVision = false, testResultVision = resultMsg)
-                }
+            // 编辑过程中旧测试可以结束，但不能把结果贴到新配置上。
+            setTestResult(target, false, resultMsg.takeIf { _uiState.value.aiDraft == draft })
+        }
+    }
+
+    private fun setTestResult(target: AiModelTarget, testing: Boolean, result: String?) {
+        _uiState.update {
+            when (target) {
+                AiModelTarget.TAG -> it.copy(testingTag = testing, testResultTag = result)
+                AiModelTarget.SUMMARY -> it.copy(testingSummary = testing, testResultSummary = result)
+                AiModelTarget.VISION -> it.copy(testingVision = testing, testResultVision = result)
             }
         }
     }
@@ -381,15 +389,25 @@ class SettingsViewModel @Inject constructor(
     fun exportModelConfig(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
-                val s = _uiState.value.settings
+                val draft = _uiState.value.aiDraft ?: return@launch
+                val validation = AiConfigValidator.validate(draft)
+                val s = validation.normalized
+                if (s == null) {
+                    _uiState.update { it.copy(aiErrors = validation.errors, validationAttempt = it.validationAttempt + 1) }
+                    _events.emit(SettingsEvent.ShowMessage("请先修正配置"))
+                    return@launch
+                }
                 val config = ModelConfigExport(
                     baseUrl = s.baseUrl,
                     tagModel = s.tagModel,
                     summaryModel = s.summaryModel,
-                    visionModel = s.visionModel
+                    visionModel = s.visionModel,
+                    summaryBaseUrl = s.summaryBaseUrl
                 )
                 val json = GsonBuilder().setPrettyPrinting().create().toJson(config)
-                context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                val output = context.contentResolver.openOutputStream(uri)
+                    ?: throw IllegalStateException("无法打开目标文件")
+                output.use { it.write(json.toByteArray(Charsets.UTF_8)) }
                 _events.emit(SettingsEvent.ShowMessage("模型配置已导出（不含 API Key）"))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导出失败: ${t.message ?: ""}"))
@@ -407,14 +425,16 @@ class SettingsViewModel @Inject constructor(
                         ),
                         Charsets.UTF_8
                     )
-                } ?: return@launch
-                // 全部字段校验通过才统一应用，避免"部分生效"
+                } ?: throw IllegalStateException("无法读取配置文件")
                 val config = ModelConfigCodec.parse(json)
-                settingsDataStore.updateBaseUrl(config.baseUrl)
-                settingsDataStore.updateTagModel(config.tagModel)
-                settingsDataStore.updateSummaryModel(config.summaryModel)
-                settingsDataStore.updateVisionModel(config.visionModel)
-                _events.emit(SettingsEvent.ShowMessage("模型配置已导入（不含 API Key）"))
+                if (_uiState.value.aiDraft == null) throw IllegalStateException("配置尚未加载，请重试")
+                _uiState.update {
+                    it.copy(
+                        aiDraft = it.aiDraft?.importConfig(config), aiErrors = emptyMap(), isSaved = false,
+                        testResultTag = null, testResultSummary = null, testResultVision = null
+                    )
+                }
+                _events.emit(SettingsEvent.ShowMessage("已导入草稿，保存后生效（不含 API Key）"))
             } catch (t: Throwable) {
                 _events.emit(SettingsEvent.ShowMessage("导入失败: ${t.message ?: "未知错误"}"))
             }
@@ -423,11 +443,13 @@ class SettingsViewModel @Inject constructor(
 }
 
 data class ModelConfigExport(
-    val version: Int = 2,
+    val version: Int = 3,
     val baseUrl: String,
     val tagModel: String,
     val summaryModel: String,
-    val visionModel: String
+    val visionModel: String,
+    /** 总结专用地址（2026-09-24）；空串 = 跟随 baseUrl。 */
+    val summaryBaseUrl: String = ""
 )
 
 sealed class SettingsEvent {

@@ -1,0 +1,1306 @@
+<!doctype html>
+<html lang="zh-CN" data-shell="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gift To Life · 4.7.0 结构示意</title>
+<style>
+/* ============================================================
+   预览页外壳（与皮肤无关，只负责把 App 的框摆出来）
+   ============================================================ */
+*{box-sizing:border-box}
+:root{
+  --shell-bg:#F2F3F5; --shell-card:#FFFFFF; --shell-text:#1B1F24;
+  --shell-muted:#6B7280; --shell-line:#E3E6EA; --shell-accent:#3F4A54;
+}
+html[data-shell="dark"]{
+  --shell-bg:#0C0F13; --shell-card:#14181E; --shell-text:#F1F3F5;
+  --shell-muted:#98A1AB; --shell-line:#232A32; --shell-accent:#E7EAEE;
+}
+body{
+  margin:0; background:var(--shell-bg); color:var(--shell-text);
+  font-family:-apple-system,"Segoe UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0; font-weight:500}
+p{margin:0}
+ul{margin:0; padding-left:16px}
+li{margin:2px 0}
+code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace; font-size:11.5px}
+
+.wrap{max-width:1240px; margin:0 auto; padding:0 24px 96px}
+
+/* 顶栏 */
+.topbar{
+  position:sticky; top:0; z-index:60;
+  background:color-mix(in srgb, var(--shell-bg) 88%, transparent);
+  backdrop-filter:blur(14px); border-bottom:1px solid var(--shell-line);
+}
+.topbar-in{max-width:1240px; margin:0 auto; padding:12px 24px; display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; justify-content:space-between}
+.brand{display:flex; gap:12px; align-items:center}
+.brand .logo{
+  width:38px; height:38px; border-radius:11px; background:var(--shell-accent); color:var(--shell-bg);
+  display:flex; align-items:center; justify-content:center; font-size:16px;
+}
+.brand h1{font-size:16px}
+.brand p{font-size:11px; color:var(--shell-muted)}
+.controls{display:flex; flex-wrap:wrap; gap:16px; align-items:center}
+.ctl{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--shell-muted)}
+.seg{display:flex; gap:3px; padding:3px; border-radius:10px; background:var(--shell-card); border:1px solid var(--shell-line)}
+.seg button{border:0; background:transparent; color:var(--shell-muted); font:inherit; font-size:12px; padding:5px 11px; border-radius:7px; cursor:pointer}
+.seg button.on{background:var(--shell-accent); color:var(--shell-bg); font-weight:500}
+.swatches{display:flex; gap:6px}
+.swatches button{
+  width:30px; height:30px; padding:0; border-radius:9px; cursor:pointer;
+  border:1px solid var(--shell-line); position:relative; overflow:hidden;
+}
+.swatches button span{position:absolute; inset:6px 6px auto 6px; height:9px; border-radius:3px; display:block}
+.swatches button.on{outline:2px solid var(--shell-accent); outline-offset:1px}
+.mini-btn{
+  border:1px solid var(--shell-line); background:var(--shell-card); color:var(--shell-text);
+  font:inherit; font-size:12px; padding:6px 12px; border-radius:9px; cursor:pointer;
+}
+.mini-btn.on{background:var(--shell-accent); color:var(--shell-bg); border-color:transparent}
+
+/* 区块 */
+section{margin-top:46px}
+.sec-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+.sec-head h2{font-size:19px}
+.sec-head span{font-size:12px; color:var(--shell-muted)}
+.sec-note{font-size:12.5px; color:var(--shell-muted); max-width:78ch; margin-bottom:18px}
+.rule{height:1px; background:var(--shell-line); margin:8px 0 18px}
+
+.rows{display:flex; flex-wrap:wrap; gap:26px; align-items:flex-start}
+.frame{width:360px}
+.frame.sm{width:300px}
+.cap{margin-top:12px; font-size:12.5px; color:var(--shell-muted)}
+.cap b{display:block; color:var(--shell-text); font-size:13px; font-weight:500; margin-bottom:6px}
+.cap .tag{
+  display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:999px;
+  border:1px solid var(--shell-line); color:var(--shell-muted); margin-left:6px;
+}
+.cap ul{padding-left:15px}
+li.minus::marker{color:#B4453B}
+li.plus::marker{color:#1F7A4D}
+
+.panel{background:var(--shell-card); border:1px solid var(--shell-line); border-radius:16px; padding:18px 20px}
+.panel h3{font-size:15px; margin-bottom:10px}
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:18px}
+
+/* ============================================================
+   手机框：里面的所有配色都来自 App 的 token
+   ============================================================ */
+.phone{
+  width:360px; height:780px; border-radius:26px; overflow:hidden; position:relative;
+  background:var(--bg); color:var(--text);
+  display:flex; flex-direction:column;
+  border:1px solid var(--line-strong);
+  box-shadow:0 12px 30px rgba(12,16,20,.10);
+}
+.phone.sm{width:300px; height:640px; border-radius:22px}
+.phone.flat{box-shadow:none}
+
+.status{
+  height:26px; flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+  padding:0 16px; font-size:11px; color:var(--muted); letter-spacing:.2px;
+}
+.status .dots{letter-spacing:2px}
+
+.appbar{
+  flex:0 0 auto; min-height:64px; display:flex; align-items:center; gap:6px;
+  padding:0 8px 0 22px; background:var(--bg);
+}
+.appbar .apptitle{flex:1; font-size:20px; line-height:28px; font-weight:500; color:var(--text)}
+.appbar.with-back{padding-left:6px}
+.appbar .with-back-title{flex:1; font-size:17px; line-height:24px; font-weight:500}
+.appactions{display:flex; align-items:center; gap:2px; margin-left:auto}
+
+.icbtn{
+  width:48px; height:48px; display:flex; align-items:center; justify-content:center;
+  color:var(--text); flex:0 0 auto;
+}
+.icbtn.muted{color:var(--muted)}
+.ic{width:24px; height:24px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round}
+.sprite{position:absolute; width:0; height:0; overflow:hidden}
+.ic.sm{width:20px; height:20px}
+.ic.xs{width:16px; height:16px}
+.ic.fill{fill:currentColor; stroke:none}
+
+.scroll{flex:1 1 auto; overflow:hidden; position:relative}
+.pad{padding:0 22px}
+
+/* 记录页：唯一输入面 */
+.composer{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:16px 18px 14px; margin:10px 22px;
+}
+.composer .ph{min-height:56px; font-size:16px; line-height:26px; color:var(--muted); opacity:.72}
+.composer .ph-caret{border-left:1.5px solid var(--primary); margin-left:1px; animation:blink 1.4s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.composer .imgrow{display:flex; align-items:center; gap:6px; margin-top:12px; color:var(--primary)}
+.composer .actions{display:flex; align-items:center; justify-content:space-between; margin-top:8px}
+.linkbtn{display:flex; align-items:center; gap:6px; height:40px; padding:0 4px; color:var(--primary); font-size:14px; font-weight:500}
+.btn{
+  height:48px; padding:0 22px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:500; border:1px solid transparent; background:none; color:var(--text);
+  font-family:inherit; cursor:default;
+}
+.btn.primary{background:var(--primary); color:var(--on-primary)}
+.btn.primary.sm{height:40px; border-radius:8px; padding:0 16px; font-size:13px}
+.btn.ghost{border-color:var(--line-strong); color:var(--text)}
+.btn.text{color:var(--primary); padding:0 8px}
+.btn.danger{color:#AA2D00}
+html[data-shell="dark"] .btn.danger{color:#E08A80}
+
+/* 记录流 */
+.feed{display:flex; flex-direction:column}
+.feed-item{padding:16px 22px; border-bottom:1px solid var(--line)}
+.feed-item .t-body{margin-top:0}
+.thumb{
+  border-radius:8px; background:var(--soft); margin-bottom:10px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+  color:var(--line-strong); border:1px dashed var(--line-strong);
+}
+.thumb span{font-size:11px; line-height:16px; color:var(--muted); opacity:.8}
+.meta-line{margin-top:8px; color:var(--muted); font-size:13px; line-height:19px}
+.mark{background:var(--soft); background:color-mix(in srgb, var(--primary) 16%, transparent); border-radius:2px; color:inherit}
+
+/* 搜索 */
+.searchbar{display:flex; align-items:center; gap:8px; padding:10px 22px 10px}
+.field{
+  flex:1; height:44px; border-radius:10px; background:var(--card); border:1px solid var(--line);
+  display:flex; align-items:center; gap:8px; padding:0 12px; color:var(--text); font-size:15px;
+}
+.field.focus{border-color:color-mix(in srgb, var(--primary) 55%, transparent)}
+.field .faint{color:var(--muted); opacity:.72}
+.iconbtn-badge{position:relative}
+.iconbtn-badge i{
+  position:absolute; top:8px; right:8px; width:7px; height:7px; border-radius:999px; background:var(--primary);
+}
+.activebar{display:flex; align-items:center; gap:8px; padding:2px 22px 10px; font-size:13px; color:var(--muted)}
+.activebar .kill{margin-left:auto; color:var(--primary); font-size:13px}
+
+/* 底栏：无大胶囊 */
+.navbar{
+  flex:0 0 auto; height:80px; display:flex; align-items:stretch;
+  border-top:1px solid var(--line); background:var(--card);
+}
+.navitem{
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  color:var(--muted); font-size:12px; line-height:18px;
+}
+.navitem.on{color:var(--primary)}
+.navitem.on .ic{stroke-width:2.1}
+
+/* 变体容器：宽度不能写在内联 style 上（会被 paint() 覆盖） */
+.vwrap{width:300px}
+.vwrap-lg{width:380px}
+.phone.sm.h560{height:560px}
+
+/* 现状复刻用的细节（带 color-mix 降级） */
+.nowcard{
+  background:var(--soft);
+  background:color-mix(in srgb, var(--primary) 8%, var(--bg));
+}
+.tagchip{
+  background:var(--soft);
+  background:color-mix(in srgb, var(--primary) 12%, transparent);
+  color:var(--primary); border-color:transparent;
+}
+.divider-primary{background:var(--line); background:color-mix(in srgb, var(--primary) 12%, transparent)}
+
+/* 分组面 */
+.group{background:var(--card); border:1px solid var(--line); border-radius:10px; margin:0 22px}
+.group + .group{margin-top:14px}
+.row{display:flex; align-items:center; gap:12px; padding:16px 18px; min-height:56px}
+.row + .row{border-top:1px solid var(--line)}
+.row .grow{flex:1; min-width:0}
+.row .ico{color:var(--muted); display:flex}
+.row .chev{color:var(--line-strong); display:flex}
+.row .t2{font-size:16px; line-height:24px; font-weight:500}
+.row .t3{font-size:12px; line-height:18px; color:var(--muted); margin-top:2px}
+.row .val{font-size:13px; color:var(--muted)}
+
+.grouplabel{font-size:12px; line-height:18px; color:var(--muted); padding:16px 22px 8px}
+.grouplabel.first{padding-top:8px}
+
+/* 输入字段（AI 配置） */
+.fieldrow{padding:14px 18px}
+.fieldrow + .fieldrow{border-top:1px solid var(--line)}
+.fieldrow .lab{font-size:12px; color:var(--muted); margin-bottom:6px}
+.textinput{
+  height:44px; border-radius:6px; border:1px solid var(--line); background:var(--bg);
+  display:flex; align-items:center; padding:0 12px; font-size:14px; color:var(--text);
+}
+.textinput.focus{border-color:var(--primary)}
+.textinput .k{color:var(--muted); letter-spacing:1px}
+.modelrow{display:flex; align-items:flex-end; gap:8px}
+.modelrow .textinput{flex:1}
+.testbtn{height:44px; display:flex; align-items:center; padding:0 6px; color:var(--primary); font-size:13px; font-weight:500; white-space:nowrap}
+.testok{color:#0F7A43}
+html[data-shell="dark"] .testok{color:#5FCF9E}
+
+/* 开关 / chip / 折叠 */
+.switch{width:44px; height:26px; border-radius:999px; background:var(--primary); position:relative; flex:0 0 auto}
+.switch::after{content:""; position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:999px; background:#fff}
+.switch.off{background:var(--line-strong)}
+.switch.off::after{right:auto; left:3px}
+.chip{
+  height:34px; padding:0 14px; border-radius:999px; display:inline-flex; align-items:center;
+  font-size:13px; color:var(--muted); border:1px solid var(--line); background:transparent;
+}
+.chip.on{background:var(--p-container); color:var(--on-p-container); border-color:transparent; font-weight:500}
+.chip.mini{height:26px; padding:0 10px; font-size:11.5px; border-radius:8px}
+.chiprow{display:flex; flex-wrap:wrap; gap:8px}
+.expander{
+  display:flex; align-items:center; gap:10px; padding:16px 18px; color:var(--text);
+  background:var(--card); border:1px solid var(--line); border-radius:10px; margin:14px 22px 0;
+}
+.expander .grow{flex:1}
+.expander .t2{font-size:16px; line-height:24px; font-weight:500}
+.expander .t3{font-size:12px; line-height:18px; color:var(--muted); margin-top:2px}
+.stickyfoot{flex:0 0 auto; padding:14px 22px calc(14px + 8px); border-top:1px solid var(--line); background:var(--bg)}
+
+/* 皮肤网格 */
+.skins{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 22px 4px}
+.skinitem{text-align:center}
+.skinprev{
+  height:56px; border-radius:8px; padding:7px; border:1px solid var(--line-strong);
+  background:var(--bg); display:flex; flex-direction:column; gap:4px;
+}
+.skinprev.on{border:2px solid var(--primary); padding:6px}
+.skinprev .bar{width:18px; height:4px; border-radius:999px; background:var(--primary)}
+.skinprev .sheet{flex:1; border-radius:6px; background:var(--card); padding:5px; display:flex; flex-direction:column; gap:4px}
+.skinprev .l1{height:3px; width:85%; border-radius:999px; background:var(--muted); opacity:.45}
+.skinprev .l2{height:3px; width:55%; border-radius:999px; background:var(--muted); opacity:.3}
+.skinitem .nm{font-size:11px; margin-top:6px; color:var(--muted)}
+.skinitem.on .nm{color:var(--primary); font-weight:500}
+
+/* 空状态 */
+.empty{display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 32px; height:100%}
+.empty .markstar{color:var(--primary); opacity:.85}
+.empty h4{font-size:16px; line-height:24px; font-weight:500; margin-top:14px}
+.empty p{font-size:13px; line-height:20px; color:var(--muted); margin-top:6px}
+.empty .btn.text{margin-top:10px}
+
+/* 回忆页随机卡：定高外壳 + 固定内容区（切换时零位移） */
+.quote{
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  height:340px; padding:18px 18px 14px; margin:0 22px; display:flex; flex-direction:column;
+}
+.quote .kicker{font-size:11px; line-height:16px; color:var(--primary)}
+/* 外壳定高；内容区承担剩余高度，不推挤元信息和动作。 */
+.frame-body{position:relative; flex:1; min-height:0; overflow:hidden; margin-top:12px; display:flex; flex-direction:column; justify-content:center}
+.frame-img{
+  height:140px; border-radius:8px; background:var(--soft); border:1px dashed var(--line-strong);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:var(--line-strong);
+}
+.frame-img span{font-size:11px; line-height:16px; color:var(--muted); opacity:.8}
+.body-center{font-size:19px; line-height:30px; text-align:center; color:var(--text)}
+.body-left{
+  font-size:16px; line-height:26px; color:var(--text);
+  display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden;
+}
+.body-cap{
+  font-size:15px; line-height:23px; color:var(--text); margin-top:10px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.more{position:absolute; right:0; bottom:0; font-size:11px; line-height:16px; color:var(--primary)}
+.quote .foot{display:flex; align-items:center; flex:0 0 auto; margin-top:10px; padding-top:6px;
+  border-top:1px solid var(--line); color:var(--muted); font-size:13px}
+.quote .foot .act{margin-left:auto; min-height:48px; display:flex; align-items:center; gap:5px; color:var(--primary); font-size:13px; font-weight:500}
+.quote .foot .act.tapped{opacity:.55}
+
+/* 统计 */
+.statline{display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:10px; margin:0 16px}
+.statline .num{font-size:16px; font-weight:500}
+.statline .chev{margin-left:auto; color:var(--line-strong); display:flex}
+.heat{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; padding:14px 16px 6px}
+.heat.compact{padding:12px 0 0; gap:4px; margin:0}
+.heat i{height:18px; border-radius:3px; background:var(--soft); display:block}
+.heat i.blank{background:transparent}
+.heat.compact i{height:18px}
+.heat i.l1{background:color-mix(in srgb, var(--primary) 28%, var(--card))}
+.heat i.l2{background:color-mix(in srgb, var(--primary) 50%, var(--card))}
+.heat i.l3{background:color-mix(in srgb, var(--primary) 72%, var(--card))}
+.heat i.l4{background:color-mix(in srgb, var(--primary) 92%, var(--card))}
+.heat i.l1{background:color-mix(in srgb, var(--primary) 20%, var(--card))}
+.heat i.l2{background:color-mix(in srgb, var(--primary) 42%, var(--card))}
+.heat i.l3{background:color-mix(in srgb, var(--primary) 66%, var(--card))}
+.heat i.l4{background:color-mix(in srgb, var(--primary) 90%, var(--card))}
+
+/* 覆盖层 / 弹层 */
+.overlay{position:absolute; inset:0; background:rgba(16,20,24,.34); display:flex; align-items:flex-end}
+.sheet{
+  width:100%; background:var(--card); border-radius:16px 16px 0 0; padding:10px 0 18px;
+  border-top:1px solid var(--line);
+}
+.sheet .handle{width:36px; height:4px; border-radius:999px; background:var(--line-strong); margin:2px auto 12px}
+.sheet h4{font-size:16px; line-height:24px; font-weight:500; padding:0 24px}
+.sheet .sect{font-size:12px; color:var(--muted); margin:16px 0 8px}
+.sheet .bodypad{padding:0 24px}
+.sheet .foot{display:flex; align-items:center; gap:12px; margin-top:20px; padding:0 24px}
+.sheet .foot .spacer{flex:1}
+
+/* 牌桌：当前卡居中，邻牌左右各露 14dp（真机几何） */
+.deck{position:relative; margin:14px 0 0; height:430px}
+.deck .nb{
+  position:absolute; top:13px; bottom:13px; width:14px; border-radius:16px;
+  background:var(--card); border:1px solid var(--line); opacity:.75;
+}
+.deck .nb.l{left:6px}
+.deck .nb.r{right:6px}
+.deck .card{
+  position:absolute; left:20px; right:20px; top:0; bottom:0;
+  border-radius:16px; background:var(--card); border:1px solid var(--line);
+  overflow:hidden; display:flex; flex-direction:column;
+}
+.deck .topline{height:2px; background:var(--primary)}
+.deck .inner{flex:1; padding:20px 20px 16px; display:flex; flex-direction:column}
+.deck .content{flex:1}
+.deck .label{font-size:11px; color:var(--primary)}
+.deck .title{font-size:16px; line-height:24px; font-weight:500; margin-top:12px}
+.deck .text{font-size:17px; line-height:27px; margin-top:10px}
+.deck .pills{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px}
+.deck .pill{
+  height:28px; padding:0 12px; border-radius:999px; display:inline-flex; align-items:center;
+  background:var(--soft); color:var(--text); font-size:12px;
+}
+.deck .foot{display:flex; align-items:center; justify-content:space-between; font-size:12px; color:var(--muted)}
+.dots{display:flex; gap:6px; justify-content:center; margin-top:16px}
+.dots i{border-radius:999px; background:var(--line-strong); display:block; width:7px; height:7px}
+.dots i.on{width:9px; height:9px; background:var(--primary)}
+.deckhint{text-align:center; font-size:11px; color:var(--muted); margin-top:10px}
+
+/* 现状 vs 重构 对照 */
+.ba{display:flex; gap:16px; flex-wrap:wrap}
+.ba .side{width:300px}
+.ba .side .lbl{font-size:11.5px; margin-bottom:8px; color:var(--shell-muted)}
+.ba .side.now .lbl{color:#B4453B}
+.ba .side.next .lbl{color:#1F7A4D}
+
+.demo-note{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:12px; color:var(--shell-muted)}
+.demo-note b{color:var(--shell-text); font-weight:500}
+
+/* 字阶样张 */
+.type-spec{display:flex; flex-direction:column}
+.type-row{display:flex; gap:16px; align-items:baseline; padding:12px 0; border-bottom:1px solid var(--shell-line)}
+.type-row:last-child{border-bottom:0}
+.type-row .meta{width:250px; flex:0 0 auto; font-size:11.5px; color:var(--shell-muted)}
+.type-row .sample{flex:1; min-width:0}
+
+/* 层级图 */
+.layers{display:flex; flex-direction:column; gap:10px}
+.layer{display:flex; align-items:center; gap:12px}
+.layer .chipbox{
+  width:76px; height:38px; border-radius:10px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; font-size:11px;
+}
+/* 层级图里的小色块跟随当前皮肤 */
+.layer-paper{background:var(--bg); border:1px solid var(--line); color:var(--muted)}
+.layer-card{background:var(--card); border:1px solid var(--line); color:var(--text)}
+.layer-ink{color:var(--text)}
+.layer-accent{color:var(--primary); font-weight:600}
+.layer .txt{font-size:12.5px; color:var(--shell-muted)}
+.layer .txt b{color:var(--shell-text); font-weight:500}
+
+table{border-collapse:collapse; width:100%; font-size:12.5px}
+th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--shell-line); vertical-align:top}
+th{font-weight:500; color:var(--shell-muted); font-size:11.5px}
+td code{color:var(--shell-text)}
+.callout{
+  border-left:2px solid var(--shell-accent); padding:10px 0 10px 14px; margin:14px 0;
+  font-size:12.5px; color:var(--shell-muted);
+}
+</style>
+</head>
+<body>
+
+<!-- 图标雪碧图：必须由 HTML 解析器静态生成，才能落到 SVG 命名空间 -->
+<svg class="sprite" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.2"/><path d="M15.6 15.6 20 20"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 5.5l6.5 6.5-6.5 6.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="13" rx="3"/><circle cx="9" cy="10.2" r="1.5"/><path d="M5.5 16.5 9.6 12.4l3 3 2.6-2.6 3.3 3.3"/></symbol>
+  <symbol id="i-memory" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.2"/><path d="M12 8.2V12l2.8 1.9"/></symbol>
+  <symbol id="i-write" viewBox="0 0 24 24"><path d="M5 19h14"/><path d="M6.5 15.2 15.4 6.3l2.3 2.3-8.9 8.9H6.5z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.9"/><path d="M18.9 12h2.6M16.9 16.9l1.8 1.8M12 18.9v2.6M7.1 16.9l-1.8 1.8M5.1 12H2.5M7.1 7.1 5.3 5.3M12 5.1V2.5M16.9 7.1l1.8-1.8"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2.2-5.1"/><path d="M19.3 4.6V9h-4.4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.6l4.6 4.6L19 7.4"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M6.5 9.5 12 15l5.5-5.5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 4v10.5"/><path d="M8.2 7.6 12 3.8l3.8 3.8"/><path d="M6 12.5V19h12v-6.5"/></symbol>
+  <symbol id="i-backup" viewBox="0 0 24 24"><path d="M12 4v9.6"/><path d="M8.2 10 12 13.8l3.8-3.8"/><path d="M5 18.4h14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M6.8 8h10.4"/><path d="M9.6 8V5.9h4.8V8"/><path d="M8.2 8l1 11h5.6l1-11"/></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6"/><circle cx="9.6" cy="10.4" r="1.1"/><circle cx="14.4" cy="10.4" r="1.1"/><circle cx="12" cy="15" r="1.1"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.6"/><path d="M12 11.2V16"/><circle cx="12" cy="8.4" r=".9"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.5 5.4 5.9.7-4.4 4 1.2 5.8L12 16.6 6.8 19.5 8 13.7 3.6 9.7l5.9-.7z"/></symbol>
+</svg>
+
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="logo">✦</div>
+      <div>
+        <h1>Gift To Life · 4.7.0 结构示意</h1>
+        <p>仅用于讨论布局；不是 Android 渲染，也不能替代真机验收。</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <span>皮肤</span>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div class="ctl">
+        <span>模式</span>
+        <div class="seg" id="modeSeg">
+          <button data-mode="light" class="on">浅色</button>
+          <button data-mode="dark">深色</button>
+        </div>
+      </div>
+      <div class="ctl">
+        <button class="mini-btn on" id="notesBtn">改动说明</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <section id="basics">
+    <div class="sec-head"><h2>设计基础</h2><span>先定层级与字阶，再谈页面</span></div>
+    <p class="sec-note">
+      整个重构只有四层材质关系，和一张字阶表。下面所有页面都只使用这两样东西——不再新增卡片样式、色块和装饰。
+    </p>
+    <div class="cols">
+      <div class="panel" data-skin="" data-mode="">
+        <h3>四层材质：纸面 · 白玉 · 墨字 · 青松落款</h3>
+        <div class="layers" style="margin-top:12px">
+          <div class="layer">
+            <div class="chipbox layer-paper">纸面</div>
+            <div class="txt"><b>画布</b>：背景色，只承托，不表达信息。整屏占比最大。</div>
+          </div>
+          <div class="layer">
+            <div class="chipbox layer-card">白玉</div>
+            <div class="txt"><b>内容面</b>：白卡，只承载真正的内容与分组。数量严格控制。</div>
+          </div>
+          <div class="layer">
+            <div class="chipbox layer-card layer-ink">墨字</div>
+            <div class="txt"><b>文字</b>：正文用 <code>onSurface</code>，元信息用 <code>onSurfaceVariant</code>。</div>
+          </div>
+          <div class="layer">
+            <div class="chipbox layer-card layer-accent">青松</div>
+            <div class="txt"><b>点睛</b>：主色只落在一处——主按钮、选中态、光标或一根细线。</div>
+          </div>
+        </div>
+        <div class="callout">
+          量化目标：中性骨架 ≥ 95% 感知面积，主色 ≤ 5%。主按钮之外，
+          普通内容屏不出现高度超过 48dp 的连续主色面。
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>字阶：全部落到 GiftTypography，不再回落 Material 默认值</h3>
+        <div class="type-spec" style="margin-top:10px">
+          <div class="type-row">
+            <div class="meta"><code>titleLarge</code> · 20/28 · 500 · 顶栏标题</div>
+            <div class="sample" style="font-size:20px;line-height:28px;font-weight:500">回忆</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>titleMedium</code> · 16/24 · 500 · 列表标题</div>
+            <div class="sample" style="font-size:16px;line-height:24px;font-weight:500">备份与恢复</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>bodyLarge</code> · 16/26 · 400 · 记录正文</div>
+            <div class="sample" style="font-size:16px;line-height:26px">台风过境，窗户一晚上都在响。</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>bodyMedium</code> · 14/22 · 400 · 说明</div>
+            <div class="sample" style="font-size:14px;line-height:22px">导入前会自动保存当前数据，导入后可以撤销。</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>bodySmall</code> · 13/19 · 400 · 时间与元信息</div>
+            <div class="sample" style="font-size:13px;line-height:19px;color:#686E64">事记 · 知识 · 9月26日 18:30</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>labelLarge</code> · 14/20 · 500 · 按钮</div>
+            <div class="sample" style="font-size:14px;line-height:20px;font-weight:500">保存</div>
+          </div>
+          <div class="type-row">
+            <div class="meta"><code>labelSmall</code> · 11/16 · 400 · 脚注</div>
+            <div class="sample" style="font-size:11px;line-height:16px;color:#686E64">还有约 6 行 · 点开读全文</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="record">
+    <div class="sec-head"><h2>记录页</h2><span>V1 · RecordScreen / EntryComposer / EntryCard</span></div>
+    <p class="sec-note">
+      目标：第一眼只表达“现在可以写”。默认态只有一个内容面（输入器），记录列表变成连续时间流，
+      筛选从常驻 7 个 chip 收成一个入口。
+    </p>
+    <div class="rows" id="recordFrames"></div>
+  </section>
+
+  <section id="memory">
+    <div class="sec-head"><h2>回忆页</h2><span>V2 · MemoryScreen / AppEmptyState</span></div>
+    <p class="sec-note">
+      随机回顾去掉 460dp “大片空白”式定高和整卡主色底，改成**定高外壳 + 固定 200dp 内容区**：
+      跳条目时卡片尺寸不变，只有内容区在换；周志 / 月志 / 那年今日合成一个分组面，不再是一排按钮和零散卡片。
+    </p>
+    <div class="rows" id="memoryFrames"></div>
+    <div class="panel" style="margin-top:22px; max-width:760px">
+      <h3>随机回顾卡：三种内容排布，外壳尺寸完全一致</h3>
+      <div class="rows" style="margin-top:14px; gap:20px" id="quoteVariants"></div>
+      <div class="callout" style="margin-bottom:0">
+        三种排布共用同一个定高外壳与固定 200dp 内容区 —— 所以从“短文”跳到“带图”也不会推动下面的元信息行。
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:22px; max-width:860px">
+      <h3>切换不抖：「再抽一条」可以真的点</h3>
+      <p class="sec-note" style="margin:8px 0 16px">
+        下面是可交互的：连点十几次试试。卡片外壳、元信息行、按钮位置全程不动，只有内容区与元信息文字在换。
+      </p>
+      <div class="rows" style="gap:26px; align-items:flex-start">
+        <div style="width:340px" data-skin="" data-mode="">
+          <div id="demoWrap"></div>
+          <div class="demo-note">已点 <b id="demoCount">0</b> 次 · 按钮从不冷却，连点每次都生效</div>
+        </div>
+        <div style="flex:1; min-width:300px">
+          <h4 style="font-size:13px; margin-bottom:8px">现在的抖是怎么来的（当前实现）</h4>
+          <ul style="font-size:12.5px; color:var(--shell-muted)">
+            <li><code>Crossfade</code> 同时叠着两份完整布局：新旧模板不同（有图/无图、短/长）就是“抖”的主要来源</li>
+            <li>内容框与下方 <code>Spacer</code> 各占一半权重 → 元信息行不锚底，长短文之间会上下移动</li>
+            <li>长文超过可用高度时，把元信息与按钮一起往下推</li>
+            <li>「再抽一条」点击后禁用 300ms → 连点被吞</li>
+          </ul>
+          <h4 style="font-size:13px; margin:16px 0 8px">新规则（已写进执行稿 §5.2.3）</h4>
+          <ul style="font-size:12.5px; color:var(--shell-muted)">
+            <li>定高外壳 + 固定 200dp 内容区，卡片尺寸与内容无关</li>
+            <li>只保留一份内容实例，直接换内容，不做 Crossfade</li>
+            <li>图片位永远预留 140dp，不管图有没有加载完</li>
+            <li>长文裁切，不推挤底部；“查看全文”只在被裁时出现</li>
+            <li>按钮永不禁用；防重入只在内部丢弃并发请求</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <div class="sec-head"><h2>设置与 AI 配置</h2><span>V3 · SettingsScreen</span></div>
+    <p class="sec-note">
+      设置主页从“大统计卡 + 5 张入口卡”收敛为“摘要卡（**保留热力图**）+ 两个分组面”；
+      AI 配置默认只留日常识别和一个保存动作，独立服务、思考强度、导入导出收进高级设置。
+    </p>
+    <div class="rows" id="settingsFrames"></div>
+    <div class="panel" style="margin-top:22px; max-width:440px">
+      <h3>热力图保留：并进摘要卡，不再单独占一张大卡</h3>
+      <div id="statVariant" style="margin-top:14px"></div>
+      <div class="callout" style="margin-bottom:0">
+        7 列按星期对齐，格子 16dp；强度用主色 20/42/66/90% 四档，格子底是中性容器色。
+      </div>
+    </div>
+  </section>
+
+  <section id="sheets">
+    <div class="sec-head"><h2>记录预览与编辑</h2><span>§5.6 · 覆盖层视觉层级</span></div>
+    <p class="sec-note">
+      弹层遵循同一条优先级：正文 &gt; 图片 &gt; 时间与标签 &gt; 操作。编辑是唯一填充按钮，
+      删除降级为危险文字动作，不再和编辑并排争抢。
+    </p>
+    <div class="rows" id="sheetFrames"></div>
+  </section>
+
+  <section id="deck">
+    <div class="sec-head"><h2>周志 / 月志牌桌</h2><span>V4 · 只减噪，不推翻定高真堆叠</span></div>
+    <p class="sec-note">
+      保留既定几何：定高牌框、邻牌露出、缩放、超长裁剪后进全文。只把颜色、徽章、页脚提示和教学文案收敛。
+    </p>
+    <div class="rows" id="deckFrames"></div>
+  </section>
+
+  <section id="diff">
+    <div class="sec-head"><h2>现状 vs 重构后</h2><span>三处最明显的视觉差异</span></div>
+    <p class="sec-note">左侧是当前工作区（4.5.0 方向）的实现效果，右侧是按执行稿改完的效果。</p>
+    <div class="rows" id="diffFrames"></div>
+  </section>
+
+  <section id="copy">
+    <div class="sec-head"><h2>文案对照</h2><span>§6 / §7 · 把解释搬进帮助，把动作留在一句话里</span></div>
+    <p class="sec-note">原则：标题用名词，按钮用动词；一句话只做一件事；技术细节不进普通路径。</p>
+    <div class="panel">
+      <table>
+        <thead><tr><th style="width:180px">位置</th><th style="width:44%">现在</th><th>改为</th></tr></thead>
+        <tbody>
+          <tr><td>AI 配置 · 自动回顾</td><td>后台生成上周的周志、上个月的月志，写好后发通知提醒你（各消耗一次 API 调用）</td><td>写好后提醒你。<span style="color:var(--shell-muted)">（“各消耗一次 API 调用”收进帮助说明）</span></td></tr>
+          <tr><td>AI 配置 · 服务地址</td><td>只填基础地址，程序自动补 /v1/chat/completions</td><td>默认态只显示“服务地址”；补全规则放进高级设置</td></tr>
+          <tr><td>AI 配置 · 思考强度</td><td>不限制思维链长度：最慢最贵，可能要几分钟，部分服务商还会截断。</td><td>选项只写“不思考 / 思考 / 深度思考”，说明进高级设置</td></tr>
+          <tr><td>设置主页 · 统计</td><td>“使用统计”大卡 + 热力图 + 日均记录</td><td>一行：本月 12 条 · 连续 3 天（展开才看细节）</td></tr>
+          <tr><td>随机回顾</td><td>点击查看全文</td><td>查看全文<span style="color:var(--shell-muted)">，且只在内容被截断时出现</span></td></tr>
+          <tr><td>周志生成中</td><td>生成失败：HTTP 400 …（总结模型：xxx）</td><td>正在整理这段时间的记录……<span style="color:var(--shell-muted)">；详情收进可展开区域</span></td></tr>
+          <tr><td>记录元信息</td><td>标签胶囊（主色底）+ 换行时间</td><td>事记 · 知识 · 9月26日 18:30<span style="color:var(--shell-muted)">（一行纯文字）</span></td></tr>
+          <tr><td>空状态</td><td>还没有记录 / 去记录页写点什么吧</td><td>还没有记录 / 从此刻的一句话开始</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   1. 皮肤 token（数值与 App 的 Color.kt 一致）
+   ============================================================ */
+var SKINS = {
+  WARM:  {name:"暖纸·赤陶", light:{bg:"#F9F3E8", card:"#FFFCF7", soft:"#F1EBE1", line:"#EBE4D9", lineStrong:"#DBD3C7", text:"#3A352E", muted:"#6E675E", primary:"#A2563E", onPrimary:"#FFFFFF", pContainer:"#F2E3DC", onPContainer:"#6B3B2A", zone:"#EAD7D1"}},
+  COOL:  {name:"冷雾",     light:{bg:"#F2F6FA", card:"#FCFEFF", soft:"#EAF0F5", line:"#E1E9F0", lineStrong:"#CCD7DF", text:"#31383F", muted:"#636B74", primary:"#396285", onPrimary:"#FFFFFF", pContainer:"#DFE8F1", onPContainer:"#2A4962", zone:"#D1DFEA"}},
+  ROSE:  {name:"烟粉·酒红", light:{bg:"#FAF3F2", card:"#FFFCFB", soft:"#F2EBEA", line:"#EBE3E4", lineStrong:"#DBD1D2", text:"#3B3537", muted:"#6E666A", primary:"#8C4A52", onPrimary:"#FFFFFF", pContainer:"#F0E2E4", onPContainer:"#5E3239", zone:"#EAD1D4"}},
+  GREEN: {name:"青松",     light:{bg:"#F5F7EF", card:"#FDFEFA", soft:"#EFF1E8", line:"#E5E8DE", lineStrong:"#D3D8CB", text:"#363A32", muted:"#686E64", primary:"#5B7B6F", onPrimary:"#FFFFFF", pContainer:"#E2EAE6", onPContainer:"#3F5347", zone:"#D5E7E0"}},
+  SLATE: {name:"石墨蓝",   light:{bg:"#F4F6F7", card:"#FCFDFE", soft:"#ECF0F2", line:"#E3E9ED", lineStrong:"#CFD6DB", text:"#333A3E", muted:"#656C72", primary:"#4C5A66", onPrimary:"#FFFFFF", pContainer:"#E1E6EA", onPContainer:"#3D474F", zone:"#D5DFE7"}},
+  LILAC: {name:"藕荷紫",   light:{bg:"#F9F6FA", card:"#FFFDFF", soft:"#F1EEF3", line:"#EAE5EC", lineStrong:"#D9D2DD", text:"#38343B", muted:"#6C666F", primary:"#705A78", onPrimary:"#FFFFFF", pContainer:"#EAE3ED", onPContainer:"#4E4055", zone:"#E2D5E6"}}
+};
+var SKIN_ORDER = ["WARM","COOL","ROSE","GREEN","SLATE","LILAC"];
+
+/* 深色派生：与 MorandiPalette.toDark() 同一套 HSL 规则 [目标明度, 饱和度缩放] */
+var DARK_RULE = {
+  bg:[0.13,0.40], card:[0.19,0.40], soft:[0.29,0.40], line:[0.38,0.60], lineStrong:[0.50,0.60],
+  text:[0.89,0.50], muted:[0.70,0.50], primary:[0.72,1.00], onPrimary:[0.14,1.00],
+  pContainer:[0.28,0.40], onPContainer:[0.87,0.50], zone:[0.20,0.75]
+};
+
+function hexToRgb(h){h=h.replace("#","");return [parseInt(h.slice(0,2),16)/255,parseInt(h.slice(2,4),16)/255,parseInt(h.slice(4,6),16)/255];}
+function rgbToHex(r,g,b){function f(x){var v=Math.round(x*255);return (v<16?"0":"")+v.toString(16);}return "#"+f(r)+f(g)+f(b);}
+function toHsl(r,g,b){
+  var mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2;
+  if(mx===mn) return [0,0,l];
+  var d=mx-mn, s = l>0.5 ? d/(2-mx-mn) : d/(mx+mn);
+  var h;
+  if(mx===r) h=((g-b)/d+(g<b?6:0))/6;
+  else if(mx===g) h=((b-r)/d+2)/6;
+  else h=((r-g)/d+4)/6;
+  return [h,s,l];
+}
+function h2r(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+function fromHsl(h,s,l){
+  if(s===0) return [l,l,l];
+  var q = l<0.5 ? l*(1+s) : l+s-l*s, p=2*l-q;
+  return [h2r(p,q,h+1/3),h2r(p,q,h),h2r(p,q,h-1/3)];
+}
+function remap(hex,L,sScale){
+  var rgb=hexToRgb(hex), hsl=toHsl(rgb[0],rgb[1],rgb[2]);
+  var s=Math.min(1,Math.max(0,hsl[1]*sScale));
+  var out=fromHsl(hsl[0],s,L);
+  return rgbToHex(out[0],out[1],out[2]);
+}
+function tokens(skinKey, mode){
+  var light = SKINS[skinKey].light, t;
+  if(mode==="dark"){
+    t={};
+    for(var k in DARK_RULE){ t[k]=remap(light[k], DARK_RULE[k][0], DARK_RULE[k][1]); }
+  } else { t = light; }
+  return "--bg:"+t.bg+";--card:"+t.card+";--soft:"+t.soft+";--line:"+t.line+";--line-strong:"+t.lineStrong+
+         ";--text:"+t.text+";--muted:"+t.muted+";--primary:"+t.primary+";--on-primary:"+t.onPrimary+
+         ";--p-container:"+t.pContainer+";--on-p-container:"+t.onPContainer+";--zone:"+t.zone+";";
+}
+
+/* ============================================================
+   2. 图标工具（图形本体在 body 开头的静态雪碧图里）
+   ============================================================ */
+function ic(name, cls){
+  return '<svg class="ic '+(cls||"")+'" viewBox="0 0 24 24"><use href="#i-'+name+'"/></svg>';
+}
+
+/* ============================================================
+   3. 通用组件片段
+   ============================================================ */
+function statusBar(){
+  return '<div class="status"><span>12:35</span><span class="dots">▮▮▮</span></div>';
+}
+function appbar(title, opt){
+  opt = opt || {};
+  return '<div class="appbar'+(opt.back?" with-back":"")+'">'+
+    (opt.back ? '<span class="icbtn">'+ic("back")+'</span><div class="with-back-title">'+title+'</div>'
+              : '<div class="apptitle">'+title+'</div>')+
+    '<div class="appactions">'+(opt.actions||"")+'</div></div>';
+}
+function nav(sel){
+  return '<div class="navbar">'+[["memory","回忆"],["write","记录"],["gear","设置"]].map(function(x){
+    return '<div class="navitem'+(sel===x[0]?" on":"")+'">'+ic(x[0])+'<span>'+x[1]+'</span></div>';
+  }).join("")+'</div>';
+}
+function thumb(h){
+  return '<div class="thumb" style="height:'+(h||150)+'px">'+ic("image","sm")+'<span>图片位</span></div>';
+}
+/* 随机回顾卡：外壳定高，内容区固定 200dp；跳条目只换内容区与元信息文字 */
+function quoteCard(opt){
+  opt = opt || {};
+  return '<div class="quote'+(opt.cls?" "+opt.cls:"")+'"'+(opt.id?' id="'+opt.id+'"':"")+(opt.margin?' style="margin:'+opt.margin+'"':"")+'>'+
+    '<div class="kicker">随机回顾</div>'+
+    '<div class="frame-body"'+(opt.bodyId?' id="'+opt.bodyId+'"':"")+'>'+opt.body+'</div>'+
+    '<div class="foot"><span'+(opt.metaId?' id="'+opt.metaId+'"':"")+'>'+opt.meta+'</span>'+
+      '<span class="act"'+(opt.btnId?' id="'+opt.btnId+'"':"")+'>'+ic("refresh","xs")+'再抽一条</span></div>'+
+  '</div>';
+}
+var BODY = {
+  short: '<div class="body-center">「把上周没回的消息全部回完了。」</div>',
+  long: '<div class="body-left">在图书馆坐到闭馆，最后一章终于读完了。走回宿舍的路上风很大，梧桐叶在路灯下面翻来翻去，像有人在远处翻书。楼下便利店已经关门，只剩自动贩卖机的灯还亮着。</div>'+
+        '<span class="more">查看全文</span>',
+  image: '<div class="frame-img">'+ic("image","sm")+'<span>图片位</span></div>'+
+         '<div class="body-cap">台风过境，窗户一晚上都在响。</div>'
+};
+function feedItem(e){
+  return '<div class="feed-item">'+
+    (e.image?thumb(e.imageH):"")+
+    '<div class="t-body" style="font-size:16px;line-height:26px">'+e.text+'</div>'+
+    '<div class="meta-line">'+e.meta+'</div></div>';
+}
+function phone(inner, opt){
+  opt = opt || {};
+  return '<div class="phone'+(opt.sm?" sm":"")+'" data-skin="'+(opt.skin||"")+'" data-mode="'+(opt.mode||"")+'">'+
+    statusBar()+inner+'</div>';
+}
+function frame(phoneHtml, title, notes, tag, width){
+  return '<div class="frame'+(width==="sm"?" sm":"")+'">'+phoneHtml+
+    '<div class="cap"><b>'+title+(tag?'<span class="tag">'+tag+'</span>':"")+'</b>'+
+    '<ul>'+notes.map(function(n){
+      var cls = n.indexOf("−")===0 ? "minus" : (n.indexOf("+")===0 ? "plus" : "");
+      return '<li class="'+cls+'">'+n+'</li>';
+    }).join("")+'</ul></div></div>';
+}
+
+/* ============================================================
+   4. 各页面内容
+   ============================================================ */
+var FEED = [
+  {text:"在图书馆坐到闭馆，最后一章终于读完了。", meta:"知识 · 9月26日 21:40"},
+  {image:true, imageH:158, text:"把上周没回的消息全部回完了，心里空出一块。", meta:"情绪 · 9月25日 22:10"},
+  {text:"台风过境，窗户一晚上都在响。", meta:"事记 · 9月24日 23:05"}
+];
+/* 搜索“台风”的命中结果（含高亮），搜索态与对照区复用同一组数据 */
+var HITS = [
+  {text:'台风过境，窗户一晚<span class="mark">台风</span>都在响。', meta:"事记 · 9月24日 23:05"},
+  {text:'改签了<span class="mark">台风</span>那天的车票，多留了一天。', meta:"事记 · 8月9日 08:12"}
+];
+
+/* — 记录页 — */
+function pageRecord(){
+  var composer = '<div class="composer">'+
+      '<div class="ph">此刻的想法…<span class="ph-caret">&nbsp;</span></div>'+
+      '<div class="actions">'+
+        '<span class="linkbtn">'+ic("image","sm")+'图片</span>'+
+        '<span class="btn primary">保存</span>'+
+      '</div></div>';
+  return phone(appbar("记录",{actions:'<span class="icbtn muted">'+ic("search")+'</span>'})+
+    composer+'<div class="scroll">'+
+    '<div class="feed">'+FEED.map(feedItem).join("")+'</div></div>'+
+    nav("write"));
+}
+function pageRecordSearch(){
+  var bars = '<div class="searchbar">'+
+      '<span class="icbtn">'+ic("back")+'</span>'+
+      '<div class="field focus"><span style="flex:1">台风</span><span class="faint">'+ic("close","xs")+'</span></div>'+
+      '<span class="icbtn iconbtn-badge">'+ic("filter")+'<i></i></span>'+
+    '</div>'+
+    '<div class="activebar"><span>事记 · 有图</span><span class="kill">清除</span></div>';
+  var hits = HITS;
+  return phone(appbar("")+bars+
+    '<div class="scroll"><div class="feed">'+hits.map(feedItem).join("")+'</div></div>'+
+    nav("write"));
+}
+function pageRecordFilter(){
+  var sheet = '<div class="overlay"><div class="sheet">'+
+      '<div class="handle"></div>'+
+      '<h4>筛选</h4>'+
+      '<div class="bodypad"><div class="sect">标签</div><div class="chiprow">'+
+        ["闪念","事记","情绪","知识"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+      '</div>'+
+      '<div class="sect">图片</div><div class="chiprow">'+
+        ["全部","有图","无图"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+      '</div>'+
+      '<div class="activebar" style="padding:18px 0 0"><span>2 条记录符合条件</span><span class="kill">重置</span></div>'+
+      '</div>'+
+      '<div class="foot"><span class="btn text">完成</span><div class="spacer"></div></div>'+
+    '</div></div>';
+  return phone(appbar("记录",{actions:'<span class="icbtn muted">'+ic("search")+'</span>'})+
+    '<div class="scroll"><div class="feed">'+FEED.slice(0,2).map(feedItem).join("")+'</div></div>'+
+    nav("write")+sheet);
+}
+function pageRecordEmpty(){
+  return phone(appbar("记录",{actions:'<span class="icbtn muted">'+ic("search")+'</span>'})+
+    '<div class="composer">'+
+      '<div class="ph">此刻的想法…<span class="ph-caret">&nbsp;</span></div>'+
+      '<div class="actions"><span class="linkbtn">'+ic("image","sm")+'图片</span><span class="btn primary">保存</span></div>'+
+    '</div>'+
+    '<div class="scroll"><div class="empty">'+
+      '<span class="markstar">'+ic("star")+'</span>'+
+      '<h4>还没有记录</h4><p>从此刻的一句话开始</p>'+
+    '</div></div>'+nav("write"));
+}
+
+/* — 回忆页 — */
+function pageMemory(){
+  var card = quoteCard({body:BODY.short, meta:"情绪 · 9月25日"});
+  var group = '<div class="group" style="margin-top:14px">'+
+      memRow("周志","上周 · 已写好")+
+      memRow("月志","上月 · 34 条")+
+      memRow("那年今日","3 年 · 5 条")+
+    '</div>';
+  return phone(appbar("回忆")+'<div class="scroll"><div style="height:8px"></div>'+card+group+'</div>'+nav("memory"));
+}
+function memRow(title, val){
+  return '<div class="row"><div class="grow"><div class="t2">'+title+'</div></div>'+
+    '<span class="val">'+val+'</span><span class="chev">'+ic("chev","sm")+'</span></div>';
+}
+function pageMemoryEmpty(){
+  return phone(appbar("回忆")+'<div class="scroll"><div class="empty">'+
+    '<span class="markstar">'+ic("star")+'</span>'+
+    '<h4>还没有记录</h4><p>去记录页写下第一句</p>'+
+    '<span class="btn text">去记录</span>'+
+  '</div></div>'+nav("memory"));
+}
+function quoteVariants(){
+  var short = '<div class="vwrap" data-skin="" data-mode="">'+
+    quoteCard({body:BODY.short, meta:"情绪 · 9月25日", margin:"0"})+'</div>';
+  var long = '<div class="vwrap" data-skin="" data-mode="">'+
+    quoteCard({body:BODY.long, meta:"知识 · 9月26日", margin:"0"})+'</div>';
+  var image = '<div class="vwrap" data-skin="" data-mode="">'+
+    quoteCard({body:BODY.image, meta:"事记 · 9月24日", margin:"0"})+'</div>';
+  return '<div class="frame sm">'+short+
+      '<div class="cap"><b>① 无图 · 短文居中</b><ul><li>19sp 居中，内容区固定 200dp</li></ul></div></div>'+
+    '<div class="frame sm">'+long+
+      '<div class="cap"><b>② 无图 · 长文左对齐</b><ul><li>超出内容区就裁切，右下角才出现“查看全文”</li></ul></div></div>'+
+    '<div class="frame sm">'+image+
+      '<div class="cap"><b>③ 有图</b><ul><li>图片位固定 140dp（不管是否加载完），下方最多 2 行文字</li></ul></div></div>';
+}
+
+/* — 设置 — */
+/* 2026-09-27：热力图保留，不再单独占一张大卡，而是并进摘要卡 */
+var HEAT_LEVELS = ["","l1","","l2","","","l1","l3","l2","l1","","l1","","","l2","","l1","","","l1","","l3","","l1","l1","l2","l1","","",""];
+function heatmap(){
+  var cells = '<i class="blank"></i><i class="blank"></i>';   // 周日、周一两个空格 → 2026-09-01 是周二
+  HEAT_LEVELS.forEach(function(l){ cells += '<i class="'+(l||"blank")+'"></i>'; });
+  while(cells.split("<i").length - 1 < 35) cells += '<i class="blank"></i>';   // 补齐末行，不留假格子
+  return '<div class="group" style="margin-top:8px; padding:14px 16px 12px">'+
+      '<div style="display:flex; align-items:baseline; gap:10px">'+
+        '<span style="font-size:16px; font-weight:500">本月 15 条</span>'+
+        '<span style="font-size:12px; color:var(--muted)">连续 3 天</span>'+
+        '<span class="chev" style="margin-left:auto">'+ic("expand","sm")+'</span>'+
+      '</div>'+
+      '<div class="heat compact">'+cells+'</div>'+
+      '<div style="font-size:11px; line-height:16px; color:var(--muted); margin-top:6px">活跃 15 天 · 日均 0.5 条 · 图片 7 张</div>'+
+    '</div>';
+}
+function pageSettingsMain(){
+  var g1 = '<div class="group" style="margin-top:14px">'+
+      setRow("gear","AI 配置","识别、总结与连接测试")+
+      setRow("backup","备份与恢复","")+
+      setRow("trash","回收站","")+
+    '</div>';
+  var g2 = '<div class="group">'+
+      setRow("palette","外观","")+
+      setRow("info","关于","")+
+    '</div>';
+  return phone(appbar("设置")+'<div class="scroll"><div style="height:8px"></div>'+heatmap()+g1+g2+'</div>'+nav("gear"));
+}
+function setRow(iconName,title,desc){
+  return '<div class="row"><span class="ico">'+ic(iconName,"sm")+'</span>'+
+    '<div class="grow"><div class="t2">'+title+'</div>'+(desc?'<div class="t3">'+desc+'</div>':"")+'</div>'+
+    '<span class="chev">'+ic("chev","sm")+'</span></div>';
+}
+function pageAiDefault(){
+  var g1 = '<div class="group">'+
+      '<div class="row"><div class="grow"><div class="t2">自动回顾</div>'+
+      '<div class="t3">每周一 / 每月初写好，提醒你</div></div><span class="switch"></span></div>'+
+    '</div>';
+  var g2 = '<div class="grouplabel">日常识别</div><div class="group" style="margin-top:0">'+
+      fieldRow("服务地址","https://api.deepseek.com")+
+      fieldRow("API Key","sk-······················")+
+      modelRow("标签模型","deepseek-chat",true)+
+      modelRow("视觉模型","deepseek-chat",false)+
+    '</div>';
+  var g3 = '<div class="grouplabel">周志与月志</div><div class="group" style="margin-top:0">'+
+      modelRow("总结模型","gpt-6-luna",true)+
+      '<div class="row"><div class="grow"><div class="t3" style="margin:0">跟随日常服务</div></div></div>'+
+    '</div>';
+  var adv = '<div class="expander"><div class="grow"><div class="t2">高级设置</div>'+
+      '<div class="t3">独立服务 · 思考强度 · 连接测试 · 导入导出</div></div>'+ic("expand","sm")+'</div>';
+  return phone(appbar("AI 配置",{back:true})+'<div class="scroll">'+g1+g2+g3+adv+
+    '<div style="height:16px"></div></div>'+
+    '<div class="stickyfoot"><span class="btn primary" style="width:100%">保存</span></div>');
+}
+function fieldRow(label,value){
+  return '<div class="fieldrow"><div class="lab">'+label+'</div><div class="textinput">'+value+'</div></div>';
+}
+function modelRow(label,value,ok){
+  return fieldRow(label,value);
+}
+function pageAiAdvanced(){
+  var adv = '<div class="expander" style="border-color:var(--line-strong)"><div class="grow"><div class="t2">高级设置</div>'+
+      '<div class="t3">独立服务 · 思考强度 · 连接测试 · 导入导出</div></div>'+ic("expand","sm")+'</div>';
+  var g = '<div class="grouplabel">独立总结服务</div><div class="group" style="margin-top:0">'+
+      fieldRow("服务地址","留空沿用日常识别")+
+      fieldRow("API Key","留空沿用日常识别")+
+    '</div>'+
+    '<div class="grouplabel">思考强度</div><div class="group" style="margin-top:0">'+
+      '<div class="fieldrow"><div class="chiprow">'+
+        ["不思考","思考","深度思考"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+      '</div><div class="lab" style="margin:10px 0 0">默认：先想一下，但限制思考长度。</div></div>'+
+    '</div>'+
+    '<div class="grouplabel">连接测试</div><div class="group" style="margin-top:0">'+
+      ["标签模型","视觉模型","总结模型"].map(function(label){
+        return '<div class="row"><div class="grow"><div class="t2">'+label+'</div></div><span class="btn text">测试</span></div>';
+      }).join("")+
+    '</div>'+
+    '<div class="grouplabel">配置导入导出</div><div class="group" style="margin-top:0">'+
+      '<div class="row"><div class="grow"><div class="t3" style="margin:0">只含地址与模型名，不含 API Key</div></div>'+
+      '<span class="testbtn">导出</span><span class="testbtn">导入</span></div>'+
+    '</div>';
+  return phone(appbar("AI 配置",{back:true})+'<div class="scroll">'+adv+g+'<div style="height:16px"></div></div>'+
+    '<div class="stickyfoot"><span class="btn primary" style="width:100%">保存</span></div>');
+}
+function pageAppearance(){
+  var skins = '<div class="grouplabel first">皮肤</div><div class="skins">'+
+    SKIN_ORDER.map(function(k){
+      var on = k===state.skin;
+      return '<div class="skinitem'+(on?" on":"")+'"><div class="skinprev'+(on?" on":"")+'" data-skin="'+k+'" data-mode="">'+
+        '<span class="bar"></span><span class="sheet"><span class="l1"></span><span class="l2"></span></span>'+
+      '</div><div class="nm">'+SKINS[k].name+'</div></div>';
+    }).join("")+'</div>';
+  var mode = '<div class="grouplabel">深浅模式</div><div class="group" style="margin-top:0">'+
+      '<div class="fieldrow"><div class="chiprow">'+
+        ["跟随系统","浅色","深色"].map(function(t,i){return '<span class="chip'+(i===0?" on":"")+'">'+t+'</span>';}).join("")+
+      '</div></div></div>';
+  return phone(appbar("外观",{back:true})+'<div class="scroll"><div style="height:8px"></div>'+skins+mode+'</div>');
+}
+function statVariant(){
+  return '<div class="vwrap-lg" data-skin="" data-mode="">'+heatmap()+'</div>';
+}
+
+/* — 弹层 — */
+function pagePreviewSheet(){
+  var feed = FEED.slice(0,2).map(feedItem).join("");
+  var sheet = '<div class="overlay"><div class="sheet">'+
+    '<div class="handle"></div>'+
+    '<div class="bodypad" style="display:flex;align-items:center">'+
+      '<span style="flex:1;font-size:12px;color:var(--muted)">9月24日 23:05</span>'+
+      '<span class="icbtn muted">'+ic("share","sm")+'</span>'+
+    '</div>'+
+    '<div class="bodypad" style="margin-top:8px;font-size:16px;line-height:25px">台风过境，窗户一晚上都在响。早上起来发现楼下的树倒了两棵。</div>'+
+    '<div class="bodypad" style="margin-top:12px">'+thumb(190)+'</div>'+
+    '<div class="bodypad" style="margin-top:14px"><div class="chiprow">'+
+      '<span class="chip mini">事记</span><span class="chip mini">情绪</span>'+
+    '</div></div>'+
+    '<div class="foot" style="margin-top:22px">'+
+      '<span class="btn text" style="color:#AA2D00">移至回收站</span>'+
+      '<div class="spacer"></div>'+
+      '<span class="btn primary">编辑</span>'+
+    '</div>'+
+  '</div></div>';
+  return phone(appbar("记录")+'<div class="scroll"><div class="feed">'+feed+'</div></div>'+nav("write")+sheet);
+}
+function pageEditSheet(){
+  var sheet = '<div class="overlay"><div class="sheet">'+
+    '<div class="handle"></div>'+
+    '<div class="bodypad" style="font-size:12px;color:var(--muted)">9月24日 23:05</div>'+
+    '<div class="bodypad" style="margin-top:12px"><div class="chiprow">'+
+      ["闪念","事记","情绪","知识"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+    '</div></div>'+
+    '<div class="bodypad" style="margin-top:14px">'+thumb(170)+'</div>'+
+    '<div class="bodypad" style="margin-top:8px;display:flex;gap:16px">'+
+      '<span class="testbtn">更换</span><span class="testbtn" style="color:#AA2D00">移除</span>'+
+      '<span style="margin-left:auto;font-size:12px;color:var(--muted);align-self:center">点图片看大图</span>'+
+    '</div>'+
+    '<div class="bodypad" style="margin-top:14px"><div class="textinput" style="height:104px;align-items:flex-start;padding-top:12px;line-height:24px;border-color:var(--line-strong)">台风过境，窗户一晚上都在响。</div></div>'+
+    '<div class="foot"><div class="spacer"></div><span class="btn primary">保存</span></div>'+
+  '</div></div>';
+  return phone(appbar("记录")+'<div class="scroll"><div class="feed">'+FEED.slice(0,2).map(feedItem).join("")+'</div></div>'+nav("write")+sheet);
+}
+
+/* — 牌桌 — */
+function pageDeck(){
+  var head = '<div style="padding:0 20px"><div style="font-size:12px;color:var(--muted)">2026 年 9/14 – 9/20</div></div>';
+  var back = '<div class="deck">'+
+    '<div class="nb l"></div><div class="nb r"></div>'+
+    '<div class="card">'+
+      '<div class="topline"></div>'+
+      '<div class="inner">'+
+        '<div class="content">'+
+          '<div class="label">九月 · 关键词</div>'+
+          '<div class="title">台风与闭馆</div>'+
+          '<div class="text">8 月 9 日你第一次经历台风，兴奋被毁，但仍按计划去了拙政园。'+
+            '月底在图书馆坐到闭馆，最后一章终于读完。</div>'+
+          '<div class="pills"><span class="pill">28 条记录</span><span class="pill">9 个活跃日</span><span class="pill">7 张配图</span></div>'+
+        '</div>'+
+        '<div class="foot"><span>9月21日 · 本期统计</span><span>点开读全文</span></div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+  return phone(appbar("周志",{back:true,actions:'<span class="icbtn muted">'+ic("gear","sm")+'</span>'})+
+    head+back+
+    '<div class="dots"><i></i><i></i><i class="on"></i><i></i><i></i></div>'+
+    '<div class="deckhint">左右滑动翻卡 · 点一下看背面</div>'+
+    '<div style="height:8px"></div>');
+}
+
+/* — 前后对照 — */
+function diffRandomNow(){
+  var card = '<div class="nowcard" style="margin:0 14px;height:300px;border-radius:10px;padding:20px;display:flex;flex-direction:column">'+
+      '<div style="font-size:11px;color:var(--primary)">随机回顾</div>'+
+      '<div style="font-size:18px;line-height:28px;text-align:center;margin-top:16px">「台风过境，窗户一晚上都在响。」</div>'+
+      '<div style="flex:1"></div>'+
+      '<div style="display:flex;justify-content:center;gap:8px;align-items:center">'+
+        '<span class="chip mini tagchip">事记</span>'+
+        '<span style="font-size:12px;color:var(--muted)">2026-09-24 23:05</span>'+
+      '</div>'+
+      '<div class="divider-primary" style="height:1px;margin:14px 0 10px"></div>'+
+      '<div style="display:flex;justify-content:flex-end;gap:5px;align-items:center;color:var(--primary);font-size:12px">'+ic("refresh","xs")+'再抽一条</div>'+
+    '</div>';
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("回忆")+'<div class="scroll"><div style="height:10px"></div>'+card+'</div>'+nav("memory")+'</div>';
+}
+function diffRandomNext(){
+  var card = quoteCard({body:BODY.short, meta:"情绪 · 9月25日", margin:"0 14px"});
+  var group = '<div class="group" style="margin:14px 14px 0">'+memRow("周志","上周 · 已写好")+memRow("月志","上月 · 34 条")+'</div>';
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("回忆")+'<div class="scroll"><div style="height:10px"></div>'+card+group+'</div>'+nav("memory")+'</div>';
+}
+function diffSearchNow(){
+  var chips = '<div style="padding:6px 14px 4px;display:flex;flex-wrap:wrap;gap:8px">'+
+      ["闪念","事记","情绪","知识"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+    '</div>'+
+    '<div style="padding:4px 14px;display:flex;gap:8px">'+
+      ["全部","有图","无图"].map(function(t,i){return '<span class="chip'+(i===1?" on":"")+'">'+t+'</span>';}).join("")+
+    '</div>'+
+    '<div style="padding:2px 14px 8px;text-align:right"><span class="btn text" style="font-size:13px">清除筛选</span></div>';
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("记录",{actions:'<span class="icbtn muted">'+ic("search")+'</span>'})+
+    '<div class="searchbar" style="padding-bottom:6px"><div class="field" style="flex:1"><span style="flex:1">台风</span></div>'+
+    '<span class="icbtn muted">'+ic("close")+'</span></div>'+
+    chips+
+    '<div class="scroll"><div class="feed">'+HITS.map(feedItem).join("")+'</div></div>'+nav("write")+'</div>';
+}
+function diffSearchNext(){
+  var bars = '<div class="searchbar">'+
+      '<span class="icbtn">'+ic("back")+'</span>'+
+      '<div class="field focus"><span style="flex:1">台风</span><span class="faint">'+ic("close","xs")+'</span></div>'+
+      '<span class="icbtn iconbtn-badge">'+ic("filter")+'<i></i></span></div>'+
+    '<div class="activebar"><span>事记 · 有图</span><span class="kill">清除</span></div>';
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("")+bars+'<div class="scroll"><div class="feed">'+HITS.map(feedItem).join("")+'</div></div>'+nav("write")+'</div>';
+}
+function diffSettingsNow(){
+  var stat = '<div style="margin:12px 14px;border-radius:16px;background:var(--card);border:1px solid var(--line);padding:18px">'+
+      '<div style="font-size:16px;font-weight:500;color:var(--primary)">9月统计</div>'+
+      '<div style="display:flex;justify-content:space-evenly;margin-top:14px">'+
+        '<div style="text-align:center"><div style="font-size:20px;font-weight:500;color:var(--primary)">12</div><div style="font-size:11px;color:var(--muted)">条记录</div></div>'+
+        '<div style="text-align:center"><div style="font-size:20px;font-weight:500;color:var(--primary)">3</div><div style="font-size:11px;color:var(--muted)">连续天数</div></div>'+
+      '</div>'+
+      '<div style="height:1px;background:var(--line);margin:14px 0 10px"></div>'+
+      '<div class="heat" style="padding:0;grid-template-columns:repeat(7,1fr);gap:3px">'+Array(21).join("<i style='height:16px'></i>")+'</div>'+
+    '</div>';
+  var cards = ["AI 配置","备份与恢复","回收站","外观","关于"].map(function(t){
+    return '<div style="margin:0 14px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line);padding:14px;display:flex;align-items:center;gap:14px">'+
+      '<span style="color:var(--primary)">'+ic("gear")+'</span>'+
+      '<span style="flex:1;font-size:15px">'+t+'</span><span class="chev">'+ic("chev","sm")+'</span></div>';
+  }).join("");
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("设置")+'<div class="scroll">'+stat+cards+'</div>'+nav("gear")+'</div>';
+}function diffSettingsNext(){
+  var summary = '<div class="statline" style="margin:12px 14px"><span class="num">本月 12 条</span>'+
+    '<span style="color:var(--muted);font-size:12px">连续 3 天</span><span class="chev">'+ic("expand","sm")+'</span></div>';
+  var g1 = '<div class="group" style="margin:0 14px">'+setRow("gear","AI 配置","识别、总结与连接测试")+setRow("backup","备份与恢复","")+setRow("trash","回收站","")+'</div>';
+  var g2 = '<div class="group" style="margin:14px 14px 0">'+setRow("palette","外观","")+setRow("info","关于","")+'</div>';
+  return '<div class="phone sm flat h560" data-skin="" data-mode="">'+
+    appbar("设置")+'<div class="scroll"><div style="height:4px"></div>'+summary+g1+g2+'</div>'+nav("gear")+'</div>';
+}
+function diffFrame(nowHtml, nextHtml, title, notes){
+  return '<div style="width:100%">'+
+    '<div class="cap" style="margin:0 0 10px"><b>'+title+'</b></div>'+
+    '<div class="ba">'+
+      '<div class="side now"><div class="lbl">现状（工作区 4.5.0 方向 · 等比缩小）</div>'+nowHtml+'</div>'+
+      '<div class="side next"><div class="lbl">重构后（按执行稿）</div>'+nextHtml+'</div>'+
+    '</div>'+
+    '<div class="cap" style="margin-top:12px"><ul>'+notes.map(function(n){
+      var cls = n.indexOf("−")===0 ? "minus" : (n.indexOf("+")===0 ? "plus" : "");
+      return '<li class="'+cls+'">'+n+'</li>';
+    }).join("")+'</ul></div></div>';
+}
+
+/* ============================================================
+   5. 组装 + 上色
+   ============================================================ */
+var state = {skin:"GREEN", mode:"light", notes:true};
+
+document.addEventListener("DOMContentLoaded", build);
+
+function build(){
+  document.getElementById("recordFrames").innerHTML =
+    frame(pageRecord(),'记录页 · 默认态',
+      ["− 记录卡的白底、圆角、阴影全部去掉，改成连续时间流",
+       "− 标签胶囊改为一行纯文字元信息",
+       "+ 输入器是页面唯一的内容面",
+       "+ 保存是唯一填充主按钮"],"V1") +
+    frame(pageRecordSearch(),'记录页 · 搜索态',
+      ["− 常驻的 4 个标签 chip + 3 个图片 chip + 清除筛选全部收起",
+       "+ 只留搜索框、返回、一个带状态点的筛选入口",
+       "+ 有筛选时用一行摘要 + 清除"],"V1") +
+    frame(pageRecordFilter(),'筛选面板',
+      ["+ 标签与图片筛选按需打开",
+       "+ 关闭即生效，面板内不再堆确认按钮"],"V1") +
+    frame(pageRecordEmpty(),'记录页 · 空状态',
+      ["− 去掉 88dp 主色实心圆与套娃卡片",
+       "+ 一个小品牌标记 + 两行字"],"V2");
+
+  document.getElementById("memoryFrames").innerHTML =
+    frame(pageMemory(),'回忆页 · 默认态',
+      ["− 去掉整卡 primary@8% 底色与主色分隔线",
+       "− 去掉 460dp 的“大片空白”定高",
+       "+ 定高外壳 + 固定 200dp 内容区：切换零位移",
+       "+ 周志 / 月志 / 那年今日合成一个分组面"],"V2") +
+    frame(pageMemoryEmpty(),'回忆页 · 空状态',
+      ["− 去掉外层大卡片",
+       "− 去掉 88dp 主色圆","+ 一句现状 + 一句引导"],"V2");
+
+  document.getElementById("quoteVariants").innerHTML = quoteVariants();
+
+  document.getElementById("settingsFrames").innerHTML =
+    frame(pageSettingsMain(),'设置主页',
+      ["+ 热力图保留，并进摘要卡（不再单独占一张大卡）",
+       "− 5 张相同入口卡合并为 2 个分组面",
+       "− 不再有“使用统计”大标题 + 大数字区",
+       "− 图标不再全是主色，改中性 20dp"],"V3") +
+    frame(pageAiDefault(),'AI 配置 · 默认',
+      ["− 不再一屏铺开三个供应商、思考强度、导入导出",
+       "− 三个“保存”并成一个底部主按钮",
+       "+ 默认只留自动回顾 + 日常识别 + 总结模型",
+       "+ 高级设置折叠，带当前状态说明"],"V3") +
+    frame(pageAiAdvanced(),'AI 配置 · 高级展开',
+      ["+ 独立总结服务、思考强度、连接测试、导入导出收在这里",
+       "− 协议细节（/v1/chat/completions）不进默认视图"],"V3") +
+    frame(pageAppearance(),'外观页',
+      ["+ 保持 3×2 迷你纸张预览与选中细边",
+       "− 预览里不再出现大面积主色"],"V3");
+
+  document.getElementById("statVariant").innerHTML = statVariant();
+
+  document.getElementById("sheetFrames").innerHTML =
+    frame(pagePreviewSheet(),'记录预览弹层',
+      ["− 删除“查看大图”“删除图片”“替换图片”三个平级文字按钮",
+       "− 标签胶囊改中性",
+       "+ 编辑是唯一填充按钮，删除降级为危险文字动作",
+       "+ 分享留在顶部"],"§5.6") +
+    frame(pageEditSheet(),'编辑弹层',
+      ["+ 图片动作收成“更换 / 移除”，点图看大图",
+       "− 不再出现四五个同重量按钮"],"§5.6");
+
+  document.getElementById("deckFrames").innerHTML =
+    frame(pageDeck(),'周志牌桌 · 减噪',
+      ["− 大圆角 20dp → 16dp；顶部色条收到 2dp",
+       "− 事实 / 引语 / 洞察不再分别用状态色，统一主色小标记",
+       "− 页脚不再同时堆“背面 / 还有 N 行 / 手势图标”",
+       "+ 手势提示只留一行，不再每张卡重复教学",
+       "= 定高牌框、邻卡露出、缩放几何全部保留"],"V4");
+
+  document.getElementById("diffFrames").innerHTML =
+    diffFrame(diffRandomNow(),diffRandomNext(),"① 随机回顾卡：固定 460dp 主色底 → 内容驱动白卡",
+      ["− 去掉整卡主色底与主色分隔线",
+       "− 去掉居中标签胶囊与换行时间",
+       "+ 卡片高度跟内容走，底部一行弱元信息 + 再抽一条"]) +
+    '<div style="height:26px"></div>' +
+    diffFrame(diffSearchNow(),diffSearchNext(),"② 搜索筛选：7 个常驻 chip → 1 个筛选入口",
+      ["− 默认态不再展示任何筛选 chip",
+       "+ 筛选入口带状态点，激活后用一行摘要呈现"]) +
+    '<div style="height:26px"></div>' +
+    diffFrame(diffSettingsNow(),diffSettingsNext(),"③ 设置主页：大统计卡 + 5 张入口卡 → 一行摘要 + 2 个分组",
+      ["+ 热力图保留在摘要卡里（不再默认折叠）",
+       "− 热力图不再单独占一张大卡",
+       "− 主色图标点阵改为中性小图标",
+       "+ 入口按“功能 / 应用”分成两组"]);
+
+  wireDemo();
+  buildSwatches();
+  paint();
+  bindControls();
+}
+
+/* 切换演示：只换内容区与元信息，外壳不动 */
+var DEMO = [
+  {body:BODY.short, meta:"情绪 · 9月25日"},
+  {body:BODY.long,  meta:"知识 · 9月26日"},
+  {body:BODY.image, meta:"事记 · 9月24日"}
+];
+var demoIdx = 0;
+function wireDemo(){
+  var wrap = document.getElementById("demoWrap");
+  if(!wrap) return;
+  wrap.innerHTML = quoteCard({
+    id:"demoCard", bodyId:"demoBody", metaId:"demoMeta", btnId:"demoBtn",
+    body:DEMO[0].body, meta:DEMO[0].meta, margin:"0"
+  });
+  var body = document.getElementById("demoBody");
+  var meta = document.getElementById("demoMeta");
+  var btn = document.getElementById("demoBtn");
+  var count = document.getElementById("demoCount");
+  var taps = 0;
+  btn.addEventListener("click", function(){
+    taps++;
+    demoIdx = (demoIdx + 1) % DEMO.length;
+    body.innerHTML = DEMO[demoIdx].body;
+    meta.textContent = DEMO[demoIdx].meta;
+    count.textContent = String(taps);
+    btn.classList.add("tapped");
+    setTimeout(function(){ btn.classList.remove("tapped"); }, 120);
+  });
+}
+
+function buildSwatches(){
+  var box = document.getElementById("swatches");
+  box.innerHTML = SKIN_ORDER.map(function(k){
+    var s = SKINS[k].light;
+    return '<button data-skin="'+k+'" class="'+(k===state.skin?"on":"")+'" title="'+SKINS[k].name+'">'+
+      '<span style="background:'+s.primary+'"></span>'+
+      '<span style="inset:auto 6px 6px 6px;height:14px;background:'+s.bg+';border:1px solid '+s.line+'"></span>'+
+    '</button>';
+  }).join("");
+}
+
+function paint(){
+  document.documentElement.setAttribute("data-shell", state.mode);
+  document.querySelectorAll("[data-skin]").forEach(function(el){
+    var skin = el.getAttribute("data-skin") || state.skin;
+    var mode = el.getAttribute("data-mode") || state.mode;
+    el.setAttribute("style", tokens(skin, mode));
+  });
+}
+
+function bindControls(){
+  document.getElementById("swatches").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-skin]");
+    if(!b) return;
+    state.skin = b.getAttribute("data-skin");
+    buildSwatches(); paint();
+  });
+  document.getElementById("modeSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button[data-mode]");
+    if(!b) return;
+    state.mode = b.getAttribute("data-mode");
+    Array.prototype.forEach.call(this.querySelectorAll("button"), function(x){
+      x.classList.toggle("on", x===b);
+    });
+    paint();
+  });
+  var nb = document.getElementById("notesBtn");
+  nb.addEventListener("click", function(){
+    state.notes = !state.notes;
+    nb.classList.toggle("on", state.notes);
+    document.querySelectorAll(".cap").forEach(function(c){ c.style.display = state.notes ? "" : "none"; });
+  });
+}
+</script>
+</body>
+</html>

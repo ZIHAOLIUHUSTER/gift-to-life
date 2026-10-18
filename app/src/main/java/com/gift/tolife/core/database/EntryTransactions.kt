@@ -3,6 +3,7 @@ package com.gift.tolife.core.database
 import androidx.room.withTransaction
 import com.gift.tolife.core.database.dao.EntryDao
 import com.gift.tolife.core.database.dao.EntryTagDao
+import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.EntryTag
 import com.gift.tolife.core.model.TagType
 import javax.inject.Inject
@@ -14,6 +15,13 @@ class EntryTransactions @Inject constructor(
     private val entryDao: EntryDao,
     private val entryTagDao: EntryTagDao
 ) {
+    /** 内容与手动标签同时落库；标签失败时不能留下未分类的记录。 */
+    suspend fun insertWithTags(entry: Entry, tags: Set<TagType>): Long = database.withTransaction {
+        val id = entryDao.insert(entry)
+        entryTagDao.insertAll(tags.map { EntryTag(id, it) })
+        id
+    }
+
     suspend fun replaceUserTags(entryId: Long, tags: Set<TagType>): Long {
         return database.withTransaction {
             check(entryDao.bumpEntryRevision(entryId, System.currentTimeMillis()) == 1) {
@@ -66,6 +74,9 @@ class EntryTransactions @Inject constructor(
     ): Boolean = database.withTransaction {
         val current = entryDao.getById(entryId) ?: return@withTransaction false
         if (current.isDeleted || current.entryRevision != expectedRevision) {
+            return@withTransaction false
+        }
+        if (!TagType.allowsAiEnhancement(entryTagDao.getByEntryId(entryId).map { it.tag })) {
             return@withTransaction false
         }
         entryDao.updateImageDescription(id = entryId, expectedRevision = expectedRevision, description = imageDescription)

@@ -42,6 +42,18 @@ class TagCodecTest {
     }
 
     @Test
+    fun `resource is manual only and restores from stable id or legacy label`() {
+        assertEquals("资料", TagType.RESOURCE.label)
+        org.junit.Assert.assertFalse(TagType.RESOURCE in TagType.AI_MANAGED)
+        org.junit.Assert.assertFalse(TagType.EXCERPT in TagType.AI_MANAGED)
+        val encoded = TagCodec.encode(listOf(TagType.RESOURCE))
+        assertEquals(listOf("RESOURCE"), encoded.ids)
+        assertEquals(listOf("资料"), encoded.labels)
+        assertEquals(listOf(TagType.RESOURCE), TagCodec.decode(encoded.ids, encoded.labels).tags)
+        assertEquals(listOf(TagType.RESOURCE), TagCodec.decode(emptyList(), encoded.labels).tags)
+    }
+
+    @Test
     fun `round trip keeps all tags`() {
         val all = TagType.entries.toList()
         val encoded = TagCodec.encode(all)

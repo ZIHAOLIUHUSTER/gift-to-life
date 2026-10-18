@@ -1,6 +1,7 @@
 package com.gift.tolife.core.ui.theme
 
 import android.app.Activity
+import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -97,8 +98,16 @@ private fun schemeOf(p: MorandiPalette, dark: Boolean): ColorScheme = if (dark) 
         surfaceVariant = p.surfaceVariant,
         onSurfaceVariant = p.onSurfaceVariant,
         surfaceTint = p.primary,
+        surfaceDim = p.surfaceVariant,
+        surfaceBright = p.surfaceContainer,
+        surfaceContainerLowest = p.surfaceContainer,
+        surfaceContainerLow = p.surfaceContainer,
         surfaceContainer = p.surfaceContainer,
         surfaceContainerHigh = p.surfaceContainerHigh,
+        surfaceContainerHighest = p.surfaceContainerHigh,
+        inverseSurface = p.onSurface,
+        inverseOnSurface = p.surface,
+        inversePrimary = p.primaryContainer,
         outline = p.outline,
         outlineVariant = p.outlineVariant,
         error = LifeStatus.DangerDark,
@@ -126,8 +135,16 @@ private fun schemeOf(p: MorandiPalette, dark: Boolean): ColorScheme = if (dark) 
         surfaceVariant = p.surfaceVariant,
         onSurfaceVariant = p.onSurfaceVariant,
         surfaceTint = p.primary,
+        surfaceDim = p.surfaceVariant,
+        surfaceBright = p.surfaceContainer,
+        surfaceContainerLowest = p.surfaceContainer,
+        surfaceContainerLow = p.surfaceContainer,
         surfaceContainer = p.surfaceContainer,
         surfaceContainerHigh = p.surfaceContainerHigh,
+        surfaceContainerHighest = p.surfaceContainerHigh,
+        inverseSurface = p.onSurface,
+        inverseOnSurface = p.surface,
+        inversePrimary = p.primaryContainer,
         outline = p.outline,
         outlineVariant = p.outlineVariant,
         error = LifeStatus.Danger,
@@ -151,6 +168,15 @@ data class ExtendedColors(
     val success: Color = LifeStatus.Success,
     /** 危险（失败、删除强调） */
     val danger: Color = LifeStatus.Danger,
+    /**
+     * 小字用的主色。浅色下是 primary 压暗后的版本（对纸底 ≥ 4.5:1），
+     * 眉题、图标、链接等 11–13sp 文本一律用它，不再直接拿 primary 排小字。
+     */
+    val accentText: Color = GreenPalette.primary.remapLightness(0.32f, 1f),
+    /** 发丝线：比分隔线更轻，用于卡片边缘和段落线。 */
+    val hairline: Color = GreenPalette.outlineVariant,
+    /** 当前是否深色；组件据此决定阴影/高光方向。 */
+    val dark: Boolean = false,
 )
 
 private val LocalExtendedColors = staticCompositionLocalOf { ExtendedColors() }
@@ -160,6 +186,9 @@ private fun MorandiPalette.toExtended(dark: Boolean) = ExtendedColors(
     zoneNeutral = surfaceContainer,
     success = if (dark) LifeStatus.SuccessDark else LifeStatus.Success,
     danger = if (dark) LifeStatus.DangerDark else LifeStatus.Danger,
+    accentText = if (dark) primary else primary.remapLightness(0.32f, 1f),
+    hairline = outlineVariant,
+    dark = dark,
 )
 
 /** 组件内通过 `ThemeExtended.current.zone` 访问。 */
@@ -201,8 +230,18 @@ fun GiftTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // 边到边：状态栏/导航栏都交给页面纸底，图标只跟着深浅走。
+                window.statusBarColor = Color.Transparent.toArgb()
+                window.navigationBarColor = Color.Transparent.toArgb()
+            } else {
+                window.statusBarColor = colorScheme.background.toArgb()
+                window.navigationBarColor = colorScheme.surfaceContainer.toArgb()
+            }
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
         }
     }
 

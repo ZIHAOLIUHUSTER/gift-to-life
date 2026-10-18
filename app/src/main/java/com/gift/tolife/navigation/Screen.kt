@@ -50,6 +50,16 @@ sealed class Screen(
         icon = Icons.Rounded.CalendarMonth,
     )
 
+    /** 总结牌桌（参数是总结条目 id）。 */
+    data object SummaryDeck : Screen(
+        route = "summary_deck/{entryId}",
+        label = "回顾",
+        icon = Icons.Rounded.History,
+    ) {
+        const val ROUTE = "summary_deck/{entryId}"
+        fun route(entryId: Long) = "summary_deck/$entryId"
+    }
+
     data object OnThisDay : Screen(
         route = "on_this_day",
         label = "那年今日",

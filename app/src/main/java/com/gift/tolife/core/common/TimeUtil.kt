@@ -49,6 +49,32 @@ object TimeUtil {
         return start to end
     }
 
+    /**
+     * 往前第 N 个自然月（1 = 上个月）。
+     * 月志会取 1~3 个月作为背景资料，用来看出长线变化。
+     */
+    fun previousMonthRange(monthsAgo: Int): Pair<Long, Long> {
+        if (monthsAgo <= 1) return previousMonthRange()
+        val cal = Calendar.getInstance().apply { add(Calendar.MONTH, -(monthsAgo - 1)) }
+        return previousMonthRangeFor(cal)
+    }
+
+    /** 形如 `2026 年 8 月`（用于把月份写进提示词）。 */
+    fun monthLabel(startMillis: Long): String {
+        val cal = Calendar.getInstance().apply { timeInMillis = startMillis }
+        return String.format(
+            "%d 年 %d 月",
+            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1,
+        )
+    }
+
+    /** 完整月范围取月中定名，避免旅行后月初落在前一个月。 */
+    fun monthLabelForRange(startMillis: Long, endMillis: Long): String =
+        monthLabel(startMillis + (endMillis - startMillis) / 2)
+
+    fun year(timestamp: Long): Int =
+        Calendar.getInstance().apply { timeInMillis = timestamp }.get(Calendar.YEAR)
+
     fun previousWeekRangeFor(cal: Calendar): Pair<Long, Long> {
         val c = cal.clone() as Calendar
         c.set(Calendar.HOUR_OF_DAY, 0); c.set(Calendar.MINUTE, 0); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)

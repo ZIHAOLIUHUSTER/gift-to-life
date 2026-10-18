@@ -86,6 +86,33 @@ class V2ArchiveWriterTest {
     }
 
     @Test
+    fun `resource backup keeps text image and manual tag`() {
+        val image = temp.newFile("resource.webp").apply { writeBytes(byteArrayOf(5, 6, 7)) }
+        val backup = temp.newFile("resource.gtlbackup")
+        backup.outputStream().use { out ->
+            V2ArchiveWriter(out).use { writer ->
+                writer.addEntry(
+                    Entry(id = 1, content = "打印机连接方法", imagePath = image.absolutePath),
+                    listOf(TagType.RESOURCE), image
+                )
+                writer.finish()
+            }
+        }
+        assertEquals(BackupArchiveVerifier.Report(1, 1), BackupArchiveVerifier.verify(backup))
+        val saved = readManifest(backup).entries.single()
+        assertEquals("打印机连接方法", saved.content)
+        assertEquals(EntryType.NORMAL.name, saved.type)
+        assertEquals(listOf("RESOURCE"), saved.tagIds)
+        assertEquals(listOf("资料"), saved.tags)
+        assertEquals(listOf(TagType.RESOURCE), TagCodec.decode(saved.tagIds, saved.tags).tags)
+        ZipFile(backup).use { zip ->
+            val bytes = zip.getInputStream(zip.getEntry(saved.imageEntry!!)!!).use { it.readBytes() }
+            assertArrayEquals(byteArrayOf(5, 6, 7), bytes)
+            assertEquals(sha256(bytes), saved.imageSha256)
+        }
+    }
+
+    @Test
     fun `shared image file gets distinct zip entries instead of crashing`() {
         val shared = temp.newFile("shared.webp").apply { writeBytes(byteArrayOf(9, 9, 9)) }
         val backup = temp.newFile("shared.gtlbackup")

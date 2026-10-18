@@ -28,7 +28,8 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE isDeleted = 0 ORDER BY createdAt DESC")
     fun getAllOrderByCreatedAtDesc(): Flow<List<Entry>>
 
-    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
+    /** 总结正文、月志背景和关联记录共用：资料不属于生活记录，任意混合标签含资料即排除。 */
+    @Query("SELECT * FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end AND NOT EXISTS (SELECT 1 FROM entry_tags WHERE entryId = entries.id AND tag = 'RESOURCE') ORDER BY createdAt ASC")
     suspend fun getNormalEntriesInRange(start: Long, end: Long): List<Entry>
 
     @Query("DELETE FROM entries")
@@ -100,8 +101,16 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 ORDER BY summaryStart DESC, createdAt DESC")
     fun observeSummaries(): Flow<List<Entry>>
 
+    /** 2026-09-24：查某个周期已有的总结（不新增列，仅新增查询）。 */
+    @Query("SELECT * FROM entries WHERE type = 'SUMMARY' AND isDeleted = 0 AND summaryStart = :start AND summaryEnd = :end ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getSummaryForRange(start: Long, end: Long): Entry?
+
     @RawQuery(observedEntities = [Entry::class, EntryTag::class])
     fun pagingSource(query: SupportSQLiteQuery): PagingSource<Int, EntryListRow>
+
+    /** 与总结输入保持一致，资料不计入待总结条数；普通统计仍包含资料。 */
+    @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end AND NOT EXISTS (SELECT 1 FROM entry_tags WHERE entryId = entries.id AND tag = 'RESOURCE')")
+    suspend fun getNormalEntryCountInRange(start: Long, end: Long): Int
 
     @Query("SELECT COUNT(*) FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end")
     suspend fun getMonthlyCount(start: Long, end: Long): Int
@@ -109,12 +118,14 @@ interface EntryDao {
     @Query("SELECT createdAt FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND createdAt BETWEEN :start AND :end ORDER BY createdAt ASC")
     suspend fun getMonthlyTimestamps(start: Long, end: Long): List<Long>
 
-    @Query("SELECT id FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 ORDER BY id ASC")
+    /** 随机回顾及桌面回顾小组件的候选，不包含资料。 */
+    @Query("SELECT id FROM entries WHERE type = 'NORMAL' AND isDeleted = 0 AND NOT EXISTS (SELECT 1 FROM entry_tags WHERE entryId = entries.id AND tag = 'RESOURCE') ORDER BY id ASC")
     suspend fun getAllActiveIds(): List<Long>
 
     @Query("""
         SELECT * FROM entries
         WHERE type = 'NORMAL' AND isDeleted = 0
+          AND NOT EXISTS (SELECT 1 FROM entry_tags WHERE entryId = entries.id AND tag = 'RESOURCE')
           AND strftime('%m-%d', createdAt / 1000, 'unixepoch', 'localtime') = :monthDay
         ORDER BY createdAt ASC
     """)

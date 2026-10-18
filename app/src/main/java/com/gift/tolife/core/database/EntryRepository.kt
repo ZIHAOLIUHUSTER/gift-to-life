@@ -22,10 +22,10 @@ class EntryRepository @Inject constructor(
 
     suspend fun getById(id: Long): Entry? = entryDao.getById(id)
 
-    suspend fun save(entry: Entry): Long {
+    suspend fun save(entry: Entry, tags: Set<TagType> = emptySet()): Long {
         val now = System.currentTimeMillis()
-        return entryDao.insert(
-            entry.copy(createdAt = now, updatedAt = now)
+        return entryTransactions.insertWithTags(
+            entry.copy(createdAt = now, updatedAt = now), tags
         )
     }
 
@@ -55,6 +55,9 @@ class EntryRepository @Inject constructor(
     suspend fun getTags(entryId: Long): List<EntryTag> = entryTagDao.getByEntryId(entryId)
 
     fun observeSummaries(): Flow<List<Entry>> = entryDao.observeSummaries()
+
+    /** 2026-09-24：低密度提示用——数一数上周期有多少条记录。 */
+    suspend fun countInRange(start: Long, end: Long): Int = entryDao.getNormalEntryCountInRange(start, end)
 
     /** 随机取一条活跃记录（含标签），随机回顾页与桌面小组件共用 */
     suspend fun getRandomEntryWithTags(): Pair<Entry, List<TagType>>? {

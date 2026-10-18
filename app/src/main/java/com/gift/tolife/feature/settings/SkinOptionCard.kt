@@ -33,7 +33,7 @@ import com.gift.tolife.core.ui.theme.toPalette
  *
  * 旧版（P39）是一行一张全宽列表卡：32dp 小色块 + 右侧 RadioButton，
  * 六套皮肤排下来比屏幕还高，末项与深色模式选项被底栏裁掉（用户截图反馈）。
- * 现在改成 3×2 网格的**迷你页面预览**：56dp 纸卡 + 名字 + 一句描述，
+ * 现在改成 3×2 网格的**迷你页面预览**：56dp 纸卡 + 名字，
  * 选中时描主色边、名字转主色 —— 与 Date 的观感一致。
  *
  * 预览层级 = 纸（外）→ 白卡（内）→ 墨（文字线），主色只出现一次（顶部点睛条）。
@@ -80,14 +80,6 @@ fun SkinOptionCard(
             fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            text = variant.description,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

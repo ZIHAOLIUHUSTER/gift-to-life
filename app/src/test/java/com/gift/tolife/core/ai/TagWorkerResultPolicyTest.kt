@@ -7,6 +7,8 @@ import org.junit.Test
 internal fun workerResultFor(result: AiResult<*>): ListenableWorker.Result = when (result) {
     is AiResult.Success -> ListenableWorker.Result.success()
     is AiResult.RetryableFailure -> ListenableWorker.Result.retry()
+    // 只回了思考不算成功：标签链路没有正文可用，直接判失败（总结链路会单独处理）
+    is AiResult.ReasoningOnly -> ListenableWorker.Result.failure()
     is AiResult.PermanentFailure -> ListenableWorker.Result.failure()
 }
 
@@ -24,5 +26,10 @@ class TagWorkerResultPolicyTest {
     @Test
     fun permanentFailureMapsToFailure() {
         assertEquals(ListenableWorker.Result.failure(), workerResultFor(AiResult.PermanentFailure("bad")))
+    }
+
+    @Test
+    fun reasoningOnlyMapsToFailure() {
+        assertEquals(ListenableWorker.Result.failure(), workerResultFor(AiResult.ReasoningOnly("thinking")))
     }
 }

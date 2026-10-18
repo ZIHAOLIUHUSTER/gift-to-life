@@ -19,3 +19,8 @@ local.properties
 # agent 本地记忆与测试截图不入库
 .pi/
 /Screenshot_*.jpg
+
+# 本地备份与日志范例含个人数据，不入库
+*.gtlbackup
+/每周日志范例.txt
+/每月日志范例.txt

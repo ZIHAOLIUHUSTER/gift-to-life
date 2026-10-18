@@ -32,14 +32,14 @@ class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
         val entryPoint = EntryPointAccessors.fromApplication(applicationContext, WorkerEntryPoint::class.java)
         val repository = entryPoint.repository()
         val transactions = entryPoint.transactions()
-        val aiClient = entryPoint.aiClient()
-        val settingsDataStore = entryPoint.settingsDataStore()
-        val settings = settingsDataStore.settings.first()
-
-        if (settings.apiKey.isBlank()) return Result.success()
-
         val entry = repository.getById(entryId) ?: return Result.success()
         if (entry.isDeleted || entry.entryRevision != expectedRevision) return Result.success()
+        // 编辑或遗留任务也必须遵守手动模式，在任何网络请求前检查。
+        if (!TagType.allowsAiEnhancement(repository.getTags(entryId).map { it.tag })) return Result.success()
+
+        val settings = entryPoint.settingsDataStore().settings.first()
+        if (settings.apiKey.isBlank()) return Result.success()
+        val aiClient = entryPoint.aiClient()
 
         var content = entry.content
         var imageDescription: String? = null
@@ -51,6 +51,10 @@ class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                     content = if (content.isNotBlank()) "$content\n[图片描述: ${descResult.value}]" else descResult.value
                 }
                 is AiResult.RetryableFailure -> return Result.retry()
+                is AiResult.ReasoningOnly -> {
+                    if (content.isBlank()) return Result.failure()
+                    imageDescription = entry.imageDescription
+                }
                 is AiResult.PermanentFailure -> {
                     if (content.isBlank()) return Result.failure()
                     imageDescription = entry.imageDescription
@@ -73,6 +77,7 @@ class TagWorker(context: Context, params: WorkerParameters) : CoroutineWorker(co
                     return Result.success()
                 }
                 is AiResult.RetryableFailure -> return Result.retry()
+                is AiResult.ReasoningOnly -> return Result.failure()
                 is AiResult.PermanentFailure -> return Result.failure()
             }
         }

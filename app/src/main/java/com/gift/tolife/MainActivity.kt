@@ -8,11 +8,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.gift.tolife.core.common.ReviewDeepLink
 import com.gift.tolife.core.common.ShareReceiver
 import com.gift.tolife.core.common.SharedContent
+import com.gift.tolife.core.common.SummaryDeepLink
 import com.gift.tolife.core.datastore.SettingsDataStore
 import com.gift.tolife.core.ui.theme.GiftTheme
 import com.gift.tolife.navigation.AppNavigation
@@ -29,8 +32,13 @@ class MainActivity : ComponentActivity() {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        handleShareIntent(intent)
-        handleWidgetIntent(intent)
+        // ViewModel 只跨配置变化保留：旋转不重收，进程重建仍重新接住原 Intent。
+        val launchIntentState = ViewModelProvider(this)[LaunchIntentState::class.java]
+        if (launchIntentState.claimInitialIntent()) {
+            handleShareIntent(intent)
+            handleWidgetIntent(intent)
+            handleSummaryIntent(intent)
+        }
         setContent {
             val settings by settingsDataStore.settings.collectAsState(
                 initial = com.gift.tolife.core.datastore.AppSettings()
@@ -46,8 +54,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         handleShareIntent(intent)
         handleWidgetIntent(intent)
+        handleSummaryIntent(intent)
+    }
+
+    /** 「上周的你，整理好了」通知 → 直接进对应牌桌。 */
+    private fun handleSummaryIntent(intent: Intent) {
+        val entryId = intent.getLongExtra(SummaryDeepLink.EXTRA_ENTRY_ID, -1L)
+        if (entryId >= 0) {
+            intent.removeExtra(SummaryDeepLink.EXTRA_ENTRY_ID)
+            SummaryDeepLink.open(entryId)
+        }
     }
 
     private fun handleShareIntent(intent: Intent) {
@@ -65,10 +84,22 @@ class MainActivity : ComponentActivity() {
     private fun handleWidgetIntent(intent: Intent) {
         val reviewEntryId = intent.getLongExtra(ReviewDeepLink.EXTRA_ENTRY_ID, -1L)
         if (reviewEntryId >= 0) {
+            intent.removeExtra(ReviewDeepLink.EXTRA_ENTRY_ID)
             ReviewDeepLink.open(reviewEntryId)
         }
         if (intent.getBooleanExtra("request_composer_focus", false)) {
+            intent.removeExtra("request_composer_focus")
             ShareReceiver.publish(SharedContent(text = null, imageUri = null))
         }
+    }
+}
+
+internal class LaunchIntentState : ViewModel() {
+    private var handled = false
+
+    fun claimInitialIntent(): Boolean {
+        if (handled) return false
+        handled = true
+        return true
     }
 }

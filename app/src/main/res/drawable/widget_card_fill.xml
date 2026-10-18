@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件卡片底：白色只作“可着色”的底，运行时用 ImageView.setColorFilter 染成当前皮肤的 surfaceContainer。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#FFFFFF" />
+    <corners android:radius="20dp" />
+</shape>

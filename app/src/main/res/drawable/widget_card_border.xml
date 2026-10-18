@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件发丝边：白色只作“可着色”的描边，运行时染成当前皮肤的 outlineVariant。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <stroke
+        android:width="1dp"
+        android:color="#E8E3D8" />
+    <corners android:radius="20dp" />
+</shape>

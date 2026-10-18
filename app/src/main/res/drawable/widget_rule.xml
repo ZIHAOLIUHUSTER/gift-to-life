@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 眉题前的一痕；运行时染成当前皮肤的强调色。 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#5B7B6F" />
-    <corners android:radius="12dp" />
+    <corners android:radius="2dp" />
 </shape>

@@ -1,11 +1,25 @@
 package com.gift.tolife.feature.record
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -13,47 +27,60 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gift.tolife.core.common.DateFormats
 import com.gift.tolife.core.common.TextMatch
 import com.gift.tolife.core.model.Entry
 import com.gift.tolife.core.model.TagType
+import com.gift.tolife.core.ui.theme.LifeType
+import com.gift.tolife.core.ui.theme.PageGutter
+import com.gift.tolife.core.ui.theme.RowPaddingV
 import java.io.File
 
-/** 记录正文；搜索模式下把命中字符标上主题色底色（2026-09-17）。 */
+/** 记录正文；搜索模式下把命中字符标上主题色底色。 */
 @Composable
 private fun HighlightedContent(text: String, query: String, maxLines: Int) {
-    val ranges = remember(text, query) { TextMatch.ranges(text, query) }
-    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-    val annotated = remember(text, ranges, highlight) {
+    val displayText = remember(text, query) { TextMatch.preview(text, query) }
+    val ranges = remember(displayText, query) { TextMatch.ranges(displayText, query) }
+    // 高亮只做提示：透明度压到 16%，不允许盖住文字本身的对比度
+    val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+    val annotated = remember(displayText, ranges, highlight) {
         if (ranges.isEmpty()) {
             null
         } else {
             buildAnnotatedString {
                 var cursor = 0
                 ranges.forEach { range ->
-                    if (range.first > cursor) append(text.substring(cursor, range.first))
+                    if (range.first > cursor) append(displayText.substring(cursor, range.first))
                     withStyle(SpanStyle(background = highlight, fontWeight = FontWeight.Medium)) {
-                        append(text.substring(range.first, range.last + 1))
+                        append(displayText.substring(range.first, range.last + 1))
                     }
                     cursor = range.last + 1
                 }
-                if (cursor < text.length) append(text.substring(cursor))
+                if (cursor < displayText.length) append(displayText.substring(cursor))
             }
         }
     }
     Text(
-        text = annotated ?: AnnotatedString(text),
-        style = MaterialTheme.typography.bodyMedium,
+        text = annotated ?: AnnotatedString(displayText),
+        style = MaterialTheme.typography.bodyLarge,
         color = MaterialTheme.colorScheme.onSurface,
         maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
     )
 }
 
+/**
+ * 记录列表的一行（2026-10-18 精修）。
+ *
+ * 仍是连续时间流（透明行 + 发丝线），但：
+ * - 有图记录改为右侧 72dp 小相片，正文不再被通栏大图截断；
+ * - 元信息只留时间与标签，日期交给上方的「今天 / 昨天」分组标题；
+ * - 搜索态保留日期（`includeDate = true`），因为此时没有分组标题。
+ */
 @Composable
 fun EntryCard(
     entry: Entry,
@@ -61,81 +88,82 @@ fun EntryCard(
     query: String = "",
     onClick: () -> Unit,
     onImageClick: () -> Unit = {},
+    includeDate: Boolean = false,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column {
-            // 图片缩略图
-            if (!entry.imagePath.isNullOrBlank()) {
-                AsyncImage(
-                    model = File(entry.imagePath),
-                    contentDescription = "记录图片",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 148.dp)
-                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                        .clickable(onClick = onImageClick),
-                    contentScale = ContentScale.Crop
-                )
-            }
+    val hasImage = !entry.imagePath.isNullOrBlank()
+    val meta = remember(entry.createdAt, tags, includeDate) {
+        val timeText = if (includeDate) {
+            DateFormats.formatDayTime(entry.createdAt)
+        } else {
+            DateFormats.formatTime(entry.createdAt)
+        }
+        (listOf(timeText) + tags.take(2).map { it.label }).joinToString(" · ")
+    }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick)
-                    .padding(12.dp)
-            ) {
-                HighlightedContent(
-                    text = entry.content,
-                    query = query,
-                    maxLines = 4,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // 标签
-                if (tags.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        val visibleTags = tags.take(2)
-                        val remaining = tags.size - 2
-                        visibleTags.forEach { tag ->
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                            ) {
-                                Text(
-                                    tag.label,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                        if (remaining > 0) {
-                            Text(
-                                "+$remaining",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = PageGutter, vertical = RowPaddingV),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                if (entry.content.isBlank()) {
+                    Text(
+                        text = if (hasImage) "一张图片" else "空白记录",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                } else {
+                    HighlightedContent(
+                        text = entry.content,
+                        query = query,
+                        maxLines = if (hasImage) 3 else 4,
+                    )
                 }
 
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    text = DateFormats.formatShortDateTime(entry.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = meta,
+                    style = LifeType.meta,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+
+            if (hasImage) {
+                Spacer(Modifier.width(14.dp))
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .border(
+                            0.75.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f),
+                            RoundedCornerShape(10.dp),
+                        )
+                        .clickable(onClick = onImageClick)
+                        .padding(2.dp),
+                ) {
+                    AsyncImage(
+                        model = File(entry.imagePath!!),
+                        contentDescription = "记录图片",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
+            }
         }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = PageGutter),
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+        )
     }
 }

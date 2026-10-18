@@ -4,11 +4,10 @@ import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.gift.tolife.core.database.dao.EntryDao
-import com.gift.tolife.core.database.dao.EntryTagDao
-import com.gift.tolife.core.model.Entry
-import com.gift.tolife.core.model.EntryTag
-import com.gift.tolife.core.model.EntryType
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
+import kotlinx.coroutines.runBlocking
 import com.gift.tolife.core.model.TagType
 import org.junit.Assert.*
 import org.junit.Rule
@@ -27,9 +26,9 @@ class AppDatabaseMigrationTest {
 
     @Test
     @Throws(IOException::class)
-    fun migrate1To4() {
+    fun migrate1To4() = runBlocking {
         // Create v1 database (without imageDescription, isDeleted, summaryModel, entryRevision)
-        val db1 = helper.createDatabase(TEST_DB, 1).apply {
+        createHistoricalDatabase(TEST_DB, 1).apply {
             execSQL("""
                 CREATE TABLE entries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -78,9 +77,9 @@ class AppDatabaseMigrationTest {
 
     @Test
     @Throws(IOException::class)
-    fun migrate1To4_withTags() {
+    fun migrate1To4_withTags() = runBlocking {
         // Create v1 database WITH entry_tags table (some historical v1 had this)
-        val db1 = helper.createDatabase(TEST_DB_TAGS, 1).apply {
+        createHistoricalDatabase(TEST_DB_TAGS, 1).apply {
             execSQL("""
                 CREATE TABLE entries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -127,8 +126,8 @@ class AppDatabaseMigrationTest {
 
     @Test
     @Throws(IOException::class)
-    fun migrate3To4() {
-        val db3 = helper.createDatabase(TEST_DB, 3).apply {
+    fun migrate3To4() = runBlocking {
+        createHistoricalDatabase(TEST_DB, 3).apply {
             execSQL("""
                 CREATE TABLE entries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -158,7 +157,7 @@ class AppDatabaseMigrationTest {
             close()
         }
 
-        val migratedDb = helper.runMigrationsAndValidate(TEST_DB, 4, true, Migrations.MIGRATION_3_4)
+        helper.runMigrationsAndValidate(TEST_DB, 4, true, Migrations.MIGRATION_3_4)
 
         val db = Room.databaseBuilder(
             InstrumentationRegistry.getInstrumentation().targetContext,
@@ -175,6 +174,23 @@ class AppDatabaseMigrationTest {
         assertEquals(setOf(TagType.FLASH_THOUGHT, TagType.KNOWLEDGE), tags)
 
         db.close()
+    }
+
+    // 仓库仅保留 v4 schema；旧结构使用独立测试库的 SQL fixture 创建。
+    private fun createHistoricalDatabase(name: String, version: Int): SupportSQLiteDatabase {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.deleteDatabase(name)
+        return FrameworkSQLiteOpenHelperFactory().create(
+            SupportSQLiteOpenHelper.Configuration.builder(context)
+                .name(name)
+                .callback(object : SupportSQLiteOpenHelper.Callback(version) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = Unit
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) {
+                        error("历史测试库不应自行升级")
+                    }
+                })
+                .build()
+        ).writableDatabase
     }
 
     companion object {
