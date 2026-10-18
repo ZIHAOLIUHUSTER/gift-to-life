@@ -20,8 +20,8 @@
 - 图片: `filesDir/images/`, WebP 压缩 1920px 85%, EXIF 方向修正, WEBP_LOSSY(API 30+)
 
 ## 当前版本
-- versionCode: 58, versionName: 4.7.6
-- APK: `app/release/gift-4.7.6-58-release.apk`，约 2.4 MiB（R8 full mode 已开启）
+- versionCode: 59, versionName: 4.7.7
+- APK: `app/release/gift-4.7.7-59-release.apk`，约 2.4 MiB（R8 full mode 已开启）
 - 数据库: Migration 1→3→4, `fallbackToDestructiveMigration` 已移除（本版 schema 零改动）
 - 代码: 死代码已清理
 
@@ -36,6 +36,13 @@
 - **工程**：修正外层 Scaffold 与页面内 Scaffold 重复吃状态栏 inset；补全 M3 surface container 槽位，避免默认淡紫泄漏；新增 `ExtendedColors.accentText`（小字主色压暗，对纸底 ≥4.5:1）、`PaperCard`、`PageHeader`、`AppBottomBar`。
 - **验证**：251 个 JVM 单测全绿；Debug / Debug AndroidTest / Release APK 构建通过；`git diff -- app/schemas/` 为空；未连接设备，未做真机视觉/大字体验收，模拟器未安装。
 - **未动**：桌面小组件与分享卡片仍沿用旧暖白配色；备份协议与 AI 链路未改。
+
+## v4.7.7 桌面小组件字体修正（2026-10-18）
+
+- **字体**：随机回顾与快速记录的全部文字改用系统 `serif`（宋体/衬线族）——正文、眉题、元信息、换一条、记录此刻；不再显式使用 `sans-serif` / `sans-serif-medium`。
+- **排版**：正文行距从 1.3 收到 1.1，并关闭 11sp 小字的字体额外 padding；宋体的天然行高更宽，收紧后小尺寸仍不裁切。
+- **不变**：皮肤/深浅跟随、尺寸自适应、卡片点击深链和换一条广播均保持。
+- **验证**：251 个 JVM 单测全绿；Debug / Debug AndroidTest / Release 构建通过；schema 无差异。未连接设备，未做真机字体截图验收。
 
 ## v4.7.6 桌面小组件精修（2026-10-18）
 
